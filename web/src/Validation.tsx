@@ -1,13 +1,48 @@
-import { useEffect, useState } from 'react'
-import { loadValidation, type Validation as ValidationData } from './data'
+import { useEffect, useState, type ReactNode } from 'react'
+import {
+  loadEngineCheck, loadSite, loadValidation, replayAtLanding,
+  type EngineCheck, type Site, type Validation as ValidationData,
+} from './data'
+import { REPLAY_MISSIONS } from './Replays'
 import './styles/evidence.css'
+
+// Every number here is read from a file a check script wrote (validation.json from the pipeline,
+// engine_check.json from `npm run check:engine`) or computed from replay data; nothing is typed in.
+const fmtDate = (d: Date | null) => (d ? d.toUTCString().slice(5, 22) + ' UTC' : 'none within the replay window')
+
+function Card({ n, title, badge, pass, desc, rows, rerun }: {
+  n: number; title: string; badge: string; pass?: boolean; desc: string; rows: [string, ReactNode][]; rerun: ReactNode
+}) {
+  return (
+    <div className="val-card">
+      <div className={`val-badge ${pass === false ? 'fail' : 'pass'}`}>{badge}</div>
+      <h3>{n}. {title}</h3>
+      <p className="val-desc">{desc}</p>
+      <div className="val-metrics-table">
+        {rows.map(([k, v]) => (
+          <div className="val-row" key={k}><span>{k}</span><strong>{v}</strong></div>
+        ))}
+      </div>
+      <div className="val-cmd">{rerun}</div>
+    </div>
+  )
+}
+
+const verdict = (p: boolean | undefined) => (p === undefined ? 'Loading…' : p ? 'PASS' : 'FAIL')
 
 export function Validation({ onReturnToSite }: { onReturnToSite: () => void }) {
   const [val, setVal] = useState<ValidationData | null>(null)
+  const [eng, setEng] = useState<EngineCheck | null>(null)
+  const [replays, setReplays] = useState<Site[]>([])
 
   useEffect(() => {
     loadValidation().then(setVal, () => setVal(null))
+    loadEngineCheck().then(setEng, () => setEng(null))
+    Promise.all(REPLAY_MISSIONS.map((m) => loadSite(m.id))).then(setReplays, () => setReplays([]))
   }, [])
+
+  const h = val?.horizons, il = val?.illumination, e = eng?.engine, f = eng?.finder
+  const na = '…'
 
   return (
     <div className="validation-page">
@@ -15,177 +50,103 @@ export function Validation({ onReturnToSite }: { onReturnToSite: () => void }) {
         <button type="button" className="validation-back-btn" onClick={onReturnToSite}>
           ← Back to Mission Planner
         </button>
-        <h2>Scientific Rigour & Validation Proofs</h2>
+        <h2>How we checked the numbers</h2>
         <p className="validation-lead">
-          Every celestial vector, terrain horizon, and illumination metric in this application is verified against NASA JPL Horizons and LRO mission data.
+          For each check: what is compared, the result, the pass mark set before the run, and how to rerun it.
+          {eng && <> Browser checks last run {eng.run_utc.replace('T', ' ')}.</>}
         </p>
       </div>
 
       <div className="validation-grid">
-        {/* Card 1: JPL Horizons */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: 0.000033° Error</div>
-          <h3>1. Sun & Earth Directions vs. NASA JPL Horizons</h3>
-          <p className="val-desc">
-            Evaluated against the gold-standard NASA JPL Horizons ephemeris system (MOON_ME frame, DE421 ephemeris).
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Worst Direction Difference</span>
-              <strong>{val ? `${val.horizons.worst_deg.toFixed(6)}°` : '0.000033°'} (0.12 arcsec)</strong>
-            </div>
-            <div className="val-row">
-              <span>Required Tolerance</span>
-              <span>{val ? `${val.horizons.tolerance_deg}°` : '0.001°'}</span>
-            </div>
-            <div className="val-row">
-              <span>Samples Tested</span>
-              <span>{val ? `${val.horizons.samples.toLocaleString('en')} (${val.horizons.points} sites)` : '8 sites × 8,760 hours'}</span>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <code>python pipeline/validate_horizons.py</code>
-          </div>
-        </div>
+        <Card n={1} title="Sun and Earth directions vs NASA JPL Horizons" pass={h?.passed}
+          badge={`${verdict(h?.passed)}${h ? `: worst ${h.worst_deg.toExponential(1)}°` : ''}`}
+          desc="Our Sun and Earth directions (Skyfield, JPL DE421, Moon frame) against JPL Horizons for the same sites and hours."
+          rows={[
+            ['Worst direction difference', h ? `${h.worst_deg.toFixed(6)}° (${(h.worst_deg * 3600).toFixed(2)} arcsec)` : na],
+            ['Pass mark', h ? `under ${h.tolerance_deg}°` : na],
+            ['Compared', h ? `${h.samples.toLocaleString('en')} directions, ${h.points} sites, ${h.period_utc[0].slice(0, 10)} to ${h.period_utc[1].slice(0, 10)}` : na],
+          ]}
+          rerun={<code>python pipeline/validate_horizons.py</code>} />
 
-        {/* Card 2: LOLA Illumination */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: r = {val ? `${val.illumination.sun.correlation.toFixed(3)} / ${val.illumination.earth.correlation.toFixed(3)}` : '0.991 / 0.995'}</div>
-          <h3>2. Sunlight % vs. NASA LOLA Illumination Maps</h3>
-          <p className="val-desc">
-            Benchmarked against NASA Goddard PGDA Product 69 (Mazarico et al., 2011), computed across an 18.6-year nodal precession cycle.
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Sunlight Correlation (r)</span>
-              <strong>{val ? val.illumination.sun.correlation.toFixed(3) : '0.991'}</strong>
-            </div>
-            <div className="val-row">
-              <span>Earth Visibility Correlation (r)</span>
-              <strong>{val ? val.illumination.earth.correlation.toFixed(3) : '0.995'}</strong>
-            </div>
-            <div className="val-row">
-              <span>Median Absolute Difference</span>
-              <span>{val ? `${val.illumination.sun.median_abs_diff_pp} pp (Sun) · ${val.illumination.earth.median_abs_diff_pp} pp (Earth)` : '0.31 pp (Sun) · 0.17 pp (Earth)'}</span>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <code>python pipeline/validate_illumination.py</code>
-          </div>
-        </div>
+        <Card n={2} title="Sunlit and Earth-in-view % vs NASA illumination maps" pass={il?.passed}
+          badge={`${verdict(il?.passed)}${il ? `: r = ${il.sun.correlation.toFixed(3)} / ${il.earth.correlation.toFixed(3)}` : ''}`}
+          desc="Our long-term sunlit and Earth-in-view percentages against NASA's LOLA-based maps (Mazarico et al. 2011), over an 18.6-year cycle."
+          rows={[
+            ['Points compared', il ? il.points : na],
+            ['Correlation (Sun / Earth)', il ? `${il.sun.correlation.toFixed(3)} / ${il.earth.correlation.toFixed(3)}` : na],
+            ['Median difference', il ? `${il.sun.median_abs_diff_pp} / ${il.earth.median_abs_diff_pp} points` : na],
+            ['90% of points within', il ? `${il.sun.p90_abs_diff_pp} / ${il.earth.p90_abs_diff_pp} points` : na],
+            ['Worst point', il ? `${il.sun.max_abs_diff_pp} / ${il.earth.max_abs_diff_pp} points` : na],
+            ['Pass mark', 'correlation ≥ 0.9 and median difference ≤ 5 points'],
+          ]}
+          rerun={<code>python pipeline/validate_illumination.py</code>} />
 
-        {/* Card 3: Browser Engine vs. Python */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: 0.00 pp Difference</div>
-          <h3>3. In-Browser TypeScript Engine vs. Python Ground Truth</h3>
-          <p className="val-desc">
-            Verifies that the client-side Web Worker (`engine.ts`) computing clicked map points matches the offline Python pipeline bit-for-bit.
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Direction Difference</span>
-              <strong>3.49 × 10⁻⁷ deg</strong>
-            </div>
-            <div className="val-row">
-              <span>Sunlit & Earth Difference</span>
-              <strong>0.00 percentage points</strong>
-            </div>
-            <div className="val-row">
-              <span>Max Horizon Angle Diff</span>
-              <strong>0.000 deg</strong>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <code>npm run check:engine</code>
-          </div>
-        </div>
+        <Card n={3} title="Browser engine vs the Python pipeline" pass={e?.passed}
+          badge={`${verdict(e?.passed)}${e ? `: ${e.direction_deg.toExponential(1)}°` : ''}`}
+          desc="Map clicks are computed in your browser (engine.ts). This repeats the pipeline's calculation for test points and compares."
+          rows={[
+            ['Test points', e ? e.points : na],
+            ['Worst direction difference', e ? `${e.direction_deg.toExponential(2)}°` : na],
+            ['Worst sunlit / Earth difference', e ? `${e.sunlit_pp.toFixed(2)} / ${e.earth_pp.toFixed(2)} points` : na],
+            ['Worst horizon difference', e ? `${e.horizon_deg.toFixed(4)}°` : na],
+            ['Pass mark', 'direction under 0.001°, sunlit and Earth within 0.5 points'],
+          ]}
+          rerun={<code>npm run check:engine</code>} />
 
-        {/* Card 4: Alternatives Finder Quick Estimate */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: Max Error 0.28 pp</div>
-          <h3>4. Alternatives Finder Coarse-to-Fine Accuracy</h3>
-          <p className="val-desc">
-            Ensures that the 5,500 candidate spot coarse horizon masks rank candidates faithfully before the top 5 are re-verified with exact geometry.
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Worst Annual Error</span>
-              <strong>0.28 percentage points (limit 3.0)</strong>
-            </div>
-            <div className="val-row">
-              <span>Mission Window Accuracy</span>
-              <span>100% agreement on viable candidates</span>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <code>npm run check:engine (finder suite)</code>
-          </div>
-        </div>
+        <Card n={4} title="Site finder quick estimate vs exact" pass={f?.passed}
+          badge={`${verdict(f?.passed)}${f ? `: worst ${f.worst_pp.toFixed(2)} points` : ''}`}
+          desc="Find sites ranks thousands of spots with coarse 1° horizons, then recomputes the top 5 exactly. This compares the two over a full year."
+          rows={[
+            ['Spots compared', f ? f.candidates : na],
+            ['Worst yearly sunlit / Earth difference', f ? `${f.worst_pp.toFixed(2)} points` : na],
+            ['Mission-window maths matches a full-year run', f ? (f.window_match ? 'yes' : 'no') : na],
+            ['Pass mark', f ? `within ${f.limit_pp} points, windows identical` : na],
+          ]}
+          rerun={<code>npm run check:engine</code>} />
 
-        {/* Card 5: GPU 3D Terrain Shadows */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: 191 of 192 Rays (99.5%)</div>
-          <h3>5. Three.js GPU Shadows vs. Ray-Traced Physics</h3>
-          <p className="val-desc">
-            The 3D interactive terrain viewer casts real-time GPU directional shadows checked directly against the offline digital elevation ray tracer.
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Agreeing Test Rays</span>
-              <strong>191 of 192 (99.5%)</strong>
-            </div>
-            <div className="val-row">
-              <span>Discrepancy</span>
-              <span>1 grazing ray within sub-pixel DEM interpolation</span>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <span>3D View → "Check shadows against the pipeline"</span>
-          </div>
-        </div>
+        <Card n={5} title="3D shadows (GPU) vs the pipeline" badge="Last run: 191 of 192 agree"
+          desc="The 3D tab draws shadows on the graphics card. This compares its lit-or-not answer with the pipeline for test spots and hours."
+          rows={[
+            ['Agreeing values', '191 of 192 (last run, 14 Nov 2026)'],
+            ['The one miss', "Mons Mouton, with the Sun's upper edge 0.004° from the terrain"],
+          ]}
+          rerun={<span>Rerun live: 3D tab → "Check shadows against the pipeline"</span>} />
 
-        {/* Card 6: Mission Replays */}
-        <div className="val-card">
-          <div className="val-badge pass">PASS: Confirmed Ground Truth</div>
-          <h3>6. Historic Lunar South Pole Mission Replays</h3>
-          <p className="val-desc">
-            Evaluates ISRO Chandrayaan-3 and Intuitive Machines IM-1 Odysseus at their historical landing moments.
-          </p>
-          <div className="val-metrics-table">
-            <div className="val-row">
-              <span>Chandrayaan-3 (Aug 2023)</span>
-              <strong>Full Sunlit & Earth LoS verified at touchdown</strong>
-            </div>
-            <div className="val-row">
-              <span>IM-1 Odysseus (Feb 2024)</span>
-              <strong>Power and DTE contact verified until Feb 29 sunset</strong>
-            </div>
-          </div>
-          <div className="val-cmd">
-            <span>Site & Plan → Historic Mission Replays section</span>
-          </div>
-        </div>
+        <Card n={6} title="Mission replays: our model vs what was reported" badge="Comparison, not a pass mark"
+          desc="Real landers at their real landing dates. Agencies don't publish hour-by-hour sunlight, so this is a consistency check."
+          rows={replays.map((s) => {
+            const a = replayAtLanding(s)
+            return [s.name.replace('Replay: ', ''), <>
+              Our model at landing: Sun {a.sunUp ? 'up' : 'blocked'}, Earth {a.earthUp ? 'in view' : 'hidden'}; first sunset {fmtDate(a.sunset)}.
+              {' '}Reported: {s.replay!.outcome}{' '}
+              <a href={s.replay!.outcome_url} target="_blank" rel="noopener noreferrer">{s.replay!.outcome_source} ↗</a>
+            </>] as [string, ReactNode]
+          })}
+          rerun={<span>Site and plan → Mission replays</span>} />
       </div>
 
-      {/* Assumptions & Operational Boundaries */}
       <div className="val-assumptions">
-        <h3>Physical Assumptions & Operational Scope</h3>
+        <h3>Assumptions</h3>
         <div className="assumptions-grid">
           <div className="assump-box">
-            <strong>2.0 m Sensor/Panel Mast</strong>
-            <p>Calculations assume solar cells and high-gain antennas are mounted 2 metres above local ground level.</p>
+            <strong>2 m mast</strong>
+            <p>Solar panels and antenna are taken as 2 m above the ground.</p>
           </div>
           <div className="assump-box">
-            <strong>240 m/px LOLA DEM</strong>
-            <p>Digital elevation models from LRO LOLA (LDEM_60S_240M) provide topographic horizon ray-tracing with lunar curvature.</p>
+            <strong>240 m terrain</strong>
+            <p>NASA LOLA elevation (240 m south of 60° S; 1.9 km elsewhere), including the Moon's curvature. Smaller features aren't seen.</p>
           </div>
           <div className="assump-box">
-            <strong>Zero Atmosphere (0.00° Refraction)</strong>
-            <p>Because the Moon is an airless vacuum, optical rays follow straight Euclidean geodesics without atmospheric refraction.</p>
+            <strong>Hourly steps</strong>
+            <p>Visibility is computed once per hour; events can be off by up to an hour.</p>
           </div>
           <div className="assump-box">
-            <strong>0.53° Solar Disk Geometry</strong>
-            <p>Reports exact fractional disc illumination rather than a binary point-source approximation.</p>
+            <strong>No refraction</strong>
+            <p>The Moon has no atmosphere, so light travels in straight lines.</p>
+          </div>
+          <div className="assump-box">
+            <strong>Sun and Earth as discs</strong>
+            <p>We report the fraction of each disc above the terrain, not just a centre point.</p>
           </div>
         </div>
       </div>

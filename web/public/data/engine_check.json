@@ -1,0 +1,18 @@
+{
+ "run_utc": "2026-11-14T15:52Z",
+ "engine": {
+  "points": 8,
+  "direction_deg": 3.4882841084978446e-7,
+  "sunlit_pp": 0,
+  "earth_pp": 0,
+  "horizon_deg": 0.00004997389428673671,
+  "passed": true
+ },
+ "finder": {
+  "candidates": 12,
+  "worst_pp": 0.28000000000000114,
+  "limit_pp": 3,
+  "window_match": true,
+  "passed": true
+ }
+}

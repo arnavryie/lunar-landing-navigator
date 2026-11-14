@@ -38,6 +38,8 @@ def main():
     (OUT / "sites").mkdir(parents=True, exist_ok=True)
     index = []
     for s in sites:
+        if "replay" in s:  # real-date windows, written by export_replays.py (run it after this script)
+            continue
         mask = horizon_mask(s["lat"], s["lon"], obs_height_m=OBS_HEIGHT_M)
         tl = site_timeline(s["lat"], s["lon"], vecs, mask=mask)
         m = metrics(tl)

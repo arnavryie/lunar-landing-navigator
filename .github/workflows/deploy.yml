@@ -1,10 +1,8 @@
 name: Deploy Lunar Landing Navigator to GitHub Pages
 
+# Manual for now: the repository is private and GitHub Pages isn't enabled yet, so a run on every push would fail.
+# Once Pages is on (Settings > Pages > Source: GitHub Actions), add:  push: { branches: [lunar-mission-planner] }
 on:
-  push:
-    branches:
-      - lunar-mission-planner
-      - main
   workflow_dispatch:
 
 permissions:
@@ -26,29 +24,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24  # runs the .ts check script directly
 
       - name: Install dependencies
         working-directory: web
-        run: bun install
+        run: npm ci
 
       - name: Verify engine parity (Horizons & Finder accuracy)
         working-directory: web
-        run: bun run check:engine
+        run: npm run check:engine
 
       - name: Build static web distribution
         working-directory: web
         env:
           BASE_PATH: '/${{ github.event.repository.name }}/'
-        run: bun run build
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

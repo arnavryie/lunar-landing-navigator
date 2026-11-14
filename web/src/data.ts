@@ -275,7 +275,26 @@ export interface MissionReplayInfo {
   outcome: string
   outcome_source: string
   outcome_url: string
+  landing_note?: string
 }
+
+/** Our model at a replay's landing hour: Sun/Earth up, and when each next sets (null = not before the data ends). */
+export function replayAtLanding(site: Site) {
+  const i = Math.floor((Date.parse(site.replay!.landing_utc) - Date.parse(site.start_utc)) / 3600e3)
+  const set = (frac: number[]) => {
+    const h = hoursToChange(frac, i)
+    return frac[i] > 0 && h !== null ? timeAt(site, i + h) : null
+  }
+  return { i, sunUp: site.sun.frac[i] > 0, earthUp: site.earth.frac[i] > 0, sunset: set(site.sun.frac), earthset: set(site.earth.frac) }
+}
+
+/** Results of the last `npm run check:engine` (browser engine vs Python, finder coarse vs exact). */
+export interface EngineCheck {
+  run_utc: string
+  engine: { points: number; direction_deg: number; sunlit_pp: number; earth_pp: number; horizon_deg: number; passed: boolean }
+  finder: { candidates: number; worst_pp: number; limit_pp: number; window_match: boolean; passed: boolean }
+}
+export const loadEngineCheck = () => getJson<EngineCheck>('engine_check.json')
 
 export const inAnalysisYear = (s: Site) => s.start_utc.startsWith('2027-01-01') && s.samples === 8760
 

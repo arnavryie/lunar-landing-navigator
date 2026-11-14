@@ -411,3 +411,9 @@
   background: #1d4ed8;
 }
 
+
+.val-badge.fail {
+  background: rgba(220, 80, 60, 0.15);
+  color: #e0705c;
+  border: 1px solid rgba(220, 80, 60, 0.4);
+}

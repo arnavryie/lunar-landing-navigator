@@ -472,7 +472,7 @@ function SiteFacts({ site }: { site: Site }) {
   return (
     <div className="facts">
       <h2>
-        Over {new Date(site.start_utc).getUTCFullYear()}
+        {inAnalysisYear(site) ? `Over ${new Date(site.start_utc).getUTCFullYear()}` : `Over this ${Math.round(site.samples / 24)}-day replay`}
         <span className={`pill kind-${site.kind}`}>{KIND_LABEL[site.kind]}</span>
       </h2>
       <dl>

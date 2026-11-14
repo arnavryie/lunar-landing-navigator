@@ -1,7 +1,7 @@
 // Checks the in-browser engine (src/engine.ts) against the Python pipeline (public/data/map/check.json).
 // Run from web/:  node scripts/check-engine.ts
 // Pass marks from the plan: Sun/Earth direction within 0.001 deg, sunlit % within 0.5 percentage points.
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { horizonMask, siteTracks, trackMetrics, heightM, type Grid } from '../src/engine.ts'
 
 const dir = new URL('../public/data/map/', import.meta.url)
@@ -56,5 +56,13 @@ for (let j = 0; j < 12; j++) {
 }
 const finderPass = worstCoarse <= 3 && windowOk
 console.log(`finder: coarse vs exact worst ${worstCoarse.toFixed(2)} pp over a year (limit 3), windowed tracks ${windowOk ? 'match' : 'DIFFER'} -> ${finderPass ? 'PASS' : 'FAIL'}`)
+const enginePass = pass
 pass &&= finderPass
+
+// The in-app validation page reads these results, so it only shows numbers this script measured.
+writeFileSync(new URL('../public/data/engine_check.json', import.meta.url), JSON.stringify({
+  run_utc: new Date().toISOString().slice(0, 16) + 'Z',
+  engine: { points: checks.length, direction_deg: worstDir, sunlit_pp: worstSun, earth_pp: worstEarth, horizon_deg: worstHz, passed: enginePass },
+  finder: { candidates: 12, worst_pp: worstCoarse, limit_pp: 3, window_match: windowOk, passed: finderPass },
+}, null, 1) + '\n')
 process.exit(pass ? 0 : 1)

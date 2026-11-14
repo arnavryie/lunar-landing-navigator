@@ -3,10 +3,8 @@
 > **NASA Space Apps Challenge 2026** · Team Stranded · Dr. D.Y. Patil Institute of Technology, Pune  
 > Challenge: **Lunar Landing Site Navigator**
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Validation: JPL Horizons](https://img.shields.io/badge/JPL%20Horizons-0.00003%C2%B0%20Match-green.svg)
 ![Validation: NASA LOLA](https://img.shields.io/badge/LOLA%20Illumination-r%20%3D%200.99-green.svg)
-![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
 
 ---
 
@@ -18,26 +16,26 @@ The **Lunar South Pole Mission Planner** is a scientific web application that co
 |---|---|
 | **Site & Plan** | Top-down horizon dial showing real-time Sun and Earth clock hands with true angular disc sizes against 360° terrain obstacles, countdown timers to sunset and Earthset, landing slip budget planner, and lander battery survival calculator. |
 | **Find Sites** | Evaluates ~5,500 candidate polar spots across 85–90° S; filters by mission duration, max slope, and viability thresholds, re-ranking the top 5 with an exact browser engine. |
-| **Whole-Moon Globe** | Photorealistic 3D Moon rendered with real Sun vectors, lunar-Lambert photometric shading, NASA SVS CGI Moon Kit colour, LOLA topographic relief, and true libration angles. |
+| **Whole-Moon Globe** | The whole Moon lit from the real Sun direction for the selected hour (lunar-Lambert shading, NASA SVS CGI Moon Kit colour, LOLA relief), with Sun and Earth models that are not to scale. |
 | **South Pole Map** | Polar stereographic projection of 85–90° S with LOLA shaded relief, NASA cumulative illumination, permanent shadow regions (PSRs), and an instant click-anywhere custom point calculator powered by a Web Worker. |
 | **3D Terrain Shadows** | High-fidelity 1024×1024 LOLA terrain mesh with GPU-accelerated ray marching that computes true topographic shadows from lunar curvature and surface relief. |
 | **Compare Scenarios** | Side-by-side multi-site and multi-date trade-off matrix with synchronized mission timelines and CSV/JSON export. |
 | **Explainers & Contrast** | Interactive "Why?" cards illustrating lunar axial tilt, libration loops, and ridge blockages, accompanied by a Moon vs. Earth solar elevation contrast tool. |
-| **Mission Replays** | Historical telemetry validation reproducing the touchdown illumination and direct-to-Earth contact for Chandrayaan-3 (Statio Shiv Shakti) and IM-1 Odysseus (Malapert A). |
-| **Validation Proofs** | Dedicated audit page detailing exact differences against JPL Horizons and NASA Goddard illumination benchmarks. |
+| **Mission Replays** | Chandrayaan-3 (Statio Shiv Shakti) and IM-1 Odysseus (near Malapert A) at their real landing dates: our model's Sun and Earth visibility next to what ISRO and NASA reported. |
+| **Validation** | Every check with its result, pass mark and rerun command, read from the files the checks write. |
 
 ---
 
 ## 2. Live Deployment
 
-- **GitHub Pages:** [https://arnavryie.github.io/lunar-landing-navigator/](https://arnavryie.github.io/lunar-landing-navigator/)
+- **Not deployed yet.** The workflow `.github/workflows/deploy.yml` builds and publishes to GitHub Pages once Pages is enabled for this repository (Settings → Pages → Source: GitHub Actions); run it from the Actions tab.
 - Fully client-side, zero backend server required; all data precomputed and compressed into static JSON and binary assets (~21 MB total).
 
 ---
 
 ## 3. What Problem It Solves
 
-Missions targeting the lunar south pole face extreme operational constraints: because the Moon's axial tilt is only ~1.5°, the Sun skims the horizon at 1°–2° elevation, causing ridges just a few kilometres away to plunge landing sites into prolonged cryogenic darkness. While comprehensive data exists in specialized tools like NASA QuickMap, Moon Trek, and JPL Horizons, their specialized interfaces make rapid cross-site and multi-date evaluation difficult for mission architects, educators, and the public. When hardware anomalies or launch windows slip, planners need immediate answers to assess alternative dates at the current site or evaluate nearby candidate landing sites without days of manual trajectory recomputation.
+Missions targeting the lunar south pole face extreme operational constraints: because the Moon's axial tilt is only ~1.5°, the Sun stays within a few degrees of the horizon, causing ridges just a few kilometres away to plunge landing sites into prolonged cryogenic darkness. While comprehensive data exists in specialized tools like NASA QuickMap, Moon Trek, and JPL Horizons, their specialized interfaces make rapid cross-site and multi-date evaluation difficult for mission architects, educators, and the public. When hardware anomalies or launch windows slip, planners need immediate answers to assess alternative dates at the current site or evaluate nearby candidate landing sites quickly.
 
 ---
 
@@ -46,44 +44,44 @@ Missions targeting the lunar south pole face extreme operational constraints: be
 Our architecture splits rigorous astronomical processing between an offline Python pipeline and a high-performance in-browser TypeScript engine:
 
 1. **Planetary Ephemeris (`pipeline/ephemeris.py`):** Uses Skyfield and the JPL DE421 ephemeris in the Moon Moon-Fixed Mean Earth frame (`MOON_ME_DE421`) to compute sub-arcsecond Sun and Earth positions across the Moon's surface.
-2. **Terrain Horizons (`pipeline/horizon.py`):** Samples NASA LRO LOLA 240 m topography (`LDEM_60S_240M`) across 360° of azimuth with spherical lunar curvature corrections ($d / 2R_{\text{moon}}$).
+2. **Terrain Horizons (`pipeline/horizon.py`):** Samples NASA LRO LOLA 240 m topography (`LDEM_60S_240M`) across 360° of azimuth including the Moon's curvature (distant terrain sits lower by about $d^2 / 2R_{\text{moon}}$).
 3. **Illumination & Occultation Timelines (`pipeline/timeline.py`):** Evaluates geometric disc intersections to determine partial and total visibility of the solar disc and terrestrial communications link for all 8,760 hours of the year.
-4. **Browser Engine (`web/src/engine.ts` & `engine.worker.ts`):** Re-implements identical celestial trigonometry and horizon ray-tracing inside a Web Worker. Clicking any point on the polar map computes full annual horizons and illumination metrics in ~0.8 seconds without server requests.
+4. **Browser Engine (`web/src/engine.ts` & `engine.worker.ts`):** Re-implements identical celestial trigonometry and horizon ray-tracing inside a Web Worker. Clicking any point on the polar map computes its horizon and a full year of visibility in the browser, with no server.
 
 ---
 
 ## 5. Accuracy & Scientific Validation
 
-Every metric displayed in the application is audited against official NASA benchmarks:
+The checks we run (the in-app Validation page shows the latest results):
 
-- **JPL Horizons Ephemeris Comparison:** Worst-case Sun/Earth directional error is **0.000033° (0.12 arcseconds)** across 70,080 test samples (pass mark: 0.001°).
-- **NASA LOLA Polar Illumination Benchmark:** Compared against NASA Goddard PGDA Product 69 (Mazarico et al., 2011) over an 18.6-year nodal precession cycle:
+- **JPL Horizons Ephemeris Comparison:** Worst-case Sun/Earth directional error is **0.000033° (0.12 arcseconds)** across 4,326 directions at 3 sites in January 2027 (pass mark: 0.01°).
+- **NASA LOLA Polar Illumination Benchmark:** Compared against NASA Goddard PGDA Product 69 (Mazarico et al., 2011) at 80 points over an 18.6-year cycle:
   - Solar illumination correlation: **r = 0.991** (median difference 0.31 percentage points).
   - Earth visibility correlation: **r = 0.995** (median difference 0.17 percentage points).
-- **Browser vs. Python Engine Parity:** Directional difference is **3.49 × 10⁻⁷°**; annual sunlit and Earth-visible percentages match within **0.00 percentage points**.
-- **GPU 3D Shadows vs. Pipeline:** 191 of 192 test moments agree on Sun/Earth illumination state.
-- **Finder Quick Estimates vs. Exact Physics:** Worst difference across 5,487 polar candidate spots is **0.28 percentage points** over a full year (limit: 3.0 pp).
+- **Browser vs. Python Engine Parity:** Directional difference is **3.49 × 10⁻⁷°**; yearly sunlit and Earth-in-view percentages differ by **0.00 percentage points** at 8 test points.
+- **GPU 3D Shadows vs. Pipeline:** 191 of 192 Sun/Earth visible-or-not values agree (the miss: Mons Mouton, Sun's upper edge 0.004° from the terrain).
+- **Finder Quick Estimates vs. Exact Physics:** Worst difference over a full year at 12 of the 5,487 candidate spots is **0.28 percentage points** (limit: 3).
 
 ---
 
 ## 6. Run It Yourself
 
 ### Prerequisites
-- Node.js 20+ or [Bun](https://bun.sh)
+- Node.js 24+ (the check script runs `.ts` directly)
 - Modern browser with WebGL 2 support (Chrome, Edge, Firefox, Safari)
 
 ### Web Application (Quick Start)
 ```bash
 git clone https://github.com/arnavryie/lunar-landing-navigator.git
 cd lunar-landing-navigator/web
-bun install          # or npm install
-bun run dev          # opens development server on http://localhost:5173
+npm install
+npm run dev          # opens development server on http://localhost:5173
 ```
 
 ### Automated Parity Checks
-Run the automated engine and finder verification test suite:
+Run the engine and finder checks (they also write `public/data/engine_check.json` for the Validation page):
 ```bash
-bun scripts/check-engine.ts
+npm run check:engine
 # Expect:
 # worst direction 3.49e-7 deg, sunlit 0.00 pp, earth 0.00 pp, horizon 0.000 deg -> PASS
 # finder: coarse vs exact worst 0.28 pp over a year (limit 3), windowed tracks match -> PASS
@@ -91,7 +89,7 @@ bun scripts/check-engine.ts
 
 ### Production Build
 ```bash
-bun run build
+npm run build
 # Compiles clean static distribution in web/dist/
 ```
 
@@ -103,6 +101,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python ephemeris.py   # verifies ephemeris calculations
+python export_sites.py    # 2027 site data (needs the LOLA files in pipeline/data/lola/)
+python export_replays.py  # mission replays; run after export_sites.py
 ```
 
 ---
@@ -115,15 +115,15 @@ python ephemeris.py   # verifies ephemeris calculations
 4. **NASA Goddard PGDA Product 69:** Lunar Polar Illumination and Earth Visibility (Mazarico et al., 2011) ([NASA PGDA](https://pgda.gsfc.nasa.gov/products/69)).
 5. **NASA SVS CGI Moon Kit:** Lunar Reconnaissance Orbiter Camera (LROC) Wide Angle Camera colour basemap ([NASA SVS 4720](https://svs.gsfc.nasa.gov/4720/)).
 6. **IAU & LROC Gazetteers:** Official nomenclature and verified landing site coordinates ([USGS / IAU](https://planetarynames.wr.usgs.gov/)).
-7. **ISRO Chandrayaan-3 Telemetry:** Vikram lander landing coordinates and operational timeline ([ISRO](https://www.isro.gov.in/Chandrayaan3_Details.html)).
-8. **Intuitive Machines IM-1 Odysseus:** Malapert A landing coordinates and operational logs ([Intuitive Machines](https://www.intuitivemachines.com/im-1)).
+7. **ISRO Chandrayaan-3 mission updates:** landing date and operations timeline ([ISRO](https://www.isro.gov.in/Chandrayaan3.html)); landing coordinates from [LROC](https://www.lroc.asu.edu/images/1314).
+8. **NASA, IM-1 Odysseus:** landing time and coordinates ([NASA LRO](https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/)) and early operations ([NASA release, 23 Feb 2024](https://www.nasa.gov/news-release/nasa-tech-contributes-to-soft-moon-landing-agency-science-underway/)).
 
 ---
 
 ## 8. Operational Assumptions & Limitations
 
 - **Analysis Period:** Primary forward analysis covers the full calendar year 2027 (8,760 hourly samples). Historical mission replays cover their respective operational epochs.
-- **Topographic Resolution:** 240 m per pixel polar DEM (1.9 km for equatorial sites). Metric-scale boulders and micro-craters are smoothed out, which may slightly overestimate illumination on knife-edge crater rims.
+- **Topographic Resolution:** 240 m per pixel polar DEM (1.9 km for equatorial sites). Boulders and features smaller than a pixel aren't seen, so results on sharp crater rims can be off.
 - **Mast Height:** Fixed at 2.0 metres above local terrain for solar arrays and communications antennas.
 - **Disc Calculation:** Solar and terrestrial discs are treated with spherical geometry against terrain silhouettes; any non-zero fraction of the disc above the horizon is registered as illuminated/visible.
 - **Atmosphere:** Airless celestial bodies (no atmospheric refraction or twilight).

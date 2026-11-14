@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatDeg, type Site } from '../data'
+import { formatDeg, timeAt, type Site } from '../data'
 import { CITIES, maxSolarElevationToday } from './solar'
 import '../styles/explain.css'
 
@@ -7,7 +7,7 @@ export function Contrast({ site, i }: { site: Site; i: number }) {
   const [cityId, setCityId] = useState('pune')
   const selectedCity = CITIES.find((c) => c.id === cityId) ?? CITIES[0]
 
-  // Calculate highest sun at this lunar site over the next month (709 hours)
+  // Highest Sun at this site over the next lunar day-night cycle (~709 h), or until the data ends
   const sunElNow = site.sun.el[i] ?? 0
   let maxLunarMonth = sunElNow
   const endHour = Math.min(site.samples, i + 709)
@@ -16,13 +16,15 @@ export function Contrast({ site, i }: { site: Site; i: number }) {
     if (el > maxLunarMonth) maxLunarMonth = el
   }
 
-  // Earth city max noon solar elevation today
-  const earthSunElev = maxSolarElevationToday(selectedCity.lat)
+  // The city's noon Sun on the same date as the selected hour, so both sides compare the same day
+  const date = timeAt(site, i)
+  const earthSunElev = maxSolarElevationToday(selectedCity.lat, date)
+  const days = Math.round((endHour - i) / 24)
 
   return (
     <div className="contrast-card">
       <div className="contrast-header">
-        <h4>Moon vs. Earth Solar Contrast</h4>
+        <h4>Moon vs Earth: how high the Sun gets</h4>
         <div className="city-picker-wrap">
           <label htmlFor="city-select" className="city-label">Compare with:</label>
           <select
@@ -42,9 +44,9 @@ export function Contrast({ site, i }: { site: Site; i: number }) {
 
       <div className="contrast-stat-grid">
         <div className="contrast-stat lunar">
-          <span className="contrast-label">Highest Sun here this month</span>
+          <span className="contrast-label">Highest Sun here, next {days} days</span>
           <span className="contrast-value">{formatDeg(maxLunarMonth)}</span>
-          <span className="contrast-hint">{site.name} (grazing horizon)</span>
+          <span className="contrast-hint">{site.name}</span>
         </div>
 
         <div className="contrast-vs">vs</div>
@@ -52,22 +54,22 @@ export function Contrast({ site, i }: { site: Site; i: number }) {
         <div className="contrast-stat earth">
           <span className="contrast-label">Solar noon in {selectedCity.name}</span>
           <span className="contrast-value">+{earthSunElev.toFixed(1)}°</span>
-          <span className="contrast-hint">Earth sky (overhead sun)</span>
+          <span className="contrast-hint">Noon on {date.toUTCString().slice(5, 16)}</span>
         </div>
       </div>
 
       <div className="contrast-facts">
         <div className="fact-item">
-          <strong>29.5 Earth Days</strong>
-          <span>A single day-night cycle on the Moon lasts nearly an entire Earth month.</span>
+          <strong>29.5 Earth days</strong>
+          <span>One day-night cycle on the Moon lasts about an Earth month.</span>
         </div>
         <div className="fact-item">
-          <strong>Days of Darkness</strong>
-          <span>Polar nights last days or weeks at a time, requiring massive battery reserves or RTGs.</span>
+          <strong>Days of darkness</strong>
+          <span>Near the pole, darkness can last days or weeks, so batteries must be sized for it.</span>
         </div>
         <div className="fact-item">
-          <strong>Zero Twilight</strong>
-          <span>No air means zero light diffusion. Shadow boundaries are razor-sharp freeze zones.</span>
+          <strong>No twilight</strong>
+          <span>With no air to scatter light, shadows have sharp edges and there is no dusk.</span>
         </div>
       </div>
     </div>

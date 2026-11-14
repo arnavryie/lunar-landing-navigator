@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
-import { dailyHours, formatDeg, formatDuration, horizonAt, hoursToChange, type Site } from '../data'
+import { dailyHours, formatDeg, formatDuration, horizonAt, hoursToChange, inAnalysisYear, timeAt, type Site } from '../data'
+
+const day = (d: Date) => d.toUTCString().slice(5, 11)
 
 export type Topic = 'sun-skims' | 'ridge-blocks' | 'earth-wobbles' | 'five-km' | 'dates-matter'
 
@@ -50,7 +52,7 @@ export function getCardContent(topic: Topic, site: Site, i: number): CardContent
       const sunAz = site.sun.az[i] ?? 0
       const sunEl = site.sun.el[i] ?? 0
       const horizonEl = horizonAt(site, sunAz)
-      const isBlocked = sunEl < horizonEl
+      const isBlocked = (site.sun.frac[i] ?? 0) === 0 // same disc rule as the rest of the app
 
       return {
         title: 'Why does a distant ridge cause darkness?',
@@ -104,11 +106,12 @@ export function getCardContent(topic: Topic, site: Site, i: number): CardContent
 
     case 'five-km': {
       const sunPct = site.metrics.sunlit_pct
+      const span = inAnalysisYear(site) ? 'over 2027' : `over this ${Math.round(site.samples / 24)}-day replay`
 
       return {
         title: 'Why does a 5 km difference make or break a landing?',
         explanation:
-          'Because the Sun is so low, mountains act like giant sundials casting shadows tens of kilometres long. Walking just 5 kilometres from a high crater rim down into a basin can turn 80% annual sunlight into 0% pitch-black cryogenic freeze.',
+          'Because the Sun is so low, mountains act like giant sundials casting shadows tens of kilometres long. Walking just 5 kilometres from a high crater rim down into a basin can take a spot from most of the year in sunlight to almost none. (The 80% and 0% in the drawing are illustrative.)',
         diagram: (
           <svg viewBox="0 0 160 80" className="explain-diagram" aria-hidden="true">
             {/* High rim to deep crater */}
@@ -119,19 +122,27 @@ export function getCardContent(topic: Topic, site: Site, i: number): CardContent
             <text x="115" y="61" textAnchor="middle" fontSize="7" fill="var(--c-muted)">5 km away: 0% Sun</text>
           </svg>
         ),
-        liveLabel: 'Annual sunlight fraction here:',
-        liveValue: `${site.name}: ${sunPct.toFixed(1)}% annual sunlight at 2m height`,
+        liveLabel: 'Sunlight here:',
+        liveValue: `${site.name}: sunlit ${sunPct.toFixed(1)}% of the time ${span}, for a 2 m mast`,
       }
     }
 
     case 'dates-matter': {
       const sunHours = dailyHours(site, 'sun')
       const maxH = Math.max(...sunHours, 24)
+      // Best and worst 30-day stretch for sunlight, computed from this site's data (the polar seasons drift through the calendar)
+      const run = (d: number) => sunHours.slice(d, d + 30).reduce((a, b) => a + b, 0)
+      let best = 0, worst = 0
+      for (let d = 0; d + 30 <= sunHours.length; d++) {
+        if (run(d) > run(best)) best = d
+        if (run(d) < run(worst)) worst = d
+      }
+      const first = timeAt(site, 0), last = timeAt(site, site.samples - 1), mid = timeAt(site, Math.floor(site.samples / 2))
 
       return {
         title: 'Why do landing dates matter so much?',
         explanation:
-          "A single lunar day lasts about 29.5 Earth days. As the Moon orbits the Sun over the course of the year, the polar tilt tilts slightly toward or away from the Sun. A landing site bathed in sunlight in January can be plunged into total darkness by July.",
+          "One lunar day lasts about 29.5 Earth days, so a site has a sunlit half-month and a dark one. On top of that, the Moon's small 1.5° tilt makes the south pole lean toward the Sun for part of the year and away for the rest, so the same site can be well lit in one season and mostly dark in another.",
         diagram: (
           <svg viewBox="0 0 160 60" className="explain-diagram" aria-hidden="true">
             {/* Sparkline of daily sun hours */}
@@ -148,13 +159,15 @@ export function getCardContent(topic: Topic, site: Site, i: number): CardContent
               strokeWidth="1.5"
             />
             <line x1="10" y1="52" x2="150" y2="52" stroke="var(--c-border)" strokeWidth="1" />
-            <text x="15" y="58" fontSize="7" fill="var(--c-muted)">Jan</text>
-            <text x="80" y="58" textAnchor="middle" fontSize="7" fill="var(--c-muted)">Jul</text>
-            <text x="145" y="58" textAnchor="end" fontSize="7" fill="var(--c-muted)">Dec</text>
+            <text x="15" y="58" fontSize="7" fill="var(--c-muted)">{day(first)}</text>
+            <text x="80" y="58" textAnchor="middle" fontSize="7" fill="var(--c-muted)">{day(mid)}</text>
+            <text x="145" y="58" textAnchor="end" fontSize="7" fill="var(--c-muted)">{day(last)}</text>
           </svg>
         ),
-        liveLabel: 'Yearly illumination variation:',
-        liveValue: `365-day seasonal light curve: peaks during south-polar summer (Dec–Feb)`,
+        liveLabel: 'Hours of sunlight per day, this site:',
+        liveValue: sunHours.length >= 30
+          ? `Best 30 days from ${day(timeAt(site, best * 24))} (${(run(best) / 30).toFixed(1)} h/day); worst from ${day(timeAt(site, worst * 24))} (${(run(worst) / 30).toFixed(1)} h/day)`
+          : `${sunHours.reduce((a, b) => a + b, 0)} sunlit hours in ${sunHours.length} days`,
       }
     }
   }
