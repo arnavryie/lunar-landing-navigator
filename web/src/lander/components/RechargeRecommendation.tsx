@@ -137,7 +137,7 @@ export function RechargeRecommendation({
           <span className="rec-hero-sub">
             {!sim.isDestinationReached
               ? 'Stranded mid-route'
-              : `${sim.arrivalBatteryKwh.toFixed(2)} kWh (${sim.arrivalReserveMarginPct >= 0 ? '+' : ''}{sim.arrivalReserveMarginPct.toFixed(1)}% vs res)`}
+              : `${sim.arrivalBatteryKwh.toFixed(2)} kWh (${sim.arrivalReserveMarginPct >= 0 ? '+' : ''}${sim.arrivalReserveMarginPct.toFixed(1)}% vs res)`}
           </span>
         </div>
 
