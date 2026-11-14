@@ -156,6 +156,8 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
   const [err, setErr] = useState('')
   const [exag, setExag] = useState(1)
   const [check, setCheck] = useState('')
+  const currentExagRef = useRef(1)
+  const animFrameRef = useRef<number | null>(null)
 
   // Build the scene once.
   useEffect(() => {
@@ -231,6 +233,10 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         resize()
         setReady(true)
         cleanup = () => {
+          if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current)
+            animFrameRef.current = null
+          }
           ro.disconnect()
           controls.dispose()
           renderer.dispose()
@@ -247,24 +253,12 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
     }
   }, [])
 
-  // Recompute visibility when the time changes; redraw pin and rays.
-  useEffect(() => {
-    const w = world.current
-    if (!w || !ready) return
-    const v = w.vectors
-    const o = 6 * Math.min(i, v.length / 6 - 1)
-    const u = w.visMat.uniforms
-    u.uSun.value.set(v[o], v[o + 1], v[o + 2])
-    u.uEarth.value.set(v[o + 3], v[o + 4], v[o + 5])
-    u.uPointMode.value = 0
-    w.terrainMat.uniforms.uExag.value = exag
-    w.renderer.setRenderTarget(w.visRT)
-    w.renderer.render(w.visScene, w.visCam)
-    w.renderer.setRenderTarget(null)
-
+  // Draw marker pin and sight rays at the specified vertical exaggeration, then render the 3D scene.
+  const drawMarksAndRender = (w: World, curExag: number) => {
+    w.terrainMat.uniforms.uExag.value = curExag
     w.marks.clear()
     if (site && site.lat <= -80.5) {
-      const pos = scenePos(w, site.lat, site.lon, exag)
+      const pos = scenePos(w, site.lat, site.lon, curExag)
       const pin = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshBasicMaterial({ color: '#d9d6cf' }))
       pin.position.copy(pos)
       w.marks.add(pin)
@@ -281,7 +275,75 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       }
     }
     w.renderer.render(w.scene, w.camera)
-  }, [i, site, exag, ready])
+  }
+
+  // Recompute visibility map on GPU when the hour/ephemeris time changes.
+  // Note: visRT ray-marching depends ONLY on sun/earth ephemeris directions and true DEM elevations.
+  // It does NOT re-run during visual vertical exaggeration changes, preventing massive GPU frame drops.
+  useEffect(() => {
+    const w = world.current
+    if (!w || !ready) return
+    const v = w.vectors
+    const o = 6 * Math.min(i, v.length / 6 - 1)
+    const u = w.visMat.uniforms
+    u.uSun.value.set(v[o], v[o + 1], v[o + 2])
+    u.uEarth.value.set(v[o + 3], v[o + 4], v[o + 5])
+    u.uPointMode.value = 0
+    w.renderer.setRenderTarget(w.visRT)
+    w.renderer.render(w.visScene, w.visCam)
+    w.renderer.setRenderTarget(null)
+
+    drawMarksAndRender(w, currentExagRef.current)
+  }, [i, site, ready])
+
+  // Smoothly animate vertical exaggeration transitions using a frame-rate-independent cubic ease-out.
+  useEffect(() => {
+    const w = world.current
+    if (!w || !ready) return
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+
+    const from = currentExagRef.current
+    const to = exag
+
+    if (Math.abs(from - to) < 0.005) {
+      currentExagRef.current = to
+      drawMarksAndRender(w, to)
+      return
+    }
+
+    const start = performance.now()
+    const duration = Math.min(360, Math.max(120, Math.abs(to - from) * 90))
+
+    const step = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(1, elapsed / duration)
+      // Smooth cubic ease-out: 1 - (1 - progress)^3
+      const ease = 1 - Math.pow(1 - progress, 3)
+      const val = from + (to - from) * ease
+      currentExagRef.current = val
+      drawMarksAndRender(w, val)
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(step)
+      } else {
+        currentExagRef.current = to
+        drawMarksAndRender(w, to)
+        animFrameRef.current = null
+      }
+    }
+
+    animFrameRef.current = requestAnimationFrame(step)
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+    }
+  }, [exag, ready, site, i])
 
   const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
     const w = world.current
@@ -296,11 +358,11 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       camera.up.set(0, 0, -1)
       controls.target.set(0, 0, 0)
     } else if (k === 'shackleton') {
-      const p = scenePos(w, -89.67, 129.78, exag)
+      const p = scenePos(w, -89.67, 129.78, currentExagRef.current)
       camera.position.set(p.x - 30, p.y + 22, p.z - 26)
       controls.target.copy(p)
     } else if (site && site.lat <= -80.5) {
-      const p = scenePos(w, site.lat, site.lon, exag).add(new THREE.Vector3(0, 0.05, 0))
+      const p = scenePos(w, site.lat, site.lon, currentExagRef.current).add(new THREE.Vector3(0, 0.05, 0))
       camera.position.copy(p)
       controls.target.copy(p.clone().addScaledVector(directionFrom(w, i, k, site.lat, site.lon), 30))
     }
@@ -348,7 +410,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       <div className="three-wrap" ref={host}>
         {!ready && !err && <p className="loading three-msg">Loading terrain (about 13 MB, once)</p>}
         {err && <p className="error three-msg">3D view couldn't start: {err}</p>}
-        <span className="three-label">{exag > 1 ? `Heights exaggerated ${exag}×, not to scale` : 'True vertical scale'}</span>
+        <span className="three-label">{exag > 1 ? `Heights exaggerated ${exag.toFixed(1).replace(/\.0$/, '')}×, not to scale` : 'True vertical scale'}</span>
       </div>
       <aside className="map-side">
         <div className="legend three-legend">
@@ -365,9 +427,21 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         </p>
         <label className="field exag">
           <span>Vertical exaggeration</span>
-          <input type="range" min={1} max={5} step={0.5} value={exag} aria-label="Vertical exaggeration" onChange={(e) => setExag(Number(e.target.value))} />
-          <span className="unit">{exag}×</span>
+          <input type="range" min={1} max={5} step={0.1} value={exag} aria-label="Vertical exaggeration" onChange={(e) => setExag(Number(e.target.value))} />
+          <span className="unit">{exag.toFixed(1).replace(/\.0$/, '')}×</span>
         </label>
+        <div className="seg" style={{ marginTop: '6px', marginBottom: '14px' }}>
+          {[1, 1.5, 2, 3, 5].map((val) => (
+            <button
+              key={val}
+              type="button"
+              aria-pressed={exag === val}
+              onClick={() => setExag(val)}
+            >
+              {val === 1 ? '1× (True)' : `${val}×`}
+            </button>
+          ))}
+        </div>
         <fieldset className="thresholds">
           <legend>Camera</legend>
           <div className="slips">
