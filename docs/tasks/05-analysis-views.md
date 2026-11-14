@@ -17,7 +17,7 @@ You own `Compare.tsx`, `HorizonDial.tsx` and your new files, so you can work in 
 
 ### 5.1 Science vs engineering in Compare (M)
 - In `web/src/Compare.tsx`, add a second table (or a toggle) that puts, per scenario:
-  - **Engineering:** sunlit %, longest darkness, Earth in view %, slope. These already exist in Compare or `data.ts` (`windowStats`).
+  - **Engineering:** sunlit %, longest darkness, Earth in view %. These already exist in Compare or `data.ts` (`windowStats`).
   - **Science:** distance to the nearest permanently shadowed region (PSR), where water ice may be trapped, and whether the site itself is in a PSR. Use the NASA PSR layer already in the app, `web/public/data/map/psr.png` (85–90° S, 240 m, value 100 = shadowed, 255 = no data; grid layout in `web/public/data/map/meta.json` → `layers`). For sites outside 85–90° S show "no data", not zero.
 - Make the trade-off visible: e.g. a small scatter of "power (sunlit %)" vs "distance to ice (km)" with one dot per scenario. Use the colour language; label axes in words.
 - **Shared helper:** #4 may need the same "distance to PSR" for their water-ice option. Write it once, append-only at the end of `web/src/data.ts` under `// --- WS5: science helpers ---`, e.g. `export async function distanceToPsrKm(lat: number, lon: number): Promise<number | null>`. Tell #4 when it's merged.

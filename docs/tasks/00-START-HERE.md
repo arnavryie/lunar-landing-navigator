@@ -102,7 +102,7 @@ pip install -r requirements.txt
 | `web/src/index.css` | #1 (layout fixes only) | **Don't add to it.** Put your CSS in your own file `web/src/styles/<your-ws>.css` and import it from your component |
 | `web/src/engine.ts`, `engine.worker.ts`, `customPoint.ts`, `Terrain3D.tsx` | frozen (#1 may fix bugs) | Read-only. Call `computeCustomPoint(lat, lon, false)` to get exact numbers for any 80–90° S point without changing the selected site |
 | `web/src/explain/` (new) | #2 | Don't touch |
-| `pipeline/sites.json`, `pipeline/export_sites.py`, new `pipeline/export_replays.py`, `pipeline/validate_*.py`, `web/src/Sources.tsx`, new `web/src/Replays.tsx`, new `web/src/Validation.tsx` | #3 | Need a new source credited? Append one line to the `SOURCES` array in `Sources.tsx` (on conflict keep both lines) |
+| `pipeline/sites.json`, `pipeline/export_sites.py`, new `pipeline/export_replays.py`, `pipeline/validate_*.py`, `web/src/Sources.tsx`, new `web/src/Replays.tsx`, new `web/src/Validation.tsx`, `YearStrip.tsx`, `Seasons.tsx`, `Timeline.tsx`, `Survival.tsx` | #3 | Need a new source credited? Append one line to the `SOURCES` array in `Sources.tsx` (on conflict keep both lines) |
 | `web/src/Finder.tsx`, `MapView.tsx`, `Globe.tsx`, `Planner.tsx`, `pipeline/export_candidates.py`, new Artemis III data files | #4 | Don't touch; ask #4 |
 | `web/src/Compare.tsx`, `HorizonDial.tsx`, new `Report.tsx`, `Ellipse.tsx`, `mode.ts`, new `pipeline/export_ellipse.py` | #5 | Don't touch; ask #5 |
 | `docs/pitch/` (new), section 13 of `PROJECT_PLAN.md` | #6 | Send decisions to #6 |
