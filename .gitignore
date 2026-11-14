@@ -6,3 +6,4 @@ node_modules/
 web/dist/
 .cache/
 apps/
+.vercel

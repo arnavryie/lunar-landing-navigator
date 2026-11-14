@@ -28,7 +28,8 @@ The **Lunar South Pole Mission Planner** is a scientific web application that co
 
 ## 2. Live Deployment
 
-- **Not deployed yet.** The workflow `.github/workflows/deploy.yml` builds and publishes to GitHub Pages once Pages is enabled for this repository (Settings → Pages → Source: GitHub Actions); run it from the Actions tab.
+- **Live:** [https://lunar-mission-planner-three.vercel.app](https://lunar-mission-planner-three.vercel.app) (Vercel, built from `web/`; every push to `lunar-mission-planner` on the deploying repository redeploys it).
+- The GitHub Pages workflow `.github/workflows/deploy.yml` is an alternative host; it runs only when started from the Actions tab and needs Pages enabled.
 - Fully client-side, zero backend server required; all data precomputed and compressed into static JSON and binary assets (~21 MB total).
 
 ---
