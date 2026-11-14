@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data'
+import type { EllipseOverlay } from './Ellipse'
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -12,6 +13,7 @@ const R_KM = 1737.4
 const VIS_RES = 1024
 const base = `${import.meta.env.BASE_URL}data/map/`
 const COLORS = { sun: '#c98419', earth: '#5590d8', both: '#1fa38a', none: '#30363e' }
+const ELLIPSE_DOT = { viable: '#e4e1da', marginal: '#8d9297', not: '#e0705c', nodata: '#30363e' } // as on the Map
 
 // Shared GLSL: heightmap lookup and the ray march (same geometry as horizon.py, coarser steps far out).
 const MARCH = /* glsl */ `
@@ -149,7 +151,7 @@ function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, 
   return meToScene([w.vectors[o] - P[0], w.vectors[o + 1] - P[1], w.vectors[o + 2] - P[2]])
 }
 
-export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSummary[]; i: number }) {
+export function Terrain3D({ site, sites, i, ellipse }: { site: Site | null; sites: SiteSummary[]; i: number; ellipse?: EllipseOverlay | null }) {
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
   const [ready, setReady] = useState(false)
@@ -265,7 +267,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
     w.marks.clear()
     if (site && site.lat <= -80.5) {
       const pos = scenePos(w, site.lat, site.lon, exag)
-      const pin = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshBasicMaterial({ color: '#d9d6cf' }))
+      const pin = new THREE.Mesh(new THREE.SphereGeometry(ellipse ? 0.03 * ellipse.focus.km : 0.8), new THREE.MeshBasicMaterial({ color: '#d9d6cf' }))
       pin.position.copy(pos)
       w.marks.add(pin)
       for (const b of ['sun', 'earth'] as const) {
@@ -280,10 +282,27 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         w.marks.add(line)
       }
     }
+    // Landing ellipse from the Map tab: drawn on top of the terrain (no depth test) so ridges can't hide it.
+    if (ellipse) {
+      const onTop = <M extends THREE.Material>(m: M) => Object.assign(m, { depthTest: false, transparent: true })
+      const ring = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(ellipse.outline.map((q) => scenePos(w, q.lat, q.lon, exag))),
+        onTop(new THREE.LineBasicMaterial({ color: '#e4e1da' })),
+      )
+      ring.renderOrder = 10
+      w.marks.add(ring)
+      const ball = new THREE.SphereGeometry(Math.max(0.02, 0.015 * ellipse.focus.km))
+      for (const d of ellipse.dots) {
+        const m = new THREE.Mesh(ball, onTop(new THREE.MeshBasicMaterial({ color: ELLIPSE_DOT[d.v] })))
+        m.position.copy(scenePos(w, d.lat, d.lon, exag))
+        m.renderOrder = 11
+        w.marks.add(m)
+      }
+    }
     w.renderer.render(w.scene, w.camera)
-  }, [i, site, exag, ready])
+  }, [i, site, exag, ready, ellipse])
 
-  const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
+  const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton' | 'ellipse') => {
     const w = world.current
     if (!w) return
     const { camera, controls } = w
@@ -299,6 +318,12 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       const p = scenePos(w, -89.67, 129.78, exag)
       camera.position.set(p.x - 30, p.y + 22, p.z - 26)
       controls.target.copy(p)
+    } else if (k === 'ellipse') {
+      if (!ellipse) return
+      const p = scenePos(w, ellipse.focus.lat, ellipse.focus.lon, exag)
+      const km = ellipse.focus.km
+      camera.position.set(p.x + 1.1 * km, p.y + 0.9 * km, p.z + 1.1 * km)
+      controls.target.copy(p)
     } else if (site && site.lat <= -80.5) {
       const p = scenePos(w, site.lat, site.lon, exag).add(new THREE.Vector3(0, 0.05, 0))
       camera.position.copy(p)
@@ -307,6 +332,12 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
     controls.update()
     w.renderer.render(w.scene, w.camera)
   }
+
+  // Fly to a new landing ellipse once, when it first appears here.
+  const ellipseAt = ellipse ? `${ellipse.focus.lat},${ellipse.focus.lon},${ellipse.focus.km}` : ''
+  useEffect(() => {
+    if (ready && ellipseAt) preset('ellipse')
+  }, [ready, ellipseAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Self-check: shader visibility at curated sites vs the pipeline's hourly values.
   const runCheck = async () => {
@@ -374,6 +405,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
             <button onClick={() => preset('overview')}>Overview</button>
             <button onClick={() => preset('overhead')}>Overhead</button>
             <button onClick={() => preset('shackleton')}>Over Shackleton</button>
+            <button disabled={!ellipse} onClick={() => preset('ellipse')}>Over the landing ellipse</button>
             <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>From the site, look at the Sun</button>
             <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>Look at Earth</button>
           </div>
@@ -383,6 +415,12 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
           {site && site.lat <= -80.5 ? (
             <p>
               <strong>{site.name}</strong>: lines to the Sun and Earth; solid when visible, red dashed when blocked by terrain.
+              {ellipse && (
+                <>
+                  {' '}
+                  Landing ellipse from the Map: {ellipse.dots.length ? 'light = viable, grey = marginal, red = not viable for the mission' : 'outline only; press "Analyse ellipse" on the Map to colour its points'}.
+                </>
+              )}
             </p>
           ) : (
             <p className="muted">The selected site is outside 80–90° S, so it isn't shown here. Pick a polar site or click the Map.</p>

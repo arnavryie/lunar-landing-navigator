@@ -33,11 +33,19 @@ interface Props {
 
 const DEFAULT: EllipseSpec = { lengthKm: 4, widthKm: 2, headingDeg: 0 } // example only, not a specific lander
 
+type Run = { key: string; points: (Sample | null)[]; total: number; spacingM: number }
+// Inputs and results outlive the panel, so switching to the 3D tab and back keeps them.
+const saved: { spec: EllipseSpec; circle: boolean; maxSlope: number; run: Run | null } = { spec: DEFAULT, circle: false, maxSlope: 8, run: null }
+
 export function Ellipse({ site, th, i, onOverlay }: Props) {
-  const [spec, setSpec] = useState(DEFAULT)
-  const [circle, setCircle] = useState(false)
-  const [maxSlope, setMaxSlope] = useState(8) // same default as Find sites
-  const [run, setRun] = useState<{ key: string; points: (Sample | null)[]; total: number; spacingM: number } | null>(null)
+  const [spec, setSpec] = useState(saved.spec)
+  const [circle, setCircle] = useState(saved.circle)
+  const [maxSlope, setMaxSlope] = useState(saved.maxSlope) // 8 deg = same default as Find sites
+  const [run, setRunState] = useState(saved.run)
+  const setRun = (r: Run) => setRunState((saved.run = r))
+  useEffect(() => {
+    Object.assign(saved, { spec, circle, maxSlope })
+  }, [spec, circle, maxSlope])
   const runId = useRef(0)
 
   const e: EllipseSpec = circle ? { lengthKm: spec.lengthKm, widthKm: spec.lengthKm, headingDeg: 0 } : spec
@@ -92,7 +100,6 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
       focus: { ...centre, km: Math.max(longKm, 1) },
     })
   }, [key, judged, usable]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => onOverlay(null), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!usable)
     return (

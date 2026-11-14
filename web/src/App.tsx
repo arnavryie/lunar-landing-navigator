@@ -64,6 +64,8 @@ export default function App() {
     if (view !== 'find') setFindRadius(0)
   }, [view])
   const [ellipse, setEllipse] = useState<EllipseOverlay | null>(null)
+  // The ellipse overlay belongs to the site it was drawn for (it stays when switching between Map and 3D).
+  const ell = ellipse && site && ellipse.focus.lat === site.lat && ellipse.focus.lon === site.lon ? ellipse : null
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -280,7 +282,7 @@ export default function App() {
             </div>
           ) : (
             <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
-              <Terrain3D site={site} sites={sites} i={i} />
+              <Terrain3D site={site} sites={sites} i={i} ellipse={ell} />
             </Suspense>
           )}
         </section>
@@ -304,9 +306,9 @@ export default function App() {
             pickError={pickError}
             onOpenSite={() => setView('site')}
             onCompare={addToCompare}
-            dots={ellipse?.dots}
-            outline={ellipse?.outline}
-            focus={ellipse?.focus}
+            dots={ell?.dots}
+            outline={ell?.outline}
+            focus={ell?.focus}
             extra={site && !busy && <Ellipse site={site} th={th} i={i} onOverlay={setEllipse} />}
           />
         </section>
