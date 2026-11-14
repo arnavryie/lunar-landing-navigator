@@ -67,8 +67,10 @@ export function CandidateLocations({
                   </td>
                   <td>
                     <div>{sim.transitDistanceKm.toFixed(2)} km</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-                      {sim.transitDurationH.toFixed(1)} h
+                    <div style={{ fontSize: '0.78rem', color: !sim.isDestinationReached ? '#f08a7a' : 'var(--muted)' }}>
+                      {!sim.isDestinationReached
+                        ? `Depleted @ ${(sim.failureTimeH ?? sim.transitDurationH).toFixed(1)} h`
+                        : `${sim.transitDurationH.toFixed(1)} h`}
                     </div>
                   </td>
                   <td>
@@ -77,10 +79,12 @@ export function CandidateLocations({
                       {c.bearingDeg.toFixed(0)}° az
                     </div>
                   </td>
-                  <td style={{ color: 'var(--sun)' }}>
+                  <td style={{ color: sim.isDestinationReached && sim.feasibility !== 'INFEASIBLE' ? 'var(--sun)' : 'var(--muted)' }}>
                     <strong>{sim.rechargeDurationH} h</strong>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'block' }}>
-                      ({c.totalSunlitHoursInHorizon}h total)
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'block' }} title="Reachable recharge window (theoretical site total in brackets)">
+                      {sim.feasibility === 'INFEASIBLE'
+                        ? `(0h reach. / ${c.totalSunlitHoursInHorizon}h pot.)`
+                        : `(${c.totalSunlitHoursInHorizon}h total)`}
                     </span>
                   </td>
                   <td style={{ color: c.route.maxSlopeDeg > 15 ? '#e5a83b' : 'var(--text)' }}>
@@ -89,26 +93,36 @@ export function CandidateLocations({
                   <td
                     style={{
                       fontWeight: 600,
-                      color: sim.arrivalReserveMarginPct >= 0 ? '#6fcf9f' : '#f08a7a',
+                      color: sim.arrivalReserveMarginPct >= 0 && sim.isDestinationReached ? '#6fcf9f' : '#f08a7a',
                     }}
                   >
                     <div>{sim.arrivalSocPct.toFixed(1)}%</div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--muted)' }}>
-                      {sim.arrivalBatteryKwh.toFixed(1)} kWh
+                      {!sim.isDestinationReached
+                        ? 'Stranded mid-route'
+                        : sim.arrivalReserveMarginPct < 0
+                        ? `Breached (${sim.arrivalBatteryKwh.toFixed(1)} kWh)`
+                        : `${sim.arrivalBatteryKwh.toFixed(1)} kWh`}
                     </div>
                   </td>
-                  <td style={{ color: 'var(--sun)' }}>
-                    <div>+{sim.rechargeSolarGeneratedKwh.toFixed(1)} kWh</div>
-                    {sim.rechargeCurtailedSolarKwh > 0 && (
+                  <td style={{ color: sim.feasibility === 'INFEASIBLE' ? 'var(--muted)' : 'var(--sun)' }}>
+                    <div>
+                      {sim.rechargeSolarGeneratedKwh > 0 ? `+${sim.rechargeSolarGeneratedKwh.toFixed(1)} kWh` : '0.0 kWh'}
+                    </div>
+                    {sim.feasibility === 'INFEASIBLE' ? (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }} title="Theoretical solar generation at site if reachable">
+                        ({sim.theoreticalSolarPotentialKwh.toFixed(1)}k site pot.)
+                      </div>
+                    ) : sim.rechargeCurtailedSolarKwh > 0 ? (
                       <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }} title="Solar energy curtailed once battery reached 100% capacity">
                         ({sim.rechargeCurtailedSolarKwh.toFixed(1)}k curtailed)
                       </div>
-                    )}
+                    ) : null}
                   </td>
                   <td
                     style={{
                       fontWeight: 600,
-                      color: sim.netMissionEnergyBenefitKwh > 0 ? '#6fcf9f' : '#f08a7a',
+                      color: sim.feasibility !== 'INFEASIBLE' && sim.netMissionEnergyBenefitKwh > 0 ? '#6fcf9f' : '#f08a7a',
                     }}
                   >
                     <div>
@@ -116,7 +130,9 @@ export function CandidateLocations({
                       {sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh
                     </div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--muted)' }}>
-                      Final: {sim.finalSocPct.toFixed(0)}%
+                      {sim.feasibility === 'INFEASIBLE'
+                        ? 'Unviable'
+                        : `Final: ${sim.finalSocPct.toFixed(0)}%`}
                     </div>
                   </td>
                   <td>

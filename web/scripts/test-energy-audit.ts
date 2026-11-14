@@ -565,6 +565,365 @@ function makeSyntheticTracks(hours: number, sunFracSeq: number[]): Tracks {
   )
 }
 
+// -----------------------------------------------------------------------------
+// TEST K — Transit depletion halts simulation mid-transit
+// Verify simulation terminates execution at point of failure when battery drops to 0.
+// -----------------------------------------------------------------------------
+{
+  const cfg: RoverMissionConfig = {
+    ...DEFAULT_ROVER_CONFIG,
+    battery: { totalCapacityKwh: 10.0, currentSocPct: 10.0, minReservePct: 20.0 }, // 1.0 kWh initial
+    mobility: { speedKmh: 0.15, mobilityPowerW: 400, terrainFactor: 1.0, maxTravelDistanceKm: 5.0 }, // 0.4 kW
+    power: { thermalManagementW: 100, avionicsW: 50, communicationsW: 50, scienceInstrumentsW: 0, standbySystemsW: 0 }, // 0.2 kW
+  }
+  // Total draw during transit = 0.6 kW. In 1.67 hours, 1.0 kWh is completely depleted.
+  // Waypoints span 0.6 km (4 hours travel time). Rover will deplete around hour 1.67.
+  const vectors = makeSyntheticVectors(24, 0, 0)
+  const tracks = makeSyntheticTracks(24, new Array(24).fill(0.0))
+
+  const sim = simulateMissionLedger(
+    cfg,
+    {
+      id: 'test-k',
+      name: 'Unreachable Deep Crater Rim',
+      lat: -89.5,
+      lon: 0,
+      elevationM: 500,
+      slopeDeg: 5,
+      distanceKm: 0.6,
+      bearingDeg: 90,
+      cardinalDirection: 'East',
+      route: {
+        totalDistanceKm: 0.6,
+        estimatedTravelTimeH: 4.0,
+        departureHourIndex: 0,
+        arrivalHourIndex: 4,
+        waypoints: [
+          { lat: -89.5, lon: 0, elevationM: 500, slopeDeg: 0, distanceFromStartKm: 0, legDistanceKm: 0, isSunlit: false, sunFrac: 0 },
+          { lat: -89.5, lon: 0.05, elevationM: 500, slopeDeg: 0, distanceFromStartKm: 0.3, legDistanceKm: 0.3, isSunlit: false, sunFrac: 0 },
+          { lat: -89.5, lon: 0.1, elevationM: 500, slopeDeg: 0, distanceFromStartKm: 0.6, legDistanceKm: 0.3, isSunlit: false, sunFrac: 0 },
+        ],
+        maxSlopeDeg: 5,
+        averageSlopeDeg: 3,
+        elevationGainM: 50,
+        elevationLossM: 0,
+        mobilityEnergyGrossKwh: 1.6,
+        transitHotelEnergyKwh: 0.8,
+        transitSolarEnergyRecoveredKwh: 0,
+        netTransitEnergyKwh: 2.4,
+        arrivalEnergyKwh: 0,
+        arrivalSocPct: 0,
+        isSafeTraverse: true,
+      },
+      tracks,
+      sunlitWindowDurationH: 10,
+      sunlitWindowStartH: 4,
+      sunlitWindowEndH: 14,
+      hoursToSunrise: 0,
+      totalSunlitHoursInHorizon: 10,
+      meanSunElevationDeg: 1.5,
+    },
+    vectors,
+    0,
+    24,
+  )
+
+  const isHaltedEarly = !sim.isDestinationReached
+  const isSocZero = sim.arrivalSocPct === 0 && sim.finalBatteryKwh === 0
+  const isFailed = sim.feasibility === 'INFEASIBLE' && !sim.missionSuccessful
+  const hasFailureTime = sim.failureTimeH !== null && sim.failureTimeH > 0 && sim.failureTimeH < 4.0
+
+  assert(
+    isHaltedEarly && isSocZero && isFailed && hasFailureTime && sim.isEnergyConserved,
+    'TEST K: Transit Depletion Halts Simulation Mid-Transit',
+    `Destination Reached: ${sim.isDestinationReached}, Halted at T+${sim.failureTimeH?.toFixed(2)}h (${sim.failureDistanceKm?.toFixed(2)} km), Feasibility: ${sim.feasibility}, Conserved: ${sim.isEnergyConserved}`,
+  )
+}
+
+// -----------------------------------------------------------------------------
+// TEST L — Unreachable destination receives zero credited recharge
+// Theoretical solar potential exists, but rover gets 0.0 kWh credit if unreachable.
+// -----------------------------------------------------------------------------
+{
+  const cfg: RoverMissionConfig = {
+    ...DEFAULT_ROVER_CONFIG,
+    battery: { totalCapacityKwh: 10.0, currentSocPct: 5.0, minReservePct: 20.0 }, // 0.5 kWh initial
+    mobility: { speedKmh: 0.15, mobilityPowerW: 400, terrainFactor: 1.0, maxTravelDistanceKm: 5.0 },
+    power: { thermalManagementW: 100, avionicsW: 50, communicationsW: 50, scienceInstrumentsW: 0, standbySystemsW: 0 },
+  }
+  // Sunlit destination with 20 hours of bright sunlight (theoretical potential > 6 kWh)
+  const vectors = makeSyntheticVectors(24, 2.0, 45)
+  const tracks = makeSyntheticTracks(24, new Array(24).fill(1.0))
+
+  const sim = simulateMissionLedger(
+    cfg,
+    {
+      id: 'test-l',
+      name: 'Unreachable Sunlit Peak',
+      lat: -89.5,
+      lon: 0,
+      elevationM: 1500,
+      slopeDeg: 4,
+      distanceKm: 0.6,
+      bearingDeg: 0,
+      cardinalDirection: 'North',
+      route: {
+        totalDistanceKm: 0.6,
+        estimatedTravelTimeH: 4.0,
+        departureHourIndex: 0,
+        arrivalHourIndex: 4,
+        waypoints: [],
+        maxSlopeDeg: 4,
+        averageSlopeDeg: 3,
+        elevationGainM: 100,
+        elevationLossM: 0,
+        mobilityEnergyGrossKwh: 1.6,
+        transitHotelEnergyKwh: 0.8,
+        transitSolarEnergyRecoveredKwh: 0,
+        netTransitEnergyKwh: 2.4,
+        arrivalEnergyKwh: 0,
+        arrivalSocPct: 0,
+        isSafeTraverse: true,
+      },
+      tracks,
+      sunlitWindowDurationH: 20,
+      sunlitWindowStartH: 4,
+      sunlitWindowEndH: 24,
+      hoursToSunrise: 0,
+      totalSunlitHoursInHorizon: 20,
+      meanSunElevationDeg: 2.0,
+    },
+    vectors,
+    0,
+    24,
+  )
+
+  const theoreticalPositive = sim.theoreticalSolarPotentialKwh > 0
+  const rechargeCreditZero = sim.rechargeSolarGeneratedKwh === 0
+  const reachableRechargeZero = sim.reachableRechargePotentialKwh === 0
+  const storedEnergyZero = sim.actualStoredEnergyRecoveredKwh === 0
+  const finalSocZero = sim.finalSocPct === 0
+
+  assert(
+    theoreticalPositive && rechargeCreditZero && reachableRechargeZero && storedEnergyZero && finalSocZero,
+    'TEST L: Unreachable Destination Receives Zero Credited Recharge',
+    `Theoretical Solar: ${sim.theoreticalSolarPotentialKwh.toFixed(2)} kWh > 0, Credited Solar: ${sim.rechargeSolarGeneratedKwh} kWh, Reachable Potential: ${sim.reachableRechargePotentialKwh} kWh, Stored Recovery: ${sim.actualStoredEnergyRecoveredKwh} kWh, Final SoC: ${sim.finalSocPct}%`,
+  )
+}
+
+// -----------------------------------------------------------------------------
+// TEST M — Infeasible candidate cannot have positive net benefit
+// Net mission benefit must be <= 0 and reflect actual loss of energy.
+// -----------------------------------------------------------------------------
+{
+  const cfg: RoverMissionConfig = {
+    ...DEFAULT_ROVER_CONFIG,
+    battery: { totalCapacityKwh: 15.0, currentSocPct: 15.0, minReservePct: 20.0 }, // 2.25 kWh
+    mobility: { speedKmh: 0.15, mobilityPowerW: 300, terrainFactor: 1.0, maxTravelDistanceKm: 5.0 },
+    power: { thermalManagementW: 100, avionicsW: 50, communicationsW: 25, scienceInstrumentsW: 0, standbySystemsW: 0 },
+  }
+  const vectors = makeSyntheticVectors(48, 1.5, 45)
+  const tracks = makeSyntheticTracks(48, new Array(48).fill(1.0))
+
+  const sim = simulateMissionLedger(
+    cfg,
+    {
+      id: 'test-m',
+      name: 'Reserve Violation Ridge',
+      lat: -89.4,
+      lon: 10,
+      elevationM: 800,
+      slopeDeg: 3,
+      distanceKm: 0.6,
+      bearingDeg: 45,
+      cardinalDirection: 'NE',
+      route: {
+        totalDistanceKm: 0.6,
+        estimatedTravelTimeH: 4.0,
+        departureHourIndex: 0,
+        arrivalHourIndex: 4,
+        waypoints: [],
+        maxSlopeDeg: 3,
+        averageSlopeDeg: 2,
+        elevationGainM: 50,
+        elevationLossM: 0,
+        mobilityEnergyGrossKwh: 1.2,
+        transitHotelEnergyKwh: 0.7,
+        transitSolarEnergyRecoveredKwh: 0,
+        netTransitEnergyKwh: 1.9,
+        arrivalEnergyKwh: 0.35, // 2.3% SoC breaches 20% reserve
+        arrivalSocPct: 2.33,
+        isSafeTraverse: true,
+      },
+      tracks,
+      sunlitWindowDurationH: 30,
+      sunlitWindowStartH: 4,
+      sunlitWindowEndH: 34,
+      hoursToSunrise: 0,
+      totalSunlitHoursInHorizon: 30,
+      meanSunElevationDeg: 1.5,
+    },
+    vectors,
+    0,
+    48,
+  )
+
+  const isNetNegative = sim.netMissionEnergyBenefitKwh < 0
+  const isFinalNotFull = sim.finalSocPct < 100
+
+  assert(
+    sim.feasibility === 'INFEASIBLE' && isNetNegative && isFinalNotFull,
+    'TEST M: Infeasible Candidates Cannot Have Positive Net Benefit',
+    `Feasibility: ${sim.feasibility}, Net Benefit: ${sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh (must be < 0), Final SoC: ${sim.finalSocPct.toFixed(1)}% (must not be 100%)`,
+  )
+}
+
+// -----------------------------------------------------------------------------
+// TEST N — Feasible candidate transit & recharge preservation
+// Verify that a viable candidate reaches destination and recovers energy correctly.
+// -----------------------------------------------------------------------------
+{
+  const cfg: RoverMissionConfig = {
+    ...DEFAULT_ROVER_CONFIG,
+    battery: { totalCapacityKwh: 15.0, currentSocPct: 38.0, minReservePct: 20.0 }, // 5.70 kWh
+    mobility: { speedKmh: 0.15, mobilityPowerW: 250, terrainFactor: 1.0, maxTravelDistanceKm: 5.0 },
+    power: { thermalManagementW: 75, avionicsW: 40, communicationsW: 25, scienceInstrumentsW: 0, standbySystemsW: 0 }, // 140 W
+  }
+  const vectors = makeSyntheticVectors(48, 1.5, 45)
+  const tracks = makeSyntheticTracks(48, new Array(48).fill(1.0))
+
+  const sim = simulateMissionLedger(
+    cfg,
+    {
+      id: 'test-n',
+      name: 'NNE Elevated Ridge',
+      lat: -89.462,
+      lon: 223.21,
+      elevationM: 1947,
+      slopeDeg: 2.6,
+      distanceKm: 0.42,
+      bearingDeg: 14,
+      cardinalDirection: 'NNE',
+      route: {
+        totalDistanceKm: 0.42,
+        estimatedTravelTimeH: 2.8,
+        departureHourIndex: 0,
+        arrivalHourIndex: 3,
+        waypoints: [
+          { lat: -89.475, lon: 222.56, elevationM: 1800, slopeDeg: 2, distanceFromStartKm: 0, legDistanceKm: 0, isSunlit: true, sunFrac: 1.0 },
+          { lat: -89.462, lon: 223.21, elevationM: 1947, slopeDeg: 2.6, distanceFromStartKm: 0.42, legDistanceKm: 0.42, isSunlit: true, sunFrac: 1.0 },
+        ],
+        maxSlopeDeg: 2.6,
+        averageSlopeDeg: 2.6,
+        elevationGainM: 147,
+        elevationLossM: 0,
+        mobilityEnergyGrossKwh: 0.70,
+        transitHotelEnergyKwh: 0.39,
+        transitSolarEnergyRecoveredKwh: 0.30,
+        netTransitEnergyKwh: 0.79,
+        arrivalEnergyKwh: 4.91,
+        arrivalSocPct: 32.7,
+        isSafeTraverse: true,
+      },
+      tracks,
+      sunlitWindowDurationH: 45,
+      sunlitWindowStartH: 3,
+      sunlitWindowEndH: 48,
+      hoursToSunrise: 0,
+      totalSunlitHoursInHorizon: 45,
+      meanSunElevationDeg: 1.5,
+    },
+    vectors,
+    0,
+    48,
+  )
+
+  const isFeasible = sim.feasibility === 'FEASIBLE'
+  const isReached = sim.isDestinationReached
+  const isNetPositive = sim.netMissionEnergyBenefitKwh > 0
+  const finalFull = sim.finalSocPct === 100
+  const diffConserved = Math.abs(sim.reconciliationDeltaKwh) < 1e-5
+
+  assert(
+    isFeasible && isReached && isNetPositive && finalFull && diffConserved,
+    'TEST N: Feasible Candidate Transit & Recharge Preservation',
+    `Feasibility: ${sim.feasibility}, Destination Reached: ${sim.isDestinationReached}, Net Benefit: +${sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh, Final SoC: ${sim.finalSocPct.toFixed(0)}%, Conserved: ${sim.isEnergyConserved}`,
+  )
+}
+
+// -----------------------------------------------------------------------------
+// TEST O — Candidate summary shortcuts match authoritative simulation ledger
+// -----------------------------------------------------------------------------
+{
+  const cfg = { ...DEFAULT_ROVER_CONFIG }
+  const vectors = makeSyntheticVectors(24, 1.5, 45)
+  const tracks = makeSyntheticTracks(24, new Array(24).fill(1.0))
+
+  const sim = simulateMissionLedger(
+    cfg,
+    {
+      id: 'test-o',
+      name: 'Test O Candidate',
+      lat: -89.462,
+      lon: 223.21,
+      elevationM: 1947,
+      slopeDeg: 2.6,
+      distanceKm: 0.42,
+      bearingDeg: 14,
+      cardinalDirection: 'NNE',
+      route: {
+        totalDistanceKm: 0.42,
+        estimatedTravelTimeH: 2.8,
+        departureHourIndex: 0,
+        arrivalHourIndex: 3,
+        waypoints: [],
+        maxSlopeDeg: 2.6,
+        averageSlopeDeg: 2.6,
+        elevationGainM: 147,
+        elevationLossM: 0,
+        mobilityEnergyGrossKwh: 0.70,
+        transitHotelEnergyKwh: 0.39,
+        transitSolarEnergyRecoveredKwh: 0,
+        netTransitEnergyKwh: 1.09,
+        arrivalEnergyKwh: 4.61,
+        arrivalSocPct: 30.7,
+        isSafeTraverse: true,
+      },
+      tracks,
+      sunlitWindowDurationH: 21,
+      sunlitWindowStartH: 3,
+      sunlitWindowEndH: 24,
+      hoursToSunrise: 0,
+      totalSunlitHoursInHorizon: 21,
+      meanSunElevationDeg: 1.5,
+    },
+    vectors,
+    0,
+    24,
+  )
+
+  const candidate = {
+    theoreticalSolarPotentialKwh: sim.theoreticalSolarPotentialKwh,
+    reachableRechargePotentialKwh: sim.reachableRechargePotentialKwh,
+    actualStoredEnergyRecoveredKwh: sim.actualStoredEnergyRecoveredKwh,
+    isDestinationReached: sim.isDestinationReached,
+    failureReason: sim.failureReason,
+    simulation: sim,
+  }
+
+  const matchTheo = candidate.theoreticalSolarPotentialKwh === sim.theoreticalSolarPotentialKwh
+  const matchReach = candidate.reachableRechargePotentialKwh === sim.reachableRechargePotentialKwh
+  const matchStored = candidate.actualStoredEnergyRecoveredKwh === sim.actualStoredEnergyRecoveredKwh
+  const matchDest = candidate.isDestinationReached === sim.isDestinationReached
+  const matchReason = candidate.failureReason === sim.failureReason
+
+  assert(
+    matchTheo && matchReach && matchStored && matchDest && matchReason,
+    'TEST O: Candidate Summary Shortcuts Match Authoritative Ledger',
+    `Theoretical: ${matchTheo}, Reachable: ${matchReach}, Stored: ${matchStored}, Reached: ${matchDest}, Reason: ${matchReason}`,
+  )
+}
+
 console.log('\n======================================================================')
 console.log(`TOTAL AUDIT TEST RESULTS: ${passCount} PASSED, ${failCount} FAILED`)
 console.log('======================================================================')

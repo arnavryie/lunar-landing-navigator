@@ -187,7 +187,8 @@ export function discoverAndRankCandidates(
     // Ranking score calculation using authoritative simulation metrics
     let rankingScore = 0
     if (simulation.feasibility === 'INFEASIBLE') {
-      rankingScore = Math.max(0, simulation.arrivalSocPct) * 0.2
+      // Heavily penalize infeasible candidates so they always score below viable candidates
+      rankingScore = -100 + (simulation.isDestinationReached ? simulation.arrivalSocPct * 0.1 : -simulation.transitDistanceKm)
     } else {
       const benefitScore = Math.max(0, Math.min(45, (simulation.netMissionEnergyBenefitKwh / 3.0) * 45))
       const windowScore = Math.max(0, Math.min(25, (sunlitWindowDurationH / 48.0) * 25))
@@ -197,8 +198,8 @@ export function discoverAndRankCandidates(
     }
 
     const rechargePowerNetW =
-      sunlitWindowDurationH > 0
-        ? (simulation.rechargePotentialNetKwh * 1000) / sunlitWindowDurationH
+      sunlitWindowDurationH > 0 && simulation.isDestinationReached
+        ? (simulation.reachableRechargePotentialKwh * 1000) / sunlitWindowDurationH
         : 0
 
     evaluated.push({
@@ -228,6 +229,11 @@ export function discoverAndRankCandidates(
       netMissionBenefitKwh: simulation.netMissionEnergyBenefitKwh,
       arrivalSocPct: simulation.arrivalSocPct,
       finalSocPct: simulation.finalSocPct,
+      theoreticalSolarPotentialKwh: simulation.theoreticalSolarPotentialKwh,
+      reachableRechargePotentialKwh: simulation.reachableRechargePotentialKwh,
+      actualStoredEnergyRecoveredKwh: simulation.actualStoredEnergyRecoveredKwh,
+      isDestinationReached: simulation.isDestinationReached,
+      failureReason: simulation.failureReason,
       feasibility: simulation.feasibility,
       rankingScore,
       rankingRank: 0,
@@ -250,7 +256,11 @@ export function discoverAndRankCandidates(
     evaluated[i].rankingRank = i + 1
   }
 
-  const recommended = evaluated.length > 0 ? evaluated[0] : null
+  // Never recommend an INFEASIBLE candidate
+  const recommended =
+    evaluated.find((c) => c.feasibility === 'FEASIBLE') ??
+    evaluated.find((c) => c.feasibility === 'CAUTION') ??
+    null
 
   return { candidates: evaluated, recommended }
 }

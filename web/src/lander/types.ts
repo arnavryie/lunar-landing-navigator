@@ -154,6 +154,17 @@ export interface SimulationRunResult {
   netStoredEnergyRecoveredKwh: number // finalBatteryKwh - arrivalBatteryKwh
   netMissionEnergyBenefitKwh: number // finalBatteryKwh - initialBatteryKwh
 
+  // Separation of Theoretical vs Reachable vs Actual Recovery
+  theoreticalSolarPotentialKwh: number // Gross solar energy incident at destination during sunlit window
+  theoreticalRechargePotentialKwh: number // Solar minus hotel load at destination if rover were present
+  reachableRechargePotentialKwh: number // Recharge potential accessible by rover (0 if unreachable/infeasible)
+  actualStoredEnergyRecoveredKwh: number // Actual battery stored energy recovered (0 if unreachable/infeasible)
+  isDestinationReached: boolean // Whether the rover reached the destination before depletion
+  failureReason: string // Diagnosis if mission failed or aborted
+  failureHourIndex: number | null // Simulation hour index where mission terminated (or null if completed)
+  failureTimeH: number | null // Elapsed mission hours where mission terminated (or null if completed)
+  failureDistanceKm: number | null // Distance traversed before failure (or null if completed)
+
   // Mathematical Reconciliation Check: final === initial + solar - hotel - mobility - curtailed
   reconciliationDeltaKwh: number
   isEnergyConserved: boolean
@@ -201,6 +212,11 @@ export interface RechargeCandidate {
   netMissionBenefitKwh: number
   arrivalSocPct: number
   finalSocPct: number
+  theoreticalSolarPotentialKwh: number
+  reachableRechargePotentialKwh: number
+  actualStoredEnergyRecoveredKwh: number
+  isDestinationReached: boolean
+  failureReason: string
   
   // Ranking
   feasibility: CandidateFeasibility

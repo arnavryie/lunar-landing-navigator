@@ -76,6 +76,12 @@ export function RechargeRecommendation({
 
       <div className="rec-summary">{sim.verdictReason}</div>
 
+      {sim.feasibility === 'INFEASIBLE' && (
+        <div style={{ background: 'rgba(224, 112, 92, 0.12)', border: '1px solid #e0705c', borderRadius: '4px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#f08a7a' }}>
+          <strong>MISSION INFEASIBLE:</strong> {sim.failureReason}
+        </div>
+      )}
+
       {/* Hero Telemetry Grid */}
       <div className="rec-hero-grid">
         <div className="rec-hero-item">
@@ -89,21 +95,33 @@ export function RechargeRecommendation({
         <div className="rec-hero-item">
           <span className="rec-hero-label">Traverse Distance</span>
           <span className="rec-hero-val">{sim.transitDistanceKm.toFixed(2)} km</span>
-          <span className="rec-hero-sub">Elev: {candidate.elevationM > 0 ? '+' : ''}{candidate.elevationM} m</span>
+          <span className="rec-hero-sub">
+            {!sim.isDestinationReached
+              ? `Stranded @ ${(sim.failureDistanceKm ?? 0).toFixed(2)} km`
+              : `Elev: ${candidate.elevationM > 0 ? '+' : ''}${candidate.elevationM} m`}
+          </span>
         </div>
 
         <div className="rec-hero-item">
           <span className="rec-hero-label">Transit Time</span>
           <span className="rec-hero-val">{sim.transitDurationH.toFixed(1)} h</span>
-          <span className="rec-hero-sub">@{config.mobility.speedKmh} km/h (Max {candidate.route.maxSlopeDeg.toFixed(0)}°)</span>
+          <span className="rec-hero-sub">
+            {!sim.isDestinationReached
+              ? `Halted @ ${(sim.failureTimeH ?? 0).toFixed(1)} h (0% SoC)`
+              : `@${config.mobility.speedKmh} km/h (Max ${candidate.route.maxSlopeDeg.toFixed(0)}°)`}
+          </span>
         </div>
 
         <div className="rec-hero-item">
           <span className="rec-hero-label">Continuous Sun</span>
-          <span className="rec-hero-val" style={{ color: 'var(--sun)' }}>
+          <span className="rec-hero-val" style={{ color: sim.isDestinationReached && sim.feasibility !== 'INFEASIBLE' ? 'var(--sun)' : 'var(--muted)' }}>
             {sim.rechargeDurationH} h
           </span>
-          <span className="rec-hero-sub">Total {candidate.totalSunlitHoursInHorizon}h in window</span>
+          <span className="rec-hero-sub">
+            {sim.feasibility === 'INFEASIBLE'
+              ? `Reachable: 0h (${candidate.totalSunlitHoursInHorizon}h pot.)`
+              : `Total ${candidate.totalSunlitHoursInHorizon}h in window`}
+          </span>
         </div>
 
         <div className="rec-hero-item">
@@ -111,13 +129,15 @@ export function RechargeRecommendation({
           <span
             className="rec-hero-val"
             style={{
-              color: sim.arrivalReserveMarginPct >= 5 ? '#6fcf9f' : sim.arrivalReserveMarginPct >= 0 ? '#e5a83b' : '#f08a7a',
+              color: sim.arrivalReserveMarginPct >= 5 && sim.isDestinationReached ? '#6fcf9f' : sim.arrivalReserveMarginPct >= 0 && sim.isDestinationReached ? '#e5a83b' : '#f08a7a',
             }}
           >
             {sim.arrivalSocPct.toFixed(1)}%
           </span>
           <span className="rec-hero-sub">
-            {sim.arrivalBatteryKwh.toFixed(2)} kWh ({sim.arrivalReserveMarginPct >= 0 ? '+' : ''}{sim.arrivalReserveMarginPct.toFixed(1)}% vs res)
+            {!sim.isDestinationReached
+              ? 'Stranded mid-route'
+              : `${sim.arrivalBatteryKwh.toFixed(2)} kWh (${sim.arrivalReserveMarginPct >= 0 ? '+' : ''}{sim.arrivalReserveMarginPct.toFixed(1)}% vs res)`}
           </span>
         </div>
 
@@ -125,11 +145,15 @@ export function RechargeRecommendation({
           <span className="rec-hero-label">Net Mission Benefit</span>
           <span
             className="rec-hero-val"
-            style={{ color: isPositiveBenefit ? '#6fcf9f' : '#f08a7a' }}
+            style={{ color: isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '#6fcf9f' : '#f08a7a' }}
           >
-            {isPositiveBenefit ? '+' : ''}{sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh
+            {isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '+' : ''}{sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh
           </span>
-          <span className="rec-hero-sub">Final SoC: {sim.finalSocPct.toFixed(0)}% ({sim.finalBatteryKwh.toFixed(1)} kWh)</span>
+          <span className="rec-hero-sub">
+            {sim.feasibility === 'INFEASIBLE'
+              ? `Final SoC: ${sim.finalSocPct.toFixed(0)}% (Aborted)`
+              : `Final SoC: ${sim.finalSocPct.toFixed(0)}% (${sim.finalBatteryKwh.toFixed(1)} kWh)`}
+          </span>
         </div>
       </div>
 
@@ -194,36 +218,52 @@ export function RechargeRecommendation({
             </span>
           </dd>
 
-          <dt>5. Gross Solar Generated at Ridge</dt>
-          <dd style={{ color: 'var(--sun)', fontWeight: 600 }}>
+          <dt>5. Gross Solar Generated at Ridge (Credited)</dt>
+          <dd style={{ color: sim.rechargeSolarGeneratedKwh > 0 ? 'var(--sun)' : 'var(--muted)', fontWeight: 600 }}>
             +{sim.rechargeSolarGeneratedKwh.toFixed(2)} kWh{' '}
-            <span className="muted">({sim.rechargeDurationH}h sunlit window)</span>
+            <span className="muted">
+              {sim.feasibility === 'INFEASIBLE'
+                ? `(0.00 kWh credited; ${sim.theoreticalSolarPotentialKwh.toFixed(2)} kWh unharvested site potential)`
+                : `(${sim.rechargeDurationH}h sunlit window)`}
+            </span>
           </dd>
 
           <dt>6. Subsystems Consumption During Recharge</dt>
-          <dd style={{ color: '#f08a7a' }}>
+          <dd style={{ color: sim.rechargeHotelEnergyKwh > 0 ? '#f08a7a' : 'var(--muted)' }}>
             −{sim.rechargeHotelEnergyKwh.toFixed(2)} kWh{' '}
-            <span className="muted">({sim.rechargeDurationH}h @ {((sim.rechargeHotelEnergyKwh / Math.max(1, sim.rechargeDurationH)) * 1000).toFixed(0)} W)</span>
+            <span className="muted">
+              {sim.rechargeDurationH > 0
+                ? `(${sim.rechargeDurationH}h @ ${((sim.rechargeHotelEnergyKwh / Math.max(1, sim.rechargeDurationH)) * 1000).toFixed(0)} W)`
+                : '(0h recharge dwell)'}
+            </span>
           </dd>
 
           <dt>
-            <strong>= Net Solar Generation Potential</strong>
+            <strong>= Reachable Net Solar Potential</strong>
           </dt>
           <dd style={{ fontWeight: 600 }}>
-            {sim.rechargePotentialNetKwh >= 0 ? '+' : ''}{sim.rechargePotentialNetKwh.toFixed(2)} kWh{' '}
-            <span className="muted">(generation minus hotel before battery limit)</span>
+            {sim.reachableRechargePotentialKwh >= 0 ? '+' : ''}{sim.reachableRechargePotentialKwh.toFixed(2)} kWh{' '}
+            <span className="muted">
+              {sim.feasibility === 'INFEASIBLE'
+                ? `(Reachable: 0.00 kWh; Theoretical site net: ${sim.theoreticalRechargePotentialKwh.toFixed(2)} kWh)`
+                : '(generation minus hotel before battery limit)'}
+            </span>
           </dd>
 
           <dt>7. Curtailed Solar Energy (overflow beyond 100% capacity)</dt>
           <dd style={{ color: 'var(--muted)' }}>
             −{sim.rechargeCurtailedSolarKwh.toFixed(2)} kWh{' '}
-            <span className="muted">(unusable once battery reached {config.battery.totalCapacityKwh.toFixed(1)} kWh cap)</span>
+            <span className="muted">
+              {sim.rechargeCurtailedSolarKwh > 0
+                ? `(unusable once battery reached ${config.battery.totalCapacityKwh.toFixed(1)} kWh cap)`
+                : '(none curtailed)'}
+            </span>
           </dd>
 
           <dt style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px' }}>
             <strong>= Actual Stored Energy Added to Battery</strong>
           </dt>
-          <dd style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px', color: '#6fcf9f', fontWeight: 600 }}>
+          <dd style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px', color: sim.rechargeStoredEnergyKwh > 0 ? '#6fcf9f' : 'var(--muted)', fontWeight: 600 }}>
             +{sim.rechargeStoredEnergyKwh.toFixed(2)} kWh
           </dd>
 
@@ -237,10 +277,12 @@ export function RechargeRecommendation({
           <dt>
             <strong>Primary Mission Net Energy Benefit</strong>
           </dt>
-          <dd style={{ color: isPositiveBenefit ? '#6fcf9f' : '#f08a7a', fontWeight: 700, fontSize: '0.95rem' }}>
-            {isPositiveBenefit ? '+' : ''}{sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh{' '}
+          <dd style={{ color: isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '#6fcf9f' : '#f08a7a', fontWeight: 700, fontSize: '0.95rem' }}>
+            {isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '+' : ''}{sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh{' '}
             <span className="muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>
-              (Final {sim.finalBatteryKwh.toFixed(2)} kWh − Initial {sim.initialBatteryKwh.toFixed(2)} kWh)
+              {sim.feasibility === 'INFEASIBLE'
+                ? `(Net loss of ${Math.abs(sim.netMissionEnergyBenefitKwh).toFixed(2)} kWh due to failed recharge)`
+                : `(Final ${sim.finalBatteryKwh.toFixed(2)} kWh − Initial ${sim.initialBatteryKwh.toFixed(2)} kWh)`}
             </span>
           </dd>
         </dl>

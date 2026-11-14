@@ -69,6 +69,38 @@ export function simulateMissionLedger(
   const driveWatts = config.mobility.mobilityPowerW * config.mobility.terrainFactor * slopePenalty
 
   // Phase accumulators (kWh)
+  // 1. Destination Theoretical Solar Potential (independent of rover reachability)
+  let theoreticalSolarPotentialKwh = 0
+  let theoreticalRechargePotentialKwh = 0
+  const tracksLength = candidate.tracks.sun.frac.length
+  const winStart = candidate.sunlitWindowStartH
+  const winEnd = Math.min(tracksLength, candidate.sunlitWindowEndH)
+
+  for (let s = winStart; s < winEnd; s++) {
+    const sIdx = startHourIndex + s
+    if (sIdx * 6 + 2 >= vectors.length) break
+    const sSunX = vectors[6 * sIdx]
+    const sSunY = vectors[6 * sIdx + 1]
+    const sSunZ = vectors[6 * sIdx + 2]
+    const sDist = Math.hypot(sSunX, sSunY, sSunZ)
+    const sEl = candidate.tracks.sun.el[s] ?? (Math.asin(sSunZ / sDist) * 180) / Math.PI
+    const sAz = candidate.tracks.sun.az[s] ?? ((Math.atan2(sSunY, sSunX) * 180) / Math.PI + 360) % 360
+    const sFrac = candidate.tracks.sun.frac[s] ?? 0
+    const sWatts = calculateSolarOutputWatts(config.solar, sEl, sAz, sFrac)
+    const sSolarKwh = sWatts / 1000
+    const sHotelKwh = hotelStandbyWatts / 1000
+    theoreticalSolarPotentialKwh += sSolarKwh
+    theoreticalRechargePotentialKwh += Math.max(0, sSolarKwh - sHotelKwh)
+  }
+
+  let isDestinationReached = false
+  let isFailureOccurred = false
+  let failureReason = ''
+  let failureHourIndex: number | null = null
+  let failureTimeH: number | null = null
+  let failureDistanceKm: number | null = null
+
+  // 2. Track energy components throughout simulation
   let transitMobilityKwh = 0
   let transitHotelKwh = 0
   let transitSolarKwh = 0
@@ -200,9 +232,66 @@ export function simulateMissionLedger(
       )
       stepSolarEnergyKwh = (solarW / 1000) * 1.0
 
+      const netDrainKwh = stepMobilityEnergyKwh + stepHotelEnergyKwh - stepSolarEnergyKwh
+      if (netDrainKwh > 0 && currentBatteryKwh - netDrainKwh <= 1e-6) {
+        // BATTERY EXHAUSTION DURING TRANSIT: Vehicle loses power and halts
+        const dtFail = Math.max(0, Math.min(1.0, currentBatteryKwh / netDrainKwh))
+        const actualMobKwh = stepMobilityEnergyKwh * dtFail
+        const actualHotKwh = stepHotelEnergyKwh * dtFail
+        const actualSolKwh = stepSolarEnergyKwh * dtFail
+
+        transitMobilityKwh += actualMobKwh
+        transitHotelKwh += actualHotKwh
+        transitSolarKwh += actualSolKwh
+        totalMobilityEnergyKwh += actualMobKwh
+        totalHotelEnergyKwh += actualHotKwh
+        totalSolarGeneratedKwh += actualSolKwh
+
+        currentBatteryKwh = 0.0
+        minBatteryKwh = 0.0
+        minSocReachedPct = 0.0
+
+        const failTime = h + dtFail
+        const failDistKm = Math.min(route.totalDistanceKm, (failTime / travelDurationH) * route.totalDistanceKm)
+
+        isDestinationReached = false
+        isFailureOccurred = true
+        failureTimeH = Number(failTime.toFixed(2))
+        failureDistanceKm = Number(failDistKm.toFixed(2))
+        failureHourIndex = startHourIndex + Math.ceil(failTime)
+        failureReason = `Battery exhausted to 0.0% SoC at T+${failTime.toFixed(1)}h during transit (${failDistKm.toFixed(2)} km from start, ${route.totalDistanceKm.toFixed(2)} km required). Rover stranded in darkness.`
+
+        steps.push({
+          hourIndex: startHourIndex + Math.ceil(failTime),
+          stepTimeH: Number(failTime.toFixed(2)),
+          utcDateStr: new Date(startUtcMs + failTime * 3600000).toISOString(),
+          phase: 'transit',
+          phaseLabel: 'Stranded (Battery Depleted)',
+          roverLat,
+          roverLon,
+          roverElevM,
+          sunElevationDeg,
+          sunAzimuthDeg,
+          isDirectSunlit: false,
+          sunFraction: 0,
+          solarGenerationW: 0,
+          locomotionDrawW: 0,
+          hotelDrawW: 0,
+          netPowerW: 0,
+          curtailedPowerW: 0,
+          storedEnergyKwh: 0,
+          socPct: 0,
+          distanceCoveredKm: failDistKm,
+        })
+        break // Stop the physically executable simulation at point of failure
+      }
+
       transitMobilityKwh += stepMobilityEnergyKwh
       transitHotelKwh += stepHotelEnergyKwh
       transitSolarKwh += stepSolarEnergyKwh
+      totalMobilityEnergyKwh += stepMobilityEnergyKwh
+      totalHotelEnergyKwh += stepHotelEnergyKwh
+      totalSolarGeneratedKwh += stepSolarEnergyKwh
     } else if (tIntervalStart < travelDurationH && tIntervalEnd > travelDurationH) {
       // 2. Interval crosses the arrival moment!
       phase = 'recharge'
@@ -227,20 +316,112 @@ export function simulateMissionLedger(
         transitSunFrac,
       )
       const transitSolKwh = (transitSolarW / 1000) * stepDriveHours
+      const netDriveDrain = transitMobKwh + transitHotKwh - transitSolKwh
+
+      if (netDriveDrain > 0 && currentBatteryKwh - netDriveDrain <= 1e-6) {
+        // Battery depleted during final driving portion
+        const dtFailDrive = Math.max(0, Math.min(stepDriveHours, currentBatteryKwh / (netDriveDrain / stepDriveHours)))
+        const actualMobKwh = (driveWatts / 1000) * dtFailDrive
+        const actualHotKwh = (hotelStandbyWatts / 1000) * dtFailDrive
+        const actualSolKwh = (transitSolarW / 1000) * dtFailDrive
+
+        transitMobilityKwh += actualMobKwh
+        transitHotelKwh += actualHotKwh
+        transitSolarKwh += actualSolKwh
+        totalMobilityEnergyKwh += actualMobKwh
+        totalHotelEnergyKwh += actualHotKwh
+        totalSolarGeneratedKwh += actualSolKwh
+
+        currentBatteryKwh = 0.0
+        minBatteryKwh = 0.0
+        minSocReachedPct = 0.0
+
+        const failTime = h + dtFailDrive
+        const failDistKm = Math.min(route.totalDistanceKm, (failTime / travelDurationH) * route.totalDistanceKm)
+
+        isDestinationReached = false
+        isFailureOccurred = true
+        failureTimeH = Number(failTime.toFixed(2))
+        failureDistanceKm = Number(failDistKm.toFixed(2))
+        failureHourIndex = startHourIndex + Math.ceil(failTime)
+        failureReason = `Battery exhausted to 0.0% SoC at T+${failTime.toFixed(1)}h during final transit segment (${failDistKm.toFixed(2)} km from start). Rover stranded in darkness.`
+
+        steps.push({
+          hourIndex: startHourIndex + Math.ceil(failTime),
+          stepTimeH: Number(failTime.toFixed(2)),
+          utcDateStr: new Date(startUtcMs + failTime * 3600000).toISOString(),
+          phase: 'transit',
+          phaseLabel: 'Stranded (Battery Depleted)',
+          roverLat,
+          roverLon,
+          roverElevM,
+          sunElevationDeg,
+          sunAzimuthDeg,
+          isDirectSunlit: false,
+          sunFraction: 0,
+          solarGenerationW: 0,
+          locomotionDrawW: 0,
+          hotelDrawW: 0,
+          netPowerW: 0,
+          curtailedPowerW: 0,
+          storedEnergyKwh: 0,
+          socPct: 0,
+          distanceCoveredKm: failDistKm,
+        })
+        break
+      }
 
       transitMobilityKwh += transitMobKwh
       transitHotelKwh += transitHotKwh
       transitSolarKwh += transitSolKwh
+      totalMobilityEnergyKwh += transitMobKwh
 
-      // Capture EXACT arrival battery state at the transition moment
-      if (!arrivalRecorded) {
-        const netTransitDelta = transitSolKwh - (transitMobKwh + transitHotKwh)
-        arrivalBatteryKwh = Math.max(0, Math.min(batteryCapKwh, currentBatteryKwh + netTransitDelta))
-        arrivalSocPct = (arrivalBatteryKwh / batteryCapKwh) * 100
-        arrivalRecorded = true
+      // Capture arrival state
+      const netTransitDelta = transitSolKwh - (transitMobKwh + transitHotKwh)
+      arrivalBatteryKwh = Math.max(0, Math.min(batteryCapKwh, currentBatteryKwh + netTransitDelta))
+      arrivalSocPct = (arrivalBatteryKwh / batteryCapKwh) * 100
+      arrivalRecorded = true
+      isDestinationReached = true
+
+      // CHECK MANDATORY RESERVE CONSTRAINT AT ARRIVAL
+      if (arrivalSocPct < minReservePct - 0.01) {
+        isFailureOccurred = true
+        currentBatteryKwh = arrivalBatteryKwh
+        minBatteryKwh = Math.min(minBatteryKwh, arrivalBatteryKwh)
+        minSocReachedPct = Math.min(minSocReachedPct, arrivalSocPct)
+        totalHotelEnergyKwh += transitHotKwh
+        totalSolarGeneratedKwh += transitSolKwh
+        failureTimeH = Number(travelDurationH.toFixed(2))
+        failureDistanceKm = Number(route.totalDistanceKm.toFixed(2))
+        failureHourIndex = startHourIndex + Math.ceil(travelDurationH)
+        failureReason = `Mandatory reserve constraint breached: Arrived with ${arrivalSocPct.toFixed(1)}% SoC, failing the ${minReservePct.toFixed(0)}% safety reserve threshold by ${(minReservePct - arrivalSocPct).toFixed(1)}%. Mission aborted.`
+
+        steps.push({
+          hourIndex: startHourIndex + Math.ceil(travelDurationH),
+          stepTimeH: Number(travelDurationH.toFixed(2)),
+          utcDateStr: new Date(startUtcMs + travelDurationH * 3600000).toISOString(),
+          phase: 'transit',
+          phaseLabel: 'Arrival (Reserve Breached)',
+          roverLat: candidate.lat,
+          roverLon: candidate.lon,
+          roverElevM: candidate.elevationM,
+          sunElevationDeg,
+          sunAzimuthDeg,
+          isDirectSunlit: false,
+          sunFraction: 0,
+          solarGenerationW: 0,
+          locomotionDrawW: 0,
+          hotelDrawW: 0,
+          netPowerW: 0,
+          curtailedPowerW: 0,
+          storedEnergyKwh: arrivalBatteryKwh,
+          socPct: arrivalSocPct,
+          distanceCoveredKm: route.totalDistanceKm,
+        })
+        break // Stop simulation at point of failure
       }
 
-      // Recharge at destination during the stationary portion
+      // Rover is reserve-compliant: proceed with destination recharge during remaining hour portion
       const destSunFrac = candidate.tracks.sun.frac[nextHourIndex - startHourIndex] ?? 0
       stepSunFraction = destSunFrac
       isDirectSunlit = destSunFrac > 0.05
@@ -255,6 +436,8 @@ export function simulateMissionLedger(
 
       rechargeSolarKwh += rechargeSolKwh
       rechargeHotelKwh += rechargeHotKwh
+      totalHotelEnergyKwh += transitHotKwh + rechargeHotKwh
+      totalSolarGeneratedKwh += transitSolKwh + rechargeSolKwh
 
       stepMobilityEnergyKwh = transitMobKwh
       stepHotelEnergyKwh = transitHotKwh + rechargeHotKwh
@@ -265,6 +448,42 @@ export function simulateMissionLedger(
         arrivalBatteryKwh = currentBatteryKwh
         arrivalSocPct = (arrivalBatteryKwh / batteryCapKwh) * 100
         arrivalRecorded = true
+        isDestinationReached = true
+
+        // CHECK MANDATORY RESERVE CONSTRAINT AT ARRIVAL
+        if (arrivalSocPct < minReservePct - 0.01) {
+          isFailureOccurred = true
+          minBatteryKwh = Math.min(minBatteryKwh, arrivalBatteryKwh)
+          minSocReachedPct = Math.min(minSocReachedPct, arrivalSocPct)
+          failureTimeH = Number(travelDurationH.toFixed(2))
+          failureDistanceKm = Number(route.totalDistanceKm.toFixed(2))
+          failureHourIndex = startHourIndex + Math.ceil(travelDurationH)
+          failureReason = `Mandatory reserve constraint breached: Arrived with ${arrivalSocPct.toFixed(1)}% SoC, failing the ${minReservePct.toFixed(0)}% safety reserve threshold by ${(minReservePct - arrivalSocPct).toFixed(1)}%. Mission aborted.`
+
+          steps.push({
+            hourIndex: startHourIndex + Math.ceil(travelDurationH),
+            stepTimeH: Number(travelDurationH.toFixed(2)),
+            utcDateStr: new Date(startUtcMs + travelDurationH * 3600000).toISOString(),
+            phase: 'transit',
+            phaseLabel: 'Arrival (Reserve Breached)',
+            roverLat: candidate.lat,
+            roverLon: candidate.lon,
+            roverElevM: candidate.elevationM,
+            sunElevationDeg,
+            sunAzimuthDeg,
+            isDirectSunlit: false,
+            sunFraction: 0,
+            solarGenerationW: 0,
+            locomotionDrawW: 0,
+            hotelDrawW: 0,
+            netPowerW: 0,
+            curtailedPowerW: 0,
+            storedEnergyKwh: arrivalBatteryKwh,
+            socPct: arrivalSocPct,
+            distanceCoveredKm: route.totalDistanceKm,
+          })
+          break // Stop simulation at point of failure
+        }
       }
 
       roverLat = candidate.lat
@@ -307,12 +526,10 @@ export function simulateMissionLedger(
         postRechargeSolarKwh += stepSolarEnergyKwh
         postRechargeHotelKwh += stepHotelEnergyKwh
       }
-    }
 
-    // Step Energy Balance
-    totalSolarGeneratedKwh += stepSolarEnergyKwh
-    totalHotelEnergyKwh += stepHotelEnergyKwh
-    totalMobilityEnergyKwh += stepMobilityEnergyKwh
+      totalSolarGeneratedKwh += stepSolarEnergyKwh
+      totalHotelEnergyKwh += stepHotelEnergyKwh
+    }
 
     const netStepDeltaKwh = stepSolarEnergyKwh - stepHotelEnergyKwh - stepMobilityEnergyKwh
     const tentativeBatteryKwh = currentBatteryKwh + netStepDeltaKwh
@@ -376,15 +593,63 @@ export function simulateMissionLedger(
     arrivalSocPct = (arrivalBatteryKwh / batteryCapKwh) * 100
   }
 
-  const finalBatteryKwh = currentBatteryKwh
-  const finalSocPct = (finalBatteryKwh / batteryCapKwh) * 100
+  let finalBatteryKwh = currentBatteryKwh
+  let finalSocPct = (finalBatteryKwh / batteryCapKwh) * 100
 
-  // Recharge phase net calculations
-  const rechargePotentialNetKwh = rechargeSolarKwh - rechargeHotelKwh
-  const rechargeStoredEnergyKwh = Math.max(0, finalBatteryKwh - arrivalBatteryKwh)
+  // Feasibility evaluation
+  const arrivalReserveMarginPct = arrivalSocPct - minReservePct
+  let feasibility: CandidateFeasibility = 'FEASIBLE'
+  let recommendationVerdict: SimulationRunResult['recommendationVerdict'] = 'RECOMMENDED'
+  let verdictReason = ''
 
-  // Net Mission Energy Benefit
-  const netStoredEnergyRecoveredKwh = finalBatteryKwh - arrivalBatteryKwh
+  if (isFailureOccurred || minSocReachedPct <= 0.05 || arrivalReserveMarginPct < -0.01) {
+    feasibility = 'INFEASIBLE'
+    recommendationVerdict = 'INSUFFICIENT ENERGY'
+    verdictReason =
+      failureReason ||
+      `Battery exhausts or breaches safety reserve during mission (arrival ${arrivalSocPct.toFixed(1)}% vs ${minReservePct.toFixed(0)}% required reserve).`
+  } else if (arrivalReserveMarginPct < 2.0 || route.maxSlopeDeg > 18.0) {
+    feasibility = 'CAUTION'
+    recommendationVerdict = 'FEASIBLE WITH CAUTION'
+    verdictReason = `Reachable with caution: narrow reserve margin (${arrivalReserveMarginPct >= 0 ? '+' : ''}${arrivalReserveMarginPct.toFixed(1)}%) or steep traversal slopes (max ${route.maxSlopeDeg.toFixed(1)}°).`
+  } else if (finalBatteryKwh - initialBatteryKwh <= 0.2) {
+    feasibility = 'CAUTION'
+    recommendationVerdict = 'FEASIBLE WITH CAUTION'
+    verdictReason = `Reachable safely, but yields minimal net energy benefit (+${(finalBatteryKwh - initialBatteryKwh).toFixed(2)} kWh) due to short illumination window or hotel consumption.`
+  } else {
+    feasibility = 'FEASIBLE'
+    recommendationVerdict = 'RECOMMENDED'
+    const storedRec = Math.max(0, finalBatteryKwh - arrivalBatteryKwh)
+    const netBen = finalBatteryKwh - initialBatteryKwh
+    verdictReason = `Optimal recharge opportunity: ${candidate.sunlitWindowDurationH}h continuous sunlight, recovering +${storedRec.toFixed(2)} kWh stored battery energy (+${netBen.toFixed(2)} kWh net mission benefit) with safe +${arrivalReserveMarginPct.toFixed(1)}% arrival reserve buffer.`
+  }
+
+  // If mission is infeasible, halt simulation outcomes at failure point: do not credit destination recharge
+  if (feasibility === 'INFEASIBLE') {
+    finalBatteryKwh = isDestinationReached ? arrivalBatteryKwh : 0.0
+    finalSocPct = (finalBatteryKwh / batteryCapKwh) * 100
+    totalSolarGeneratedKwh = transitSolarKwh
+    totalHotelEnergyKwh = transitHotelKwh
+    totalMobilityEnergyKwh = transitMobilityKwh
+    totalCurtailedSolarKwh = transitCurtailedKwh
+    rechargeSolarKwh = 0.0
+    rechargeHotelKwh = 0.0
+    rechargeCurtailedKwh = 0.0
+    postRechargeSolarKwh = 0.0
+    postRechargeHotelKwh = 0.0
+    postRechargeCurtailedKwh = 0.0
+  }
+
+  // Separation of Potentials vs Actual Simulated Recovery
+  const isExecutable = feasibility !== 'INFEASIBLE' && isDestinationReached
+  const reachableRechargePotentialKwh = isExecutable
+    ? Math.max(0, rechargeSolarKwh - rechargeHotelKwh)
+    : 0.0
+  const actualStoredEnergyRecoveredKwh = isExecutable
+    ? Math.max(0, finalBatteryKwh - arrivalBatteryKwh)
+    : 0.0
+
+  const netStoredEnergyRecoveredKwh = actualStoredEnergyRecoveredKwh
   const netMissionEnergyBenefitKwh = finalBatteryKwh - initialBatteryKwh
   const transitNetExpenditureKwh = initialBatteryKwh - arrivalBatteryKwh
 
@@ -400,31 +665,8 @@ export function simulateMissionLedger(
   const reconciliationDeltaKwh = Math.abs(finalBatteryKwh - expectedFinalKwh)
   const isEnergyConserved = reconciliationDeltaKwh < 1e-5
 
-  // Feasibility evaluation
-  const arrivalReserveMarginPct = arrivalSocPct - minReservePct
-  let feasibility: CandidateFeasibility = 'FEASIBLE'
-  let recommendationVerdict: SimulationRunResult['recommendationVerdict'] = 'RECOMMENDED'
-  let verdictReason = ''
-
-  if (minSocReachedPct <= 0.05 || arrivalSocPct < minReservePct - 1.0) {
-    feasibility = 'INFEASIBLE'
-    recommendationVerdict = 'INSUFFICIENT ENERGY'
-    verdictReason = `Battery exhausts during mission (min ${minSocReachedPct.toFixed(1)}% SoC, arrival ${arrivalSocPct.toFixed(1)}%), breaching the ${minReservePct.toFixed(0)}% safety reserve threshold.`
-  } else if (arrivalReserveMarginPct < 2.0 || route.maxSlopeDeg > 18.0) {
-    feasibility = 'CAUTION'
-    recommendationVerdict = 'FEASIBLE WITH CAUTION'
-    verdictReason = `Reachable with caution: narrow reserve margin (${arrivalReserveMarginPct >= 0 ? '+' : ''}${arrivalReserveMarginPct.toFixed(1)}%) or steep traversal slopes (max ${route.maxSlopeDeg.toFixed(1)}°).`
-  } else if (netMissionEnergyBenefitKwh <= 0.2) {
-    feasibility = 'CAUTION'
-    recommendationVerdict = 'FEASIBLE WITH CAUTION'
-    verdictReason = `Reachable safely, but yields minimal net energy benefit (+${netMissionEnergyBenefitKwh.toFixed(2)} kWh) due to short illumination window or hotel consumption.`
-  } else {
-    feasibility = 'FEASIBLE'
-    recommendationVerdict = 'RECOMMENDED'
-    verdictReason = `Optimal recharge opportunity: ${candidate.sunlitWindowDurationH}h continuous sunlight, recovering +${rechargeStoredEnergyKwh.toFixed(2)} kWh stored battery energy (+${netMissionEnergyBenefitKwh.toFixed(2)} kWh net mission benefit) with safe +${arrivalReserveMarginPct.toFixed(1)}% arrival reserve buffer.`
-  }
-
   const missionSuccessful =
+    isDestinationReached &&
     minSocReachedPct >= minReservePct &&
     netMissionEnergyBenefitKwh > 0 &&
     feasibility !== 'INFEASIBLE'
@@ -432,10 +674,12 @@ export function simulateMissionLedger(
   let summaryVerdict = ''
   if (missionSuccessful) {
     summaryVerdict = `Mission Nominal: Relocated ${route.totalDistanceKm.toFixed(2)} km to ${candidate.name}. Battery replenished from ${departureSocPct.toFixed(0)}% to ${finalSocPct.toFixed(0)}% (+${netMissionEnergyBenefitKwh.toFixed(2)} kWh net mission gain).`
-  } else if (minSocReachedPct < minReservePct) {
-    summaryVerdict = `Reserve Constraint Violation: Battery dropped to ${minSocReachedPct.toFixed(1)}% SoC, breaching the ${minReservePct.toFixed(0)}% reserve threshold.`
+  } else if (!isDestinationReached) {
+    summaryVerdict = `Mission Infeasible: Rover stranded in transit before reaching destination. ${failureReason}`
+  } else if (arrivalReserveMarginPct < 0) {
+    summaryVerdict = `Reserve Constraint Violation: Battery dropped to ${arrivalSocPct.toFixed(1)}% SoC upon arrival, breaching the ${minReservePct.toFixed(0)}% reserve threshold.`
   } else {
-    summaryVerdict = `Energy Stagnation: Solar replenishment did not offset mission consumption, resulting in negative net benefit.`
+    summaryVerdict = `Energy Stagnation: Solar replenishment did not offset mission consumption, resulting in non-positive net benefit.`
   }
 
   return {
@@ -446,8 +690,10 @@ export function simulateMissionLedger(
     initialBatteryKwh,
     departureSocPct,
 
-    transitDurationH: travelDurationH,
-    transitDistanceKm: route.totalDistanceKm,
+    transitDurationH: isDestinationReached ? travelDurationH : (failureTimeH ?? travelDurationH),
+    transitDistanceKm: isDestinationReached
+      ? route.totalDistanceKm
+      : Math.min(route.totalDistanceKm, ((failureTimeH ?? travelDurationH) / travelDurationH) * route.totalDistanceKm),
     transitMobilityEnergyKwh: transitMobilityKwh,
     transitHotelEnergyKwh: transitHotelKwh,
     transitSolarGeneratedKwh: transitSolarKwh,
@@ -458,18 +704,18 @@ export function simulateMissionLedger(
     arrivalSocPct,
     arrivalReserveMarginPct,
 
-    rechargeDurationH: candidate.sunlitWindowDurationH,
-    rechargeSolarGeneratedKwh: rechargeSolarKwh,
-    rechargeHotelEnergyKwh: rechargeHotelKwh,
-    rechargePotentialNetKwh,
-    rechargeStoredEnergyKwh,
-    rechargeCurtailedSolarKwh: rechargeCurtailedKwh,
+    rechargeDurationH: isExecutable ? candidate.sunlitWindowDurationH : 0,
+    rechargeSolarGeneratedKwh: isExecutable ? rechargeSolarKwh : 0,
+    rechargeHotelEnergyKwh: isExecutable ? rechargeHotelKwh : 0,
+    rechargePotentialNetKwh: reachableRechargePotentialKwh,
+    rechargeStoredEnergyKwh: actualStoredEnergyRecoveredKwh,
+    rechargeCurtailedSolarKwh: isExecutable ? rechargeCurtailedKwh : 0,
 
-    postRechargeDurationH: Math.max(0, totalSimHours - (travelDurationH + candidate.sunlitWindowDurationH)),
-    postRechargeSolarGeneratedKwh: postRechargeSolarKwh,
-    postRechargeHotelEnergyKwh: postRechargeHotelKwh,
-    postRechargeStoredEnergyKwh: Math.max(0, finalBatteryKwh - (arrivalBatteryKwh + rechargeStoredEnergyKwh)),
-    postRechargeCurtailedSolarKwh: postRechargeCurtailedKwh,
+    postRechargeDurationH: isExecutable ? Math.max(0, totalSimHours - (travelDurationH + candidate.sunlitWindowDurationH)) : 0,
+    postRechargeSolarGeneratedKwh: isExecutable ? postRechargeSolarKwh : 0,
+    postRechargeHotelEnergyKwh: isExecutable ? postRechargeHotelKwh : 0,
+    postRechargeStoredEnergyKwh: isExecutable ? Math.max(0, finalBatteryKwh - (arrivalBatteryKwh + actualStoredEnergyRecoveredKwh)) : 0,
+    postRechargeCurtailedSolarKwh: isExecutable ? postRechargeCurtailedKwh : 0,
 
     finalBatteryKwh,
     finalSocPct,
@@ -482,6 +728,16 @@ export function simulateMissionLedger(
     totalCurtailedSolarKwh,
     netStoredEnergyRecoveredKwh,
     netMissionEnergyBenefitKwh,
+
+    theoreticalSolarPotentialKwh,
+    theoreticalRechargePotentialKwh,
+    reachableRechargePotentialKwh,
+    actualStoredEnergyRecoveredKwh,
+    isDestinationReached,
+    failureReason,
+    failureHourIndex,
+    failureTimeH,
+    failureDistanceKm,
 
     reconciliationDeltaKwh,
     isEnergyConserved,
