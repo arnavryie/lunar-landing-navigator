@@ -170,3 +170,107 @@
   color: #94a3b8;
   border: 1px solid rgba(100, 116, 139, 0.4);
 }
+
+/* 3D Science Lens in Terrain3D */
+.science-3d-card {
+  background: #141b24;
+  border: 1px solid #283341;
+  border-radius: var(--radius-m, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.science-3d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.science-3d-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.science-3d-subtitle {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.science-toggle-pill {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.science-toggle-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.science-3d-desc {
+  font-size: 11px;
+  color: #8a99ad;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.science-3d-telemetry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  padding: 10px;
+  background: #0d1218;
+  border-radius: 6px;
+  border: 1px solid #1f2732;
+  font-size: 11px;
+}
+
+.telemetry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.telemetry-item.full {
+  grid-column: span 2;
+  margin-top: 4px;
+}
+
+.telemetry-lbl {
+  color: #8b99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.telemetry-val {
+  font-family: monospace;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.telemetry-val.highlight {
+  color: #38bdf8;
+}
+
+.telemetry-val.depth {
+  color: #f87171;
+}
+
+.telemetry-val.cryo {
+  color: #34d399;
+}
+

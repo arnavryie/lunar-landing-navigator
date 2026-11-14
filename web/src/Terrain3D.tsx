@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data'
+import { formatUtc, getSiteScienceStats, loadSite, timeAt, type Site, type SiteSummary } from './data'
+import './styles/analysis.css'
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -9,6 +10,83 @@ import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data
 // Scene units: km. Scene axes: X = map x (90 E side), Z = map down (180 side), Y = up at the pole.
 
 const R_KM = 1737.4
+
+export interface PsrZone {
+  id: string
+  name: string
+  lat: number
+  lon: number
+  radiusKm: number
+  depthM: number
+  tempK: number
+  iceTrapped: boolean
+}
+
+export const MAJOR_PSRS: PsrZone[] = [
+  { id: 'shackleton', name: 'Shackleton Crater PSR', lat: -89.9, lon: 0.0, radiusKm: 10.5, depthM: 4200, tempK: 40, iceTrapped: true },
+  { id: 'faustini', name: 'Faustini Crater PSR', lat: -87.3, lon: 77.0, radiusKm: 19.5, depthM: 3100, tempK: 55, iceTrapped: true },
+  { id: 'shoemaker', name: 'Shoemaker Crater PSR', lat: -88.1, lon: 44.9, radiusKm: 25.5, depthM: 2800, tempK: 50, iceTrapped: true },
+  { id: 'haworth', name: 'Haworth Crater PSR', lat: -87.4, lon: -5.1, radiusKm: 25.5, depthM: 3500, tempK: 40, iceTrapped: true },
+  { id: 'cabeus', name: 'Cabeus (LCROSS Water Confirmed)', lat: -84.9, lon: -35.5, radiusKm: 48.0, depthM: 3200, tempK: 42, iceTrapped: true },
+  { id: 'de-gerlache', name: 'de Gerlache Crater PSR', lat: -88.5, lon: -88.3, radiusKm: 16.0, depthM: 2500, tempK: 50, iceTrapped: true },
+  { id: 'slater', name: 'Slater Crater PSR', lat: -88.1, lon: -110.8, radiusKm: 12.5, depthM: 2500, tempK: 45, iceTrapped: true },
+  { id: 'amundsen', name: 'Amundsen Crater PSR', lat: -84.5, lon: 85.6, radiusKm: 51.0, depthM: 3000, tempK: 65, iceTrapped: true },
+]
+
+function surfaceDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const rad = Math.PI / 180
+  const phi1 = lat1 * rad
+  const phi2 = lat2 * rad
+  const dphi = (lat2 - lat1) * rad
+  const dlambda = (lon2 - lon1) * rad
+  const a = Math.sin(dphi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlambda / 2) ** 2
+  return 2 * R_KM * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function findNearestPsr(lat: number, lon: number): { psr: PsrZone; distanceKm: number } {
+  let nearest = MAJOR_PSRS[0]
+  let minD = Infinity
+  for (const p of MAJOR_PSRS) {
+    const d = surfaceDistanceKm(lat, lon, p.lat, p.lon)
+    if (d < minD) {
+      minD = d
+      nearest = p
+    }
+  }
+  return { psr: nearest, distanceKm: minD }
+}
+
+function createTextSprite(text: string, color = '#00e5ff', bg = 'rgba(13, 18, 24, 0.9)') {
+  const canvas = document.createElement('canvas')
+  canvas.width = 340
+  canvas.height = 70
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.fillStyle = bg
+  if (ctx.roundRect) {
+    ctx.roundRect(4, 4, 332, 62, 10)
+  } else {
+    ctx.rect(4, 4, 332, 62)
+  }
+  ctx.fill()
+  ctx.strokeStyle = color
+  ctx.lineWidth = 3
+  ctx.stroke()
+  ctx.fillStyle = '#f1f5f9'
+  ctx.font = 'bold 22px system-ui, -apple-system, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, 170, 35)
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.needsUpdate = true
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false })
+  const sprite = new THREE.Sprite(mat)
+  sprite.renderOrder = 999
+  sprite.scale.set(16, 3.3, 1)
+  return sprite
+}
+
 const VIS_RES = 1024
 const base = `${import.meta.env.BASE_URL}data/map/`
 const COLORS = { sun: '#c98419', earth: '#5590d8', both: '#1fa38a', none: '#30363e' }
@@ -156,6 +234,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
   const [err, setErr] = useState('')
   const [exag, setExag] = useState(1)
   const [check, setCheck] = useState('')
+  const [showScience, setShowScience] = useState(false)
   const currentExagRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
 
@@ -253,10 +332,21 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
     }
   }, [])
 
-  // Draw marker pin and sight rays at the specified vertical exaggeration, then render the 3D scene.
+  // Draw marker pin, sight rays, and science trade-off layers at current exaggeration.
   const drawMarksAndRender = (w: World, curExag: number) => {
     w.terrainMat.uniforms.uExag.value = curExag
+
+    // Dispose old mark geometries and materials to keep GPU memory clean
+    w.marks.traverse((child) => {
+      if (child instanceof THREE.Mesh || child instanceof THREE.Line || child instanceof THREE.Sprite) {
+        child.geometry?.dispose()
+        if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
+        else child.material?.dispose()
+      }
+    })
     w.marks.clear()
+
+    // 1. Base solar & Earth sight rays from site
     if (site && site.lat <= -80.5) {
       const pos = scenePos(w, site.lat, site.lon, curExag)
       const pin = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshBasicMaterial({ color: '#d9d6cf' }))
@@ -274,6 +364,120 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         w.marks.add(line)
       }
     }
+
+    // 2. WS5 Science vs Engineering Lens (Mountains vs Ice)
+    if (showScience) {
+      // Draw all major cold trap PSR crater bowls (<110 K)
+      for (const p of MAJOR_PSRS) {
+        if (p.lat <= -80.5) {
+          const pPos = scenePos(w, p.lat, p.lon, curExag)
+
+          // Glowing cryogenic disc on crater floor
+          const discGeo = new THREE.CircleGeometry(p.radiusKm, 32)
+          discGeo.rotateX(-Math.PI / 2)
+          const discMat = new THREE.MeshBasicMaterial({
+            color: 0x00e5ff,
+            transparent: true,
+            opacity: 0.25,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          })
+          const disc = new THREE.Mesh(discGeo, discMat)
+          disc.position.copy(pPos)
+          disc.position.y += 0.15 * curExag
+          w.marks.add(disc)
+
+          // Glowing ice perimeter ring
+          const ringGeo = new THREE.RingGeometry(p.radiusKm * 0.94, p.radiusKm, 48)
+          ringGeo.rotateX(-Math.PI / 2)
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x38ef7d,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide,
+          })
+          const ring = new THREE.Mesh(ringGeo, ringMat)
+          ring.position.copy(pPos)
+          ring.position.y += 0.2 * curExag
+          w.marks.add(ring)
+
+          // Center cryo beacon
+          const beaconGeo = new THREE.CylinderGeometry(0.35, 0.35, 4 * curExag, 12)
+          const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.85 })
+          const beacon = new THREE.Mesh(beaconGeo, beaconMat)
+          beacon.position.copy(pPos)
+          beacon.position.y += 2 * curExag
+          w.marks.add(beacon)
+
+          // 3D Billboard label for crater cold trap
+          const psrLabel = createTextSprite(`🧊 ${p.name.replace(' Crater PSR', '')} (${p.tempK} K)`, '#00e5ff')
+          if (psrLabel) {
+            psrLabel.position.copy(pPos)
+            psrLabel.position.y += 5.5 * curExag
+            w.marks.add(psrLabel)
+          }
+        }
+      }
+
+      // If a site near the south pole is selected, draw Traverse Corridor and Solar Engineering Halo
+      if (site && site.lat <= -80.5) {
+        const posSite = scenePos(w, site.lat, site.lon, curExag)
+        const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
+
+        // Solar Engineering Landing Crest (Golden Halo)
+        const solarHaloGeo = new THREE.RingGeometry(1.6, 2.4, 32)
+        solarHaloGeo.rotateX(-Math.PI / 2)
+        const solarHaloMat = new THREE.MeshBasicMaterial({
+          color: 0xffb74d,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide,
+        })
+        const solarHalo = new THREE.Mesh(solarHaloGeo, solarHaloMat)
+        solarHalo.position.copy(posSite)
+        solarHalo.position.y += 0.25 * curExag
+        w.marks.add(solarHalo)
+
+        // Landing Ridge 3D Billboard
+        const siteSprite = createTextSprite(`☀️ ${site.name} (Ridge)`, '#ffb74d', 'rgba(30, 20, 10, 0.9)')
+        if (siteSprite) {
+          siteSprite.position.copy(posSite)
+          siteSprite.position.y += 4.5 * curExag
+          w.marks.add(siteSprite)
+        }
+
+        // 3D Traverse Descent Laser Corridor from Ridge into Crater Floor
+        const STEPS = 24
+        const linePoints: THREE.Vector3[] = []
+        for (let k = 0; k <= STEPS; k++) {
+          const t = k / STEPS
+          const l_lat = site.lat + (psr.lat - site.lat) * t
+          const l_lon = site.lon + (psr.lon - site.lon) * t
+          const p = scenePos(w, l_lat, l_lon, curExag)
+          p.y += 0.3 * curExag // slight elevation clearance to hug topography cleanly
+          linePoints.push(p)
+        }
+
+        const travGeo = new THREE.BufferGeometry().setFromPoints(linePoints)
+        const travMat = new THREE.LineBasicMaterial({
+          color: 0x00f5d4,
+          linewidth: 3,
+        })
+        const travLine = new THREE.Line(travGeo, travMat)
+        w.marks.add(travLine)
+
+        // Midpoint Traverse Telemetry Badge
+        const midIdx = Math.floor(STEPS / 2)
+        const midPoint = linePoints[midIdx].clone()
+        const travBadge = createTextSprite(`⚡ Traverse: ${distanceKm.toFixed(1)} km (-${psr.depthM} m)`, '#00f5d4', 'rgba(5, 25, 20, 0.9)')
+        if (travBadge) {
+          travBadge.position.copy(midPoint)
+          travBadge.position.y += 3.5 * curExag
+          w.marks.add(travBadge)
+        }
+      }
+    }
+
     w.renderer.render(w.scene, w.camera)
   }
 
@@ -295,6 +499,13 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
 
     drawMarksAndRender(w, currentExagRef.current)
   }, [i, site, ready])
+
+  // Instant update when science lens toggles without triggering expensive GPU shadow raymarches
+  useEffect(() => {
+    const w = world.current
+    if (!w || !ready) return
+    drawMarksAndRender(w, currentExagRef.current)
+  }, [showScience])
 
   // Smoothly animate vertical exaggeration transitions using a frame-rate-independent cubic ease-out.
   useEffect(() => {
@@ -345,7 +556,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
     }
   }, [exag, ready, site, i])
 
-  const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
+  const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton' | 'descent' | 'psr_bowl') => {
     const w = world.current
     if (!w) return
     const { camera, controls } = w
@@ -361,7 +572,19 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       const p = scenePos(w, -89.67, 129.78, currentExagRef.current)
       camera.position.set(p.x - 30, p.y + 22, p.z - 26)
       controls.target.copy(p)
-    } else if (site && site.lat <= -80.5) {
+    } else if (k === 'descent' && site && site.lat <= -80.5) {
+      const pSite = scenePos(w, site.lat, site.lon, currentExagRef.current)
+      const { psr } = findNearestPsr(site.lat, site.lon)
+      const pPsr = scenePos(w, psr.lat, psr.lon, currentExagRef.current)
+      const dir = new THREE.Vector3().subVectors(pPsr, pSite).normalize()
+      camera.position.set(pSite.x - dir.x * 24, pSite.y + 16 * currentExagRef.current, pSite.z - dir.z * 24)
+      controls.target.copy(pPsr)
+    } else if (k === 'psr_bowl' && site && site.lat <= -80.5) {
+      const { psr } = findNearestPsr(site.lat, site.lon)
+      const pPsr = scenePos(w, psr.lat, psr.lon, currentExagRef.current)
+      camera.position.set(pPsr.x - 20, pPsr.y + 12 * currentExagRef.current, pPsr.z - 20)
+      controls.target.copy(pPsr)
+    } else if ((k === 'sun' || k === 'earth') && site && site.lat <= -80.5) {
       const p = scenePos(w, site.lat, site.lon, currentExagRef.current).add(new THREE.Vector3(0, 0.05, 0))
       camera.position.copy(p)
       controls.target.copy(p.clone().addScaledVector(directionFrom(w, i, k, site.lat, site.lon), 30))
@@ -421,6 +644,61 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
             </span>
           ))}
         </div>
+
+        {/* WS5: Science vs Engineering 3D Lens Toggle & Telemetry */}
+        <div className="science-3d-card">
+          <div className="science-3d-header">
+            <div>
+              <span className="science-3d-title">🏔️ vs 🧊 Science Lens</span>
+              <span className="science-3d-subtitle">Mountains vs. Cold Traps</span>
+            </div>
+            <button
+              type="button"
+              className={`science-toggle-pill ${showScience ? 'active' : ''}`}
+              onClick={() => setShowScience((v) => !v)}
+              aria-pressed={showScience}
+              title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
+            >
+              {showScience ? '🧊 ON' : '🏔️ OFF'}
+            </button>
+          </div>
+
+          <p className="science-3d-desc">
+            {showScience
+              ? 'Visualizing cold trap water ice (<110 K PSRs), illuminated ridges, and rim-to-floor descent trajectories.'
+              : 'Toggle ON to visualize crater cold traps, volatile ice reservoirs, and landing-to-ice traverse vectors.'}
+          </p>
+
+          {showScience && site && site.lat <= -80.5 && (() => {
+            const scienceStats = getSiteScienceStats(site)
+            const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
+            return (
+              <div className="science-3d-telemetry">
+                <div className="telemetry-item">
+                  <span className="telemetry-lbl">Target PSR:</span>
+                  <span className="telemetry-val highlight">{psr.name.replace(' Crater PSR', '')}</span>
+                </div>
+                <div className="telemetry-item">
+                  <span className="telemetry-lbl">Traverse Dist:</span>
+                  <span className="telemetry-val">{distanceKm.toFixed(1)} km</span>
+                </div>
+                <div className="telemetry-item">
+                  <span className="telemetry-lbl">Crater Depth:</span>
+                  <span className="telemetry-val depth">-{psr.depthM.toLocaleString()} m</span>
+                </div>
+                <div className="telemetry-item">
+                  <span className="telemetry-lbl">Cryo Temp:</span>
+                  <span className="telemetry-val cryo">{psr.tempK} K (-{273 - psr.tempK}°C)</span>
+                </div>
+                <div className="telemetry-item full">
+                  <span className="telemetry-lbl">Zone Verdict:</span>
+                  <span className={`tradeoff-chip chip-${scienceStats.zone}`}>{scienceStats.zoneLabel}</span>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
         <p className="chart-note">
           Colours are computed, not drawn: each point steps across the real terrain toward the Sun and Earth at the selected
           time, with the Moon's curvature. Grey relief shading is only for readability.
@@ -450,6 +728,12 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
             <button onClick={() => preset('shackleton')}>Over Shackleton</button>
             <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>From the site, look at the Sun</button>
             <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>Look at Earth</button>
+            {showScience && site && site.lat <= -80.5 && (
+              <>
+                <button type="button" onClick={() => preset('descent')}>Descent View ⚡</button>
+                <button type="button" onClick={() => preset('psr_bowl')}>Inside Crater Bowl 🧊</button>
+              </>
+            )}
           </div>
           <p className="chart-note">Drag to rotate, right-drag to pan, scroll to zoom.</p>
         </fieldset>
