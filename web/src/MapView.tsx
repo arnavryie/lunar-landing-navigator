@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode }
 import { R_M, polarRowCol, rowColToLatLon } from './engine'
 import { loadMapData, slopeGrid, terrainAt, type MapData } from './mapData'
 import { VCOLOR, VERDICT_CUTOFF, VERDICT_COLOR, type Verdict } from './ellipseCheck'
+import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
 import { ARTEMIS_III_URL, ARTEMIS_NOTE, formatDuration, loadArtemis, type Region, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
@@ -140,6 +141,7 @@ interface Props {
   maxSlope?: number // for the landing layers
   areaKm?: number // landing-area layer window (ellipse size)
   extra?: ReactNode // extra panel under the picked-point box
+  onOpenArtemis?: () => void
 }
 
 export function MapView(p: Props) {
@@ -151,11 +153,24 @@ export function MapView(p: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [regions, setRegions] = useState<Region[]>([])
   const [showRegions, setShowRegions] = useState(true)
+  const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(null)
 
   useEffect(() => {
     ;loadMapData().then(setData, (e) => setErr(String(e.message ?? e)))
     loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
+
+  useEffect(() => {
+    const s = p.site
+    if (!s) return
+    const match = ARTEMIS_3_SITES.find((a) => {
+      if (s.id === `artemis-${a.id}`) return true
+      if (s.name.toLowerCase().includes(a.name.toLowerCase())) return true
+      const dLon = Math.abs((((a.lon - s.lon) % 360) + 540) % 360 - 180)
+      return Math.hypot(a.lat - s.lat, dLon * Math.cos(((a.lat + s.lat) * 0.5 * Math.PI) / 180)) < 0.5
+    })
+    if (match) setSelectedArtemis(match)
+  }, [p.site])
 
   const maxSlope = p.maxSlope ?? 8
   const areaKm = p.areaKm ?? 4
@@ -370,9 +385,17 @@ export function MapView(p: Props) {
         g.lineWidth = 3.5
         g.strokeStyle = '#111418'
         g.stroke()
-        g.lineWidth = 1.5
-        g.strokeStyle = '#d9d6cf'
+        const isArtemisSel = selectedArtemis?.name.toLowerCase() === r.name.toLowerCase()
+        g.lineWidth = isArtemisSel ? 2.5 : 1.5
+        g.strokeStyle = isArtemisSel ? '#f59e0b' : '#38bdf8'
         g.stroke()
+        if (isArtemisSel) {
+          g.beginPath()
+          g.arc(pt[0], pt[1], 12, 0, Math.PI * 2)
+          g.lineWidth = 1
+          g.strokeStyle = '#f59e0b'
+          g.stroke()
+        }
         let ly = pt[1] + 4
         while (placed.some((y) => Math.abs(y - ly) < 15)) ly += 15
         placed.push(ly)
@@ -416,6 +439,15 @@ export function MapView(p: Props) {
   const onClick = (e: MouseEvent<HTMLCanvasElement>) => {
     const q = pixelAt(e)
     if (!q) return
+    const nearArtemis = ARTEMIS_3_SITES.find((a) => {
+      const pt = a.lat <= -85 ? toCanvas(a.lat, a.lon, q.size) : null
+      return pt && Math.hypot(pt[0] - q.x, pt[1] - q.y) < 14
+    })
+    if (nearArtemis) {
+      setSelectedArtemis(nearArtemis)
+      p.onPickPoint(nearArtemis.lat, nearArtemis.lon)
+      return
+    }
     const near = markers.find((s) => {
       const pt = toCanvas(s.lat, s.lon, q.size)
       return pt && Math.hypot(pt[0] - q.x, pt[1] - q.y) < 9
@@ -426,7 +458,10 @@ export function MapView(p: Props) {
     })
     if (ranked) p.onPickPoint(ranked.lat, ranked.lon)
     else if (near) p.onPickSite(near.id)
-    else if (q.lat <= -85) p.onPickPoint(q.lat, q.lon)
+    else if (q.lat <= -85) {
+      setSelectedArtemis(null)
+      p.onPickPoint(q.lat, q.lon)
+    }
   }
 
   const t = data && hover && hover.r >= 1 && hover.c >= 1 && hover.r < data.n - 1 && hover.c < data.n - 1 ? terrainAt(data, hover.r, hover.c) : null
@@ -547,6 +582,99 @@ export function MapView(p: Props) {
             </button>
           )}
         </div>
+        <fieldset className="thresholds" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites &amp; Resources</legend>
+          <div className="slips" style={{ gap: '6px' }}>
+            {ARTEMIS_3_SITES.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '3px 7px',
+                  minWidth: 'auto',
+                  borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                  color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  fontWeight: selectedArtemis?.id === a.id ? 600 : 400
+                }}
+                onClick={() => {
+                  setSelectedArtemis(a)
+                  p.onPickPoint(a.lat, a.lon)
+                }}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedArtemis && (
+            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid #38bdf8', borderRadius: 'var(--radius-s)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
+                    {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.68rem', padding: '2px 5px', borderRadius: '3px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
+                  {selectedArtemis.resources.water_ice_potential} Ice
+                </span>
+              </div>
+              <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
+              
+              <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
+                <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
+                  {selectedArtemis.minerals.primary.map((m) => (
+                    <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 5px', borderRadius: '3px', fontSize: '0.7rem' }}>
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
+              </div>
+
+              <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
+                <strong style={{ color: '#38bdf8' }}>Water-Ice &amp; Cryogenic Volatiles:</strong>
+                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                  Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
+                </div>
+              </div>
+
+              <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
+                <strong style={{ color: '#f59e0b' }}>Lander In-Situ Resources (ISRU):</strong>
+                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                  Extractable Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => {
+                    p.onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
+                    p.onOpenSite()
+                  }}
+                >
+                  Analyze in Site &amp; Plan Tab →
+                </button>
+                {p.onOpenArtemis && (
+                  <button
+                    type="button"
+                    style={{ padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                    onClick={p.onOpenArtemis}
+                  >
+                    View in 3D Tab (Terrain &amp; Resources) →
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </fieldset>
         <label className="radio">
           <input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} />
           NASA candidate landing regions ◇

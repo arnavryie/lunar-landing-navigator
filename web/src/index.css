@@ -318,6 +318,86 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .globe-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-variant-numeric: tabular-nums; }
 .globe-facts span { color: var(--muted); }
 
+/* Artemis 3D globe interactive aerospace badges */
+.globe-label.is-artemis {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #f0f9ff;
+  background: rgba(11, 18, 30, 0.90);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(56, 189, 248, 0.25);
+  padding: 3px 8px;
+  border-radius: var(--radius-s);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease;
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+  visibility: hidden;
+}
+.globe-label.is-artemis.is-hovered {
+  opacity: 0.95;
+  visibility: visible;
+  background: rgba(14, 116, 144, 0.92);
+  border-color: #38bdf8;
+  transform: translateY(0) scale(1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.45);
+  z-index: 15;
+}
+.globe-label.is-artemis.is-selected {
+  opacity: 1;
+  visibility: visible;
+  color: #ffffff;
+  background: rgba(180, 83, 9, 0.92);
+  border: 1.5px solid #fbbf24;
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.6), 0 2px 8px rgba(0, 0, 0, 0.7);
+  transform: translateY(0) scale(1);
+  z-index: 20;
+  animation: badgePop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.globe-label.is-artemis.show-always {
+  opacity: 0.88;
+  visibility: visible;
+  transform: translateY(0) scale(0.95);
+}
+@keyframes badgePop {
+  0% { transform: translateY(10px) scale(0.8); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.globe-label.is-artemis .artemis-badge-dot {
+  color: #38bdf8;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+.globe-label.is-artemis.is-selected .artemis-badge-dot {
+  color: #fbbf24;
+}
+.globe-label.is-artemis .artemis-badge-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.globe-label.is-artemis .artemis-badge-tag {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  font-weight: 700;
+}
+.globe-label.is-artemis.is-selected .artemis-badge-tag {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fef08a;
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
 /* F7 finder */
 .finder { display: grid; gap: 12px; }
 .finder .field.wide { grid-template-columns: 1fr 170px; }

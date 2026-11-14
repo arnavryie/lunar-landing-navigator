@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
-  VIABILITY_LABEL, formatDeg, formatDuration, hoursToChange, loadSite, timeAt, viability, windowStats,
+  VIABILITY_LABEL, formatDeg, formatDuration, getSiteScienceStats, hoursToChange, loadSite, timeAt, viability, windowStats,
   type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
 } from './data'
+import './styles/analysis.css'
 
 export interface Scenario {
   siteId: string
@@ -47,6 +48,12 @@ const ROWS: Row[] = [
     group: 'At landing', label: 'Earth', get: (e) => change(e, 'earth'),
     fmt: (n, e) => (e.site.earth.frac[e.sc.t] > 0 ? `In view, sets in ${formatDuration(n)}` : `Hidden, rises in ${formatDuration(n)}`),
   },
+  // Science (Water Ice & Volatiles)
+  { group: 'Science (Water Ice)', label: 'Distance to Ice PSR', get: (e) => getSiteScienceStats(e.site).distToPsrKm, fmt: (n) => `${n.toFixed(1)} km`, best: 'low' },
+  { group: 'Science (Water Ice)', label: 'Cold trap temp', get: (e) => getSiteScienceStats(e.site).tempK, fmt: (n) => `~${n} K (${n < 110 ? 'Ice Stable' : 'Thermal Boundary'})` },
+  { group: 'Science (Water Ice)', label: 'Crater depth drop', get: (e) => getSiteScienceStats(e.site).depthDropM, fmt: (n) => `-${n.toLocaleString('en')} m` },
+  { group: 'Science (Water Ice)', label: 'Trade-off Sweet Spot', get: (e) => getSiteScienceStats(e.site).scienceScore, fmt: (_, e) => getSiteScienceStats(e.site).zoneLabel, best: 'high' },
+  // Whole Year
   { group: 'Whole year', label: 'Sunlit', get: (e) => e.site.metrics.sunlit_pct, fmt: pct, best: 'high' },
   { group: 'Whole year', label: 'Earth in view', get: (e) => e.site.metrics.earth_visible_pct, fmt: pct, best: 'high' },
   { group: 'Whole year', label: 'Longest darkness', get: (e) => e.site.metrics.longest_dark_h, fmt: formatDuration, best: 'low' },
@@ -214,9 +221,208 @@ export function Compare(p: {
           </p>
         </div>
       )}
+
+      {ready && <ScienceQuadrantChart evals={ready} th={th} />}
     </div>
   )
 }
+
+function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
+  const { evals, th } = p
+  const [activeLetter, setActiveLetter] = useState<string | null>(null)
+
+  const w = 680
+  const h = 330
+  const ml = 65
+  const mr = 35
+  const mt = 35
+  const mb = 45
+  const pw = w - ml - mr
+  const ph = h - mt - mb
+
+  const maxKm = 20
+  const toX = (km: number) => ml + (Math.min(km, maxKm) / maxKm) * pw
+  const toY = (pct: number) => mt + ph - (Math.min(100, Math.max(0, pct)) / 100) * ph
+
+  const splitX = toX(5.0)
+  const splitY = toY(th.minSunPct)
+
+  return (
+    <div className="science-tradeoff-section">
+      <div className="science-tradeoff-header">
+        <div>
+          <h3>Science vs. Engineering Trade-off: The Sweet Spot Navigator</h3>
+          <p>
+            Balances Engineering power survival (Sunlight %) against Science return (Proximity to permanently shadowed water ice).
+          </p>
+        </div>
+      </div>
+
+      <div className="quadrant-legend">
+        <div className="quadrant-legend-item">
+          <span className="quadrant-legend-dot dot-sweet-spot" />
+          <span><strong>Sweet Spot ⭐:</strong> Sun ≥ {th.minSunPct}% &amp; Ice ≤ 5 km</span>
+        </div>
+        <div className="quadrant-legend-item">
+          <span className="quadrant-legend-dot dot-safe-dry" />
+          <span><strong>Safe but Dry 🛡️:</strong> Sun ≥ {th.minSunPct}%, Ice &gt; 5 km</span>
+        </div>
+        <div className="quadrant-legend-item">
+          <span className="quadrant-legend-dot dot-cryo-danger" />
+          <span><strong>Cryo Hazard ⚠️:</strong> Near/In Ice, Sun &lt; {th.minSunPct}%</span>
+        </div>
+        <div className="quadrant-legend-item">
+          <span className="quadrant-legend-dot dot-non-viable" />
+          <span><strong>Non-Viable 🚫:</strong> Low Sun &amp; Distant from Ice</span>
+        </div>
+      </div>
+
+      <div className="quadrant-wrap">
+        <svg viewBox={`0 0 ${w} ${h}`} className="quadrant-chart-svg" aria-label="Science vs Engineering quadrant plot">
+          {/* Quadrant Backgrounds */}
+          <rect x={ml} y={mt} width={splitX - ml} height={splitY - mt} fill="rgba(31, 163, 138, 0.12)" />
+          <rect x={splitX} y={mt} width={w - mr - splitX} height={splitY - mt} fill="rgba(85, 144, 216, 0.08)" />
+          <rect x={ml} y={splitY} width={splitX - ml} height={mt + ph - splitY} fill="rgba(245, 158, 11, 0.09)" />
+          <rect x={splitX} y={splitY} width={w - mr - splitX} height={mt + ph - splitY} fill="rgba(100, 116, 139, 0.05)" />
+
+          {/* Quadrant Titles */}
+          <text x={ml + 12} y={mt + 20} fill="#1fa38a" fontSize="11" fontWeight="bold">SWEET SPOT ⭐</text>
+          <text x={ml + 12} y={mt + 34} fill="#8b99aa" fontSize="9">Power Viable + Ice Accessible (&lt;5 km)</text>
+
+          <text x={splitX + 12} y={mt + 20} fill="#5590d8" fontSize="11" fontWeight="bold">SAFE BUT DRY 🛡️</text>
+          <text x={splitX + 12} y={mt + 34} fill="#8b99aa" fontSize="9">Lander Survives · Ice Unreachable</text>
+
+          <text x={ml + 12} y={splitY + 22} fill="#f59e0b" fontSize="11" fontWeight="bold">CRYO HAZARD ⚠️</text>
+          <text x={ml + 12} y={splitY + 36} fill="#8b99aa" fontSize="9">Rich in Ice · Lander Freeze Hazard</text>
+
+          <text x={splitX + 12} y={splitY + 22} fill="#64748b" fontSize="11" fontWeight="bold">NON-VIABLE 🚫</text>
+          <text x={splitX + 12} y={splitY + 36} fill="#8b99aa" fontSize="9">Low Power · Far from Ice</text>
+
+          {/* Threshold Divider Lines */}
+          <line x1={splitX} y1={mt} x2={splitX} y2={mt + ph} stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" />
+          <line x1={ml} y1={splitY} x2={w - mr} y2={splitY} stroke="#c98419" strokeWidth="1.5" strokeDasharray="3 3" />
+
+          {/* X Axis Ticks */}
+          {[0, 5, 10, 15, 20].map((km) => {
+            const x = toX(km)
+            return (
+              <g key={km}>
+                <line x1={x} y1={mt} x2={x} y2={mt + ph} stroke="#1f2732" strokeWidth="0.5" />
+                <text x={x} y={mt + ph + 16} fill="#8b99aa" fontSize="10" textAnchor="middle">
+                  {km === 20 ? '20+ km' : `${km} km`}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Y Axis Ticks */}
+          {[0, 25, 50, 75, 100].map((p) => {
+            const y = toY(p)
+            return (
+              <g key={p}>
+                <line x1={ml} y1={y} x2={w - mr} y2={y} stroke="#1f2732" strokeWidth="0.5" />
+                <text x={ml - 8} y={y + 4} fill="#8b99aa" fontSize="10" textAnchor="end">
+                  {p}%
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Axis Labels */}
+          <text x={ml + pw / 2} y={h - 6} fill="#cbd5e1" fontSize="11" fontWeight="bold" textAnchor="middle">
+            Distance to Nearest Water-Ice Cold Trap (km) →
+          </text>
+          <text
+            x={-mt - ph / 2}
+            y={16}
+            transform="rotate(-90)"
+            fill="#c98419"
+            fontSize="11"
+            fontWeight="bold"
+            textAnchor="middle"
+          >
+            Mission Sunlight % (Power) →
+          </text>
+
+          {/* Scenario Points */}
+          {evals.map((e, k) => {
+            const sc = getSiteScienceStats(e.site)
+            const sunPct = e.w?.sunPct ?? 0
+            const cx = toX(sc.distToPsrKm)
+            const cy = toY(sunPct)
+            const letter = LETTERS[k]
+            const isHover = activeLetter === letter
+
+            let dotColor = '#5590d8'
+            if (sc.zone === 'sweet_spot') dotColor = '#1fa38a'
+            else if (sc.zone === 'cryo_danger') dotColor = '#f59e0b'
+            else if (sc.zone === 'non_viable') dotColor = '#64748b'
+
+            return (
+              <g
+                key={letter}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setActiveLetter(letter)}
+                onMouseLeave={() => setActiveLetter(null)}
+              >
+                {/* Glow ring */}
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={isHover ? 18 : 14}
+                  fill={dotColor}
+                  fillOpacity={isHover ? 0.35 : 0.2}
+                  stroke={dotColor}
+                  strokeWidth={isHover ? 2 : 1}
+                />
+                {/* Solid core */}
+                <circle cx={cx} cy={cy} r={8} fill={dotColor} />
+                {/* Letter */}
+                <text x={cx} y={cy + 3.5} fill="#0d1218" fontSize="10" fontWeight="bold" textAnchor="middle">
+                  {letter}
+                </text>
+                {/* Name Tag */}
+                <text
+                  x={cx}
+                  y={cy - 16}
+                  fill="#f1f5f9"
+                  fontSize="10"
+                  fontWeight={isHover ? 'bold' : 'normal'}
+                  textAnchor="middle"
+                  style={{ textShadow: '0 1px 4px #000' }}
+                >
+                  {letter}: {e.site.name.slice(0, 18)}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+
+        {activeLetter && (() => {
+          const idx = LETTERS.indexOf(activeLetter)
+          const target = evals[idx]
+          if (!target) return null
+          const sc = getSiteScienceStats(target.site)
+          return (
+            <div className="science-badge-row">
+              <span className="science-badge-title">Scenario {activeLetter} ({target.site.name}):</span>
+              <span className="science-badge-val">Sunlit: {target.w?.sunPct?.toFixed(1) ?? '–'}%</span>
+              <span>·</span>
+              <span className="science-badge-val">Distance to Ice: {sc.distToPsrKm.toFixed(1)} km</span>
+              <span>·</span>
+              <span className="science-badge-val">Temp: ~{sc.tempK} K</span>
+              <span>·</span>
+              <span className="science-badge-val">Crater Relief: -{sc.depthDropM} m</span>
+              <span>·</span>
+              <span className={`tradeoff-chip chip-${sc.zone}`}>{sc.zoneLabel}</span>
+            </div>
+          )
+        })()}
+      </div>
+    </div>
+  )
+}
+
 
 function MissionTracks(p: { letter: string; e: Eval; hours: number; hover: number | null; setHover: (h: number | null) => void }) {
   const { e, hours } = p
