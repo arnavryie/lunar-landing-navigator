@@ -21,6 +21,8 @@ import { Contrast } from './explain/Contrast'
 // WS3
 import { Replays } from './Replays'
 import { Validation } from './Validation'
+// Lander Systems
+import { LanderSystems } from './LanderSystems'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -56,8 +58,8 @@ export default function App() {
   const [validation, setValidation] = useState<ValidationData | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
-  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation' | 'lander'
+  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation', 'lander'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [findRadius, setFindRadius] = useState(0) // radius for Find sites when opened from the planner
   useEffect(() => {
     if (view !== 'find') setFindRadius(0)
@@ -191,6 +193,10 @@ export default function App() {
           <button aria-pressed={view === 'compare'} onClick={openCompare}>
             Compare
           </button>
+          {/* Lander Systems */}
+          <button aria-pressed={view === 'lander'} onClick={() => setView('lander')}>
+            Lander Systems
+          </button>
         </nav>
         {/* WS3 */}
         <button
@@ -288,6 +294,13 @@ export default function App() {
       {view === 'validation' && (
         <section className="panel" aria-label="Validation proofs and scientific checks">
           <Validation onReturnToSite={() => setView('site')} />
+        </section>
+      )}
+
+      {/* Lander Systems */}
+      {view === 'lander' && (
+        <section className="panel" aria-label="Lander systems engineering simulator">
+          <LanderSystems site={site} i={i} />
         </section>
       )}
 

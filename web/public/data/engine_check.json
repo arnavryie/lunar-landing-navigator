@@ -1,9 +1,4 @@
-{
-<<<<<<< HEAD
- "run_utc": "2026-11-14T16:48Z",
-=======
- "run_utc": "2026-11-14T17:23Z",
->>>>>>> f3c52be (fix terrain exaggeration animation and make it smooth)
+{ "run_utc": "2026-11-14T19:13Z",
  "engine": {
   "points": 8,
   "direction_deg": 3.4882841084978446e-7,
