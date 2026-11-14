@@ -17,7 +17,7 @@ export interface SiteSummary {
   name: string
   lat: number
   lon: number
-  kind: 'landing' | 'feature' | 'derived'
+  kind: 'landing' | 'feature' | 'derived' | 'custom'
   metrics: Metrics
 }
 
@@ -32,6 +32,7 @@ export const KIND_LABEL: Record<SiteSummary['kind'], string> = {
   landing: 'Landing site',
   feature: 'Named feature',
   derived: 'Derived point',
+  custom: 'Custom point',
 }
 
 export interface Site extends SiteSummary {
@@ -59,9 +60,18 @@ async function getJson<T>(path: string): Promise<T> {
 
 export const loadSites = () => getJson<SiteSummary[]>('sites.json')
 const siteCache = new Map<string, Promise<Site>>()
+const waiting = new Map<string, (s: Site) => void>()
+/** Curated sites load from public/data; the map's custom point (id 'custom') arrives later via registerSite. */
 export const loadSite = (id: string) => {
-  if (!siteCache.has(id)) siteCache.set(id, getJson<Site>(`sites/${id}.json`))
+  if (!siteCache.has(id))
+    siteCache.set(id, id === 'custom' ? new Promise<Site>((res) => waiting.set(id, res)) : getJson<Site>(`sites/${id}.json`))
   return siteCache.get(id)!
+}
+/** Make a site computed in the browser (map click) available to every panel under its id. */
+export const registerSite = (site: Site) => {
+  waiting.get(site.id)?.(site)
+  waiting.delete(site.id)
+  siteCache.set(site.id, Promise.resolve(site))
 }
 
 /** Terrain horizon elevation at an azimuth (linear between the 0.5 deg samples). */

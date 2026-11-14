@@ -1,0 +1,24 @@
+{
+ "dem": {
+  "file": "dem_80s_240m.i16",
+  "n": 2534,
+  "scale_m": 240.0,
+  "lat_edge": -80,
+  "dn_to_m": 0.5,
+  "source": "NASA LOLA LDEM_60S_240M (PDS), cropped"
+ },
+ "vectors": {
+  "file": "vectors_2027.f32",
+  "hours": 8760,
+  "start_utc": "2027-01-01T00:00:00Z",
+  "source": "JPL DE421 + MOON_ME_DE421 via Skyfield, apparent, from the Moon's centre"
+ },
+ "layers": {
+  "n": 1266,
+  "scale_m": 240.0,
+  "lat_edge": -85,
+  "source": "NASA PGDA Lunar Polar Illumination (Mazarico et al. 2011), 60 m, averaged to 240 m"
+ },
+ "obs_height_m": 2.0,
+ "r_moon_m": 1737400.0
+}

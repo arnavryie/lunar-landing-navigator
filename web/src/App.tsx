@@ -6,6 +6,8 @@ import {
 } from './data'
 import { HorizonDial } from './HorizonDial'
 import { Compare, type Scenario } from './Compare'
+import { computeCustomPoint } from './customPoint'
+import { MapView } from './MapView'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
 import { Sources } from './Sources'
@@ -43,7 +45,10 @@ export default function App() {
   const [validation, setValidation] = useState<Validation | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  const [view, setView] = useState<'site' | 'compare'>(params.get('view') === 'compare' ? 'compare' : 'site')
+  type View = 'site' | 'compare' | 'map'
+  const [view, setView] = useState<View>((['compare', 'map'] as const).find((v) => v === params.get('view')) ?? 'site')
+  const [busy, setBusy] = useState(false)
+  const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
     (params.get('cmp') ?? '')
       .split(',')
@@ -58,6 +63,29 @@ export default function App() {
       const other = sites.find((x) => x.id !== site.id)?.id ?? site.id
       setScenarios([{ siteId: site.id, t: i }, { siteId: other, t: i }])
     }
+    setView('compare')
+  }
+
+  // F6a: a map click becomes site 'custom', computed in a Web Worker.
+  const pickPoint = (lat: number, lon: number) => {
+    setBusy(true)
+    setPickError('')
+    computeCustomPoint(lat, lon)
+      .then((c) => {
+        const { id, group, name, kind, metrics } = c
+        setSites((prev) => [...prev.filter((x) => x.id !== 'custom'), { id, group, name, kind, metrics, lat: c.lat, lon: c.lon }])
+        setSite(c)
+        setSiteId('custom')
+      })
+      .catch((e) => setPickError(`Couldn't compute that point: ${e.message}`))
+      .finally(() => setBusy(false))
+  }
+
+  const addToCompare = () => {
+    if (!site) return
+    const other = sites.find((x) => x.id !== site.id)?.id ?? site.id
+    const mine = { siteId: site.id, t: i }
+    setScenarios(scenarios.length < 2 ? [mine, { siteId: other, t: i }] : scenarios.length < 4 ? [...scenarios, mine] : [...scenarios.slice(0, 3), mine])
     setView('compare')
   }
 
@@ -85,7 +113,9 @@ export default function App() {
       .then((s) => {
         setSites(s)
         const wanted = params.get('site')
-        setSiteId(s.some((x) => x.id === wanted) ? wanted! : (s[0]?.id ?? ''))
+        const pin = (params.get('pin') ?? '').split(',').map(Number)
+        if (wanted === 'custom' && pin.length === 2 && pin.every(Number.isFinite)) pickPoint(pin[0], pin[1])
+        else setSiteId(s.some((x) => x.id === wanted) ? wanted! : (s[0]?.id ?? ''))
       })
       .catch((e) => setError(String(e.message ?? e)))
   }, [])
@@ -96,13 +126,15 @@ export default function App() {
       site: siteId, t: String(i), plan: String(planned),
       m: String(th.missionDays), sun: String(th.minSunPct), dark: String(th.maxDarkH), earth: String(th.minEarthPct),
     })
-    if (view === 'compare') q.set('view', 'compare')
+    if (view !== 'site') q.set('view', view)
+    if (siteId === 'custom' && site?.kind === 'custom') q.set('pin', `${site.lat},${site.lon}`)
     if (scenarios.length) q.set('cmp', scenarios.map((x) => `${x.siteId}@${x.t}`).join(','))
     history.replaceState(null, '', `?${q}`)
-  }, [siteId, i, planned, th, view, scenarios])
+  }, [siteId, i, planned, th, view, scenarios, site])
 
   useEffect(() => {
     if (!siteId) return
+    if (siteId === 'custom') return // set directly by pickPoint
     loadSite(siteId).then(setSite).catch((e) => setError(String(e.message ?? e)))
   }, [siteId])
 
@@ -129,6 +161,9 @@ export default function App() {
           <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
             Site and plan
           </button>
+          <button aria-pressed={view === 'map'} onClick={() => setView('map')}>
+            Map
+          </button>
           <button aria-pressed={view === 'compare'} onClick={openCompare}>
             Compare
           </button>
@@ -138,7 +173,7 @@ export default function App() {
             <span aria-hidden="true">✓</span> Validated against JPL Horizons, max error {validation.horizons.worst_deg.toFixed(5)}°
           </a>
         )}
-        {view === 'site' && (
+        {view !== 'compare' && (
         <label className="site-pick">
           <span>Site</span>
           <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
@@ -160,6 +195,21 @@ export default function App() {
 
       {error && <p className="error">{error}</p>}
       {!site && !error && <p className="loading">Loading site data</p>}
+
+      {view === 'map' && (
+        <section className="panel" aria-label="South-pole map">
+          <MapView
+            sites={sites}
+            site={site}
+            onPickSite={setSiteId}
+            onPickPoint={pickPoint}
+            busy={busy}
+            pickError={pickError}
+            onOpenSite={() => setView('site')}
+            onCompare={addToCompare}
+          />
+        </section>
+      )}
 
       {site && view === 'compare' && scenarios.length >= 2 && (
         <section className="panel" aria-label="Compare scenarios">
