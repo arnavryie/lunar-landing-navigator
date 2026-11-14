@@ -134,5 +134,39 @@
    "longest_dark_h": 354.0,
    "longest_no_earth_h": 0.0
   }
+ },
+ {
+  "id": "replay-chandrayaan-3",
+  "group": "Mission replays",
+  "name": "Replay: Chandrayaan-3 Vikram (Aug 2023)",
+  "lat": -69.3741,
+  "lon": 32.32,
+  "kind": "landing",
+  "metrics": {
+   "sunlit_pct": 68.75,
+   "mean_sun_disc_pct": 68.14,
+   "mean_power_index_pct": 66.13,
+   "earth_visible_pct": 100.0,
+   "sun_and_earth_pct": 68.75,
+   "longest_dark_h": 148.0,
+   "longest_no_earth_h": 0.0
+  }
+ },
+ {
+  "id": "replay-im1-odysseus",
+  "group": "Mission replays",
+  "name": "Replay: IM-1 Odysseus (Feb 2024)",
+  "lat": -80.13,
+  "lon": 1.44,
+  "kind": "landing",
+  "metrics": {
+   "sunlit_pct": 59.95,
+   "mean_sun_disc_pct": 59.18,
+   "mean_power_index_pct": 58.49,
+   "earth_visible_pct": 100.0,
+   "sun_and_earth_pct": 59.95,
+   "longest_dark_h": 173.0,
+   "longest_no_earth_h": 0.0
+  }
  }
 ]

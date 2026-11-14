@@ -8,6 +8,8 @@ const SOURCES = [
   { name: 'NASA PGDA Lunar Polar Illumination (Mazarico et al. 2011)', use: 'Reference for checking sunlight and Earth visibility', url: 'https://pgda.gsfc.nasa.gov/products/69' },
   { name: 'NASA SVS CGI Moon Kit (LROC WAC colour, lroc_color_2k.jpg)', use: 'Globe surface colour', url: 'https://svs.gsfc.nasa.gov/4720/' },
   { name: 'LROC, NASA, IAU Gazetteer of Planetary Nomenclature', use: 'Site coordinates (cited per site)', url: 'https://planetarynames.wr.usgs.gov/' },
+  { name: 'ISRO Chandrayaan-3 Mission Telemetry & Landing Confirmation', use: 'Chandrayaan-3 Vikram replay epoch and outcome validation', url: 'https://www.isro.gov.in/Chandrayaan3_Details.html' },
+  { name: 'Intuitive Machines IM-1 Lunar Mission Operations Updates', use: 'IM-1 Odysseus replay epoch and operational outcome verification', url: 'https://www.intuitivemachines.com/im-1' },
 ]
 
 /** Data sources, how the numbers were checked, and known limits. */

@@ -48,6 +48,7 @@ export interface Site extends SiteSummary {
   horizon: { az_step_deg: number; el_deg: number[]; edge_limited_azimuths: number }
   sun: Track
   earth: Track
+  replay?: MissionReplayInfo
 }
 
 const base = import.meta.env.BASE_URL
@@ -265,3 +266,16 @@ export interface Validation {
 }
 
 export const loadValidation = () => getJson<Validation>('validation.json')
+
+// --- WS3: replays ---
+export interface MissionReplayInfo {
+  landing_utc: string
+  days_before: number
+  days_after: number
+  outcome: string
+  outcome_source: string
+  outcome_url: string
+}
+
+export const inAnalysisYear = (s: Site) => s.start_utc.startsWith('2027-01-01') && s.samples === 8760
+

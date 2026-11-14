@@ -1,0 +1,258 @@
+/* Styles for Workstream 2: Explainers (F8) */
+
+.why-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #c98419;
+  background: rgba(201, 132, 25, 0.12);
+  border: 1px solid rgba(201, 132, 25, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  vertical-align: middle;
+}
+
+.why-pill:hover {
+  background: rgba(201, 132, 25, 0.25);
+  border-color: #c98419;
+}
+
+.why-dialog {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 480px;
+  width: calc(100% - 32px);
+  margin: auto;
+}
+
+.why-dialog::backdrop {
+  background: rgba(8, 12, 18, 0.75);
+  backdrop-filter: blur(3px);
+}
+
+.why-card {
+  background: #141b24;
+  border: 1px solid #2d3846;
+  border-radius: 8px;
+  padding: 18px;
+  color: #e2e8f0;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  font-family: inherit;
+}
+
+.why-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #232d3b;
+  padding-bottom: 10px;
+}
+
+.why-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.why-close {
+  background: transparent;
+  border: none;
+  color: #8b99aa;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.why-close:hover {
+  color: #f1f5f9;
+  background: #232d3b;
+}
+
+.why-body {
+  margin-bottom: 14px;
+}
+
+.why-text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #cbd5e1;
+  margin: 0 0 12px 0;
+}
+
+.why-diagram-wrap {
+  display: flex;
+  justify-content: center;
+  background: #0d1218;
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid #1f2732;
+}
+
+.explain-diagram {
+  max-width: 100%;
+  height: auto;
+  max-height: 100px;
+}
+
+.why-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #19222e;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #c98419;
+}
+
+.why-live-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b99aa;
+  font-weight: 600;
+}
+
+.why-live-val {
+  font-size: 11px;
+  font-family: monospace;
+  color: #e2e8f0;
+}
+
+/* Moon vs Earth Contrast Card */
+.contrast-card {
+  margin-top: 14px;
+  background: #141b24;
+  border: 1px solid #283341;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: inherit;
+}
+
+.contrast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #222b37;
+}
+
+.contrast-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+}
+
+.city-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.city-label {
+  font-size: 11px;
+  color: #8b99aa;
+}
+
+.city-select {
+  background: #0d1218;
+  color: #e2e8f0;
+  border: 1px solid #2d3846;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.contrast-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  background: #0d1218;
+  border-radius: 6px;
+  padding: 12px 14px;
+  border: 1px solid #1f2732;
+  margin-bottom: 12px;
+}
+
+.contrast-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contrast-stat.lunar .contrast-value {
+  color: #c98419;
+}
+
+.contrast-stat.earth .contrast-value {
+  color: #5590d8;
+}
+
+.contrast-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8b99aa;
+  letter-spacing: 0.04em;
+}
+
+.contrast-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.contrast-hint {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.contrast-vs {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a515a;
+  text-transform: uppercase;
+}
+
+.contrast-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #19222e;
+  padding: 8px 10px;
+  border-radius: 5px;
+  border-left: 2px solid #5590d8;
+}
+
+.fact-item strong {
+  font-size: 11px;
+  color: #f1f5f9;
+}
+
+.fact-item span {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
