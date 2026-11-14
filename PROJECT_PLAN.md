@@ -1,6 +1,6 @@
 # Lunar South Pole Mission Planner: Project Plan
 
-> **NASA Space Apps Challenge 2026** · Team planning document · v1.1 · 14 November 2026
+> **NASA Space Apps Challenge 2026** · Team planning document · v1.4 · 14 November 2026
 > **Status:** Phase 1 in progress. Step 1 done: Sun/Earth calculator (`lunar-mission-planner/pipeline/ephemeris.py`) matches JPL Horizons. Step 2 done: terrain horizon mask (`pipeline/horizon.py`, LOLA 240 m). Step 3 done: Sun/Earth visibility timelines + metrics (`pipeline/timeline.py`), validated against NASA's LOLA illumination maps. Step 4 done: first web app screen (`lunar-mission-planner/web/`, React + Vite + TypeScript) with the F1 horizon dial, hero numbers and a year strip; Curated site list done: 8 sites with cited coordinates. F2 done (availability timeline, seasons, power index, thermal context, lander survival calculator). F3 MVP done (viability thresholds, landing-date calendar, slip buttons + before/after card, slip budget, permalinks). Next: F4 site comparison, then the F5 Horizons check page.
 > "Lunar South Pole Mission Planner" is a working title; the final name is still to be decided.
 > Companion PDF for sharing: [Lunar_South_Pole_Mission_Planner_Concept.pdf](Lunar_South_Pole_Mission_Planner_Concept.pdf), a short 5-page feature summary (each feature in 3–4 lines). Detailed report: [Lunar_South_Pole_Mission_Planner_Detailed_Report.pdf](Lunar_South_Pole_Mission_Planner_Detailed_Report.pdf) (16 pages)
@@ -48,20 +48,20 @@ Missions to the Moon's south pole face extreme lighting and communication limits
 | Brief item | Status | Where we cover it |
 |---|---|---|
 | Sun and Earth vs horizon at a site on a date | **Required** | F1 site view, F6 globe |
-| Curated sites (Apollo, CLPS, other commercial, other countries) + custom coordinates | Optional | F1/F6 site list; custom lat/lon inside the precomputed region |
+| Curated sites (Apollo, CLPS, other commercial, other countries) + custom coordinates | Optional | F1/F6 site list; custom point: click anywhere on the F6 south-pole map (85°S–90°S) or type lat/lon |
 | Side-by-side or sequential comparison | Optional | F4 comparison |
 | Pick landing date and time | Optional | Date/time control on every view |
 | How conditions change across lunar days and seasons | Optional | F2 timeline + seasons view; F3 date calendar |
 | Time remaining before sunset / Earthset | Optional, stressed twice | F2 hero numbers (countdowns) |
 | Solar elevation shown prominently | Optional, stressed twice | F2 hero numbers |
 | Sunlight duration, Earth visibility windows | Optional | F2 timeline and metrics |
-| 2D maps, 3D surface, creative visuals | Optional | F1 sky plot, F6 globe |
+| 2D maps, 3D surface, creative visuals | Optional | F1 horizon dial; F6 2D south-pole map, 3D terrain view, whole-Moon globe |
 | Animations and timelines | Optional | F6 time scrubbing, F2 timeline |
 | Usable by planners, educators and the public | Optional | Explore/Planner modes; F8 explainer |
 | Re-evaluate alternative dates or nearby sites after delays | Main use case | F3 slip planner, F7 alternatives finder |
 | Why small location/date changes have big effects | Consideration | F8 explainer; F3 before/after deltas |
 | Make lunar vs terrestrial differences apparent | Consideration | F8 Moon-vs-Earth cards |
-| Real topography (LOLA), steep craters, shadows | Consideration | F1 horizons from LOLA; F6 terrain |
+| Real topography (LOLA), steep craters, shadows | Consideration | F1 horizons from LOLA; F6 3D terrain with shadows from the same horizon physics |
 | Libration and orbital variations | Consideration | Computed in the Moon's own reference frame |
 | No atmosphere: horizon = terrain + lunar curvature, no refraction | Consideration | F1 horizon calculation |
 | Ephemeris from Horizons or precomputed datasets | Consideration | Precomputed offline, validated against Horizons ([section 10](#10-architecture-and-data), F5) |
@@ -140,6 +140,24 @@ The "two lights" insight: **sunlight and radio line-of-sight are the same geomet
 - **Accessibility basics:** colour-blind-safe palette (colour never the only cue), keyboard navigation, readable contrast.
 - **Correctness beats features.** A wrong number in the demo costs more than a missing feature.
 
+### Screens and visuals *(added v1.4)*
+How the app looks and how the screens connect. **One selected point and one selected time are shared by every screen.** Change either anywhere (picker, map click, calendar, slider) and everything updates.
+
+- **Top bar (always visible):** site picker · selected point (lat/lon) · Explore/Planner toggle · "Copy link to this scenario".
+- **Time bar (pinned to the bottom, already built):** year strip, hourly slider, ±1 h / ±1 d buttons; a play button is added for the 3D time-lapse.
+- **Screens.** Today the app is one scrolling page (Site + Plan). When Map and 3D arrive it becomes tabs:
+
+| Screen | Main visual | Status |
+|---|---|---|
+| **Site** | Horizon dial, hero numbers, availability timeline, seasons, survival calculator (F1, F2) | ✅ Built |
+| **Plan** | Landing-date calendar, slip buttons, before/after card, slip budget (F3) | ✅ Built |
+| **Map** | 2D south-pole map; click anywhere to pick a point; toggle layers (F6) | Phase 2, first item |
+| **3D** | South-pole terrain in 3D with real Sun shadows and Earth visibility; switch to the whole-Moon globe (F6) | Phase 2 |
+| **Compare** | 2–4 scenarios side by side (F4) | Phase 1, next |
+| **Validation** | Horizons and LOLA comparisons, assumptions, sources (F5) | Phase 1 (check) / Phase 3 (full page) |
+
+- **Visual rules:** dark background; amber = Sun, blue = Earth, green = both, grey = neither (exact colours in `web/src/index.css`). Every exaggerated or not-to-scale view says so on screen. Every layer shows its source and resolution. Hovering any chart, map pixel or terrain point shows the numbers behind it.
+
 ---
 
 ## 5. Feature overview
@@ -150,7 +168,7 @@ The "two lights" insight: **sunlight and radio line-of-sight are the same geomet
 | F3 | Scenario and slip planner | 🟢 Core | Date calendar heatmap, "slip by N days" before/after, nearby alternatives |
 | F4 | Site comparison | 🟢 Core | 2–4 site-date scenarios side by side |
 | F5 | Credibility layer | 🟢 Core | Validation vs NASA data, assumptions panel, provenance, export |
-| F6 | Lunar globe | 🔵 Differentiator | "Google Earth for the Moon" with every layer draped on it |
+| F6 | Lunar globe, south-pole map, 3D terrain | 🔵 Differentiator | Click anywhere on a 2D south-pole map; 3D terrain with real shadows; whole-Moon globe |
 | F7 | Alternatives finder | 🔵 Differentiator | Constraints in, ranked shortlist out; water-ice option |
 | F8 | Explainer + Moon vs Earth | 🔵 Differentiator | "Why?" cards linked from the data; contrast with Earth |
 | F9 | Relay mode | ⚪ Stretch | Comms through a user-defined relay orbiter |
@@ -242,7 +260,41 @@ The "two lights" insight: **sunlight and radio line-of-sight are the same geomet
   - Proves the tool matches reality, and gives the pitch real stories.
   - ⚠️ Every mission fact (coordinates, dates, outcomes) must come from official sources, with the source cited in the app.
 
-### 🔵 F6 Lunar globe: "Google Earth for the Moon"
+### 🔵 F6 Lunar globe, south-pole map and 3D terrain
+F6 has three views sharing one engine and one data set: a **2D south-pole map** (pick any point), a **3D south-pole terrain view** (see the shadows), and the **whole-Moon globe** (context). *(Map and 3D terrain added v1.4.)*
+
+#### F6a 2D south-pole map with click-anywhere *(added v1.4; first Phase 2 item)*
+- **What:** a top-down map of 85°S–90°S with 0°E at the top (same orientation as `horizon.py`). Drawn on a plain canvas, no map library. Shows a lat/lon grid, a scale bar and curated site markers.
+- **Layers (toggle on/off):**
+  - shaded relief (base layer, from our LOLA DEM);
+  - NASA sunlight % and Earth-visibility % (PGDA `AVGVISIB_85S_060M_201608` and its Earth version, already used for validation);
+  - permanently shadowed regions (`LPSR_85S_060M_201608`);
+  - slope (from our DEM);
+  - Artemis III candidate regions (approximate, sourced);
+  - "lit now / Earth in view now" at the selected time (from the F6b shadow shader).
+- **Hover:** lat/lon, terrain height, slope, and the value of the active layer.
+- **Click anywhere:** a pin drops and, in about a second, the dial, hero numbers, timeline, planner and comparison all switch to that point. "Add to comparison" from the pin. The pin is saved in the permalink.
+- **How the click works (no server).** The browser runs the same maths as the Python pipeline, in a Web Worker:
+  1. horizon mask for the point from a cropped DEM (80°S–90°S at 240 m, so every clickable point has ≥ 150 km of terrain around it);
+  2. Sun and Earth position vectors in the Moon ME frame for every hour of the analysis year, exported once from Skyfield (~200 KB). The browser converts them to the point's local sky, including Earth parallax (the point is 1,737 km from the Moon's centre);
+  3. the same visibility and metrics as `timeline.py`, in the same format as the per-site files, so every existing panel works unchanged.
+- **Self-check (must pass before the demo):** for every curated site, the browser result matches the Python pipeline: Sun/Earth direction within 0.001°, sunlit % within 0.5 percentage points. Python is already checked against Horizons, so the browser inherits that accuracy.
+- **Limits, stated in the app:** custom points only in 85°S–90°S (elsewhere use curated sites); same 240 m resolution limit as the pipeline.
+- **Data cost:** DEM crop ~13 MB raw (int16), less compressed. If loading is too slow, halve the resolution beyond 30 km.
+
+#### F6b 3D south-pole terrain view *(added v1.4, Phase 2)*
+- **What:** the same DEM crop as a Three.js 3D surface (downsampled to ~1024 × 1024 vertices). Vertical exaggeration slider, default 1×, labelled whenever it is above 1×.
+- **Shadows come from our horizon physics, not from Three.js shadow maps.** A shader tests each terrain pixel by stepping across the heightmap toward the Sun, with curvature included, exactly like the horizon mask.
+  - Why: with the Sun only 1–2° above the horizon over a 300 km scene, standard shadow maps are inaccurate, so the picture would disagree with our numbers.
+  - Recomputed only when the time changes, not every frame.
+- **Earth too:** the same test toward Earth gives an Earth-visible tint. Colours: amber = lit, blue = Earth in view, green = both, dark = neither.
+- **Camera presets:** overhead; standing at the selected point looking at the Sun; looking at Earth; low angle over Shackleton crater.
+- **Selected point:** pin plus line-of-sight rays to the Sun and Earth (solid = clear, red dashed = blocked).
+- **Shadow time-lapse:** press play and shadows sweep around the pole over a lunar day.
+- **Self-check:** shader lit/dark matches the pipeline at the curated sites for sample hours.
+- **Fallback if the shader misses its time box:** plain directional light, labelled "lighting illustrative".
+
+#### F6c Whole-Moon globe ("Google Earth for the Moon")
 - **What:** an interactive 3D Moon to spin and zoom, from the whole globe down to site terrain, like Google Earth for Earth.
 - **On the surface:**
   - site markers (curated + custom) and Artemis III candidate regions (approximate);
@@ -255,9 +307,13 @@ The "two lights" insight: **sunlight and radio line-of-sight are the same geomet
 - **Time control:** scrub or play; lighting and models move together.
 - **MVP:** globe, site markers, correct Sun lighting, Sun/Earth reference models, time scrubbing.
 - **Stretch:** heatmap layers, metre-level terrain zoom, line-of-sight rays, orbit drawing.
-- **Shadow time-lapse** *(added v1.3, Phase 2)*: an animated sweep of sunlight and shadow across the south-pole region over a lunar day; crater shadows rotate like clock hands. Built from the precomputed illumination grids. A key demo moment.
+- **Shadow time-lapse** *(added v1.3, Phase 2)*: an animated sweep of sunlight and shadow across the south-pole region over a lunar day; crater shadows rotate like clock hands. A key demo moment. *(v1.4: built in the F6b 3D view with the shadow shader, not from precomputed grids.)*
 - **Reality check:** directions must come from the real ephemeris; wrong lighting is the first thing an expert notices.
-- **Engine:** CesiumJS or Three.js, an open decision ([section 13](#13-open-decisions)).
+- **Globe textures:** NASA CGI Moon Kit (LROC colour + LOLA elevation), lit from the true Sun direction.
+- **Engine: Three.js** *(decided v1.4)*, for all three views.
+  - Runs offline with NASA's Moon Kit textures and our own DEM, with no account or token.
+  - One engine for the globe and the terrain, and full control of the shadow shader.
+  - CesiumJS's lunar terrain is served through a Cesium ion account and gives less control over the shading.
 
 ### 🔵 F7 Alternatives finder (was "site finder")
 - **What:** state mission constraints; the tool searches the south-pole region and ranks locations. Powers F3's nearby alternatives and also works region-wide.
@@ -369,6 +425,27 @@ Mentor verdicts: ⭐ = strongly recommend, 🟡 = maybe later, ❌ = not worth i
 | ❌ **Natural-language AI query** | "Find sites near Shackleton viable in March 2027." | Same reason we dropped the chatbot: risk of wrong answers, adds little over good filters. |
 | ❌ **Power beaming, lasers, sci-fi infrastructure** | Beaming power into dark craters. | Not grounded in the brief or near-term missions. |
 
+### Review of older build notes (2026-11-14)
+Two earlier notes (a resource plan and a build list) were checked against what is now built. Verdicts: ✅ already done, ⭐ worth adding, 🟡 maybe later, ❌ don't.
+
+| Idea from the old notes | Verdict | Why |
+|---|---|---|
+| Validate Sun/Earth against JPL Horizons | ✅ Done, beyond the note | 3 points × 721 hourly steps, worst 0.000033° (note asked for 2 sites × 3 dates) |
+| Check % sunlit against QuickMap's LOLA illumination layer | ✅ Done, stronger | We compared directly with NASA's LOLA illumination maps (the data behind that layer) at 80 points: correlation 0.99. A QuickMap screenshot can still go on a slide |
+| Go / marginal / no-go verdict, timeline bars, metric cards, grouped site picker, best-dates heatmap | ✅ Done | F3 viability, F2 timeline and readouts, F3 calendar |
+| In-browser `astronomy-engine`, 10-minute steps, browser-side horizon logic | ❌ Superseded | Plan decision: precompute in Python (Skyfield + our own LOLA horizons), validated; the browser only loads results |
+| "Not building: own LOLA ray-marching" | ❌ Superseded | We built it from NASA LOLA data and validated it |
+| Crediting another team's horizon masks | ❌ Never | All horizons are our own, computed from NASA LOLA; only NASA/JPL/IAU/LROC sources are credited |
+| "Validated against JPL Horizons, max error X°" badge + data sources panel in the app | ⭐ Add (F5, Phase 1) | Cheap; the numbers already exist in `validation/` |
+| "Open in QuickMap / Moon Trek" link per site | ⭐ Add (small) | Points experts to the specialist tools. Verify each tool's link format before building |
+| Play button for time | ⭐ Add (small) | Animates the dial; good for the demo |
+| README + deployed URL | ⭐ Required (Phase 3) | Submission needs both; free static hosting works |
+| Mast height choice (1, 2, 5, 10 m) | 🟡 Later | Real effect (height adds sunlight at the pole) but 4× the precomputed data; fits F1 Planner mode |
+| Custom lat/lon | 🟡 Phase 2 | Plan item; needs a precomputed grid (shares the F7 engine), since the browser has no terrain data |
+| ~20 sites incl. Artemis III | 🟡 When sourced | NASA publishes Artemis III regions, not points; add only with cited coordinates |
+| 360° horizon panorama (strip) | 🟡 Planned | Already in the plan as the classic azimuth-elevation view for Planner mode |
+| CSA content, Canadian rover target | 🟡 Optional | Only if a target has published coordinates |
+
 ---
 
 ## 8. Decision log
@@ -396,7 +473,11 @@ All decisions confirmed by the team on 14 November 2026. v1.1 rows follow the of
 | Lander survival calculator | ✅ Added (v1.3) | F2 | Turns metrics into an engineering decision |
 | Landing-ellipse dispersion | ✅ Added (v1.3) | F1 | How real site-selection teams handle landing uncertainty |
 | Mission replays | ✅ Added (v1.3) | F5 | Proves the tool against real outcomes; pitch stories |
-| Shadow time-lapse | ✅ Added (v1.3) | F6 | Demo wow; reuses illumination grids |
+| Shadow time-lapse | ✅ Added (v1.3) | F6 | Demo wow; reuses illumination grids (v1.4: shader in the 3D view) |
+| 2D south-pole map with click-anywhere | ✅ Added (v1.4) | F6a | Any point in 85°S–90°S becomes a site; browser runs the pipeline maths in a Web Worker, checked against Python |
+| 3D south-pole terrain view | ✅ Added (v1.4) | F6b | Shows *why* a site is lit or dark; hosts the shadow time-lapse |
+| 3D engine: Three.js | ✅ Decided (v1.4) | F6 | Offline, no account, one engine for globe and terrain, full shader control |
+| Terrain shadows from horizon physics (shader), not Three.js shadow maps | ✅ Decided (v1.4) | F6b | Shadow maps are inaccurate at 1–2° Sun; picture must agree with the numbers |
 | Site assessment report | ✅ Added (v1.3) | F4 | Agency-style briefing for team coordination |
 | Relay orbiter mode (user-supplied orbit) | ⬇️ Demoted (v1.1) | F9 | Brief focuses on direct-to-Earth |
 | Energy/traverse simulator | 🔀 Merged | F10 | Merged with the dark-zone excursion idea |
@@ -448,7 +529,11 @@ Validation (Horizons, LOLA) ──┘     Lit / Earth-visible grids    └─►
 ```
 - **Heavy work offline:** terrain horizons with curvature, a year or more of daily metrics per site, and illumination grids, computed once in Python.
 - **The web app loads precomputed results**, so comparisons and slip checks are instant.
-- **Computed live only for stretch features:** the user-defined relay orbit (two-body propagation) and the rover planner (Web Worker).
+- **Computed live in the browser:**
+  - custom-point horizon and visibility when the user clicks the F6a map (Web Worker, same maths as the pipeline, checked against it);
+  - terrain shadows and Earth visibility in the F6b 3D view (shader);
+  - stretch only: the user-defined relay orbit (two-body propagation) and the rover planner (Web Worker).
+- **Extra exports for the browser (v1.4):** an 80°S–90°S DEM crop (240 m), hourly Sun/Earth position vectors in the Moon ME frame, and map layer images (shaded relief, slope, NASA sunlight/Earth %, PSRs).
 
 ### Data sources
 | Source | Used for | Notes |
@@ -492,7 +577,7 @@ Adapt to team size.
 | Data and science pipeline | Python: ephemeris, horizons with curvature, daily metrics, grids, validation numbers |
 | App UI and charts | F1, F2, F4: layout, hero numbers, sky plot, timelines, seasons strip, design system, Explore/Planner modes |
 | Scenario logic | F3 slip planner + viability rule; F7 alternatives finder |
-| 3D globe | F6: engine test, globe, lighting, Sun/Earth models, layers |
+| Map and 3D | F6: south-pole map + click-anywhere (browser port of the pipeline maths, with the pipeline owner), 3D terrain + shadow shader, globe, Sun/Earth models, layers |
 | Content, pitch and docs | F8 explainer cards + contrast copy; assumptions text; demo, slides, video, submission |
 
 ---
@@ -500,7 +585,7 @@ Adapt to team size.
 ## 13. Open decisions
 | Decision | Options | Recommendation |
 |---|---|---|
-| 3D engine for the globe | CesiumJS (built-in globe streaming + Moon support) or Three.js (more control, more code) | Half a day testing Cesium's lunar terrain first; fall back to Three.js + NASA Moon textures |
+| 3D engine for the globe | CesiumJS or Three.js | ✅ **Decided v1.4: Three.js** for globe, terrain and map shading (see F6) |
 | Default viability thresholds (F3) | Min sunlight, max darkness, min Earth visibility, mission length | Placeholder example values in the app: 14-day mission, sunlit ≥ 60%, darkness ≤ 48 h, Earth in view ≥ 50%; marginal = misses by ≤ 10 points or ≤ 50% more darkness. Editable and shown on screen. **Team still to agree real defaults** (e.g. from a reference lander's battery and comms needs) |
 | Reference location for Moon-vs-Earth cards (F8) | Browser location or city picker | City picker: no location permission needed |
 | Team size and available time | Decides how much of Phases 2–3 is realistic | Confirm before assigning roles |
@@ -519,11 +604,11 @@ About 3 minutes. Numbers are illustrative placeholders; replace them with real t
 
 | Step | What the judge sees | Message |
 |---|---|---|
-| 1 | Globe opens; the Sun lights the Moon; the south pole in half-light | "At the pole, the Sun skims the horizon." |
+| 1 | 3D south pole opens; press play: shadows sweep around the pole like clock hands | "At the pole, the Sun skims the horizon." |
 | 2 | Pick a south-pole site and date: hero numbers + sky plot | "Sun 0.9° up, sunset in 3 days, Earthset in 11 hours. Answered in one glance." |
 | 3 | Tap "Why?": Moon-vs-Earth card | "Your city's Sun today: 58°. Here: under 1°. That's why terrain decides everything." |
 | 4 | "Launch slipped two weeks": press +14 days | "Darkness at landing jumps from 0 to 40 hours. Not viable." |
-| 5 | Calendar shows the next good window; nearby alternatives show a site 6 km away that works | "What took several specialist tools now takes seconds." |
+| 5 | Calendar shows the next good window; click a spot 6 km away on the south-pole map and it works | "What took several specialist tools now takes seconds." |
 | 6 | Compare original vs alternative side by side | "A few kilometres change everything." |
 | 7 | Mission replay of a real landing, then the validation page | "Our predictions match what really happened, and every number is checked against NASA data." |
 
@@ -570,6 +655,7 @@ Newest first. Every new feature, idea or decision gets a line here when it's add
 
 | Date | Change |
 |---|---|
+| 2026-11-14 | v1.4 visuals: added "Screens and visuals" (section 4: shared point + time, top bar, time bar, Site / Plan / Map / 3D / Compare / Validation screens, visual rules). F6 split into **F6a 2D south-pole map with click-anywhere** (85°S–90°S, layers, browser Web Worker runs the pipeline maths, checked against Python), **F6b 3D south-pole terrain** (Three.js, shadows from a horizon-physics shader, not shadow maps; Earth tint; camera presets; line-of-sight rays; hosts the shadow time-lapse) and **F6c whole-Moon globe**. Decided: **Three.js** for all 3D. Updated brief mapping, feature overview, decision log, open decisions, architecture, roadmap, roles, demo steps 1 and 5. |
 | 2026-11-14 | F3 MVP done (`web/src/Planner.tsx`, logic in `web/src/data.ts`). **Viability rule:** user sets mission length, minimum sunlit %, maximum continuous darkness, minimum Earth-in-view %; each landing date (landing 00:00 UTC) is viable / marginal / not viable / runs past the data, counted from the precomputed hourly visibility (no new physics). Example thresholds are placeholders (open decision). **Landing-date calendar:** one cell per day of 2027 (months × days), ordinal lightness ramp (light = viable) so it reads in colour-blindness; hover shows sunlit %, longest darkness, Earth %; click plans a landing on that day; planned and selected days outlined. Also a native date input. **Slip buttons:** +1 d, +7 d, +14 d, +1 lunar month (709 h), custom N days, back to planned date; the dial and all panels follow the slipped date. **Before/after card:** verdict, sunlit %, longest darkness, Earth % during the mission (with ▲/▼ better/worse in words, not colour alone), Sun and Earth at landing (sets/rises in). **Slip budget:** 'you can slip up to N days and stay viable; after that the next viable window opens on …' (clickable). **Permalinks:** site, selected time, planned day and thresholds live in the URL; 'Copy link to this scenario' button; reloading restores the scenario (tested). Example (IM-2 Athena, 14-day mission): planned 12 Jan is viable with a 4-day slip budget; +14 d makes it not viable (sunlit 86% → 18%). The calendar shows the viable windows drifting through the year. Not yet (stretch): nearby alternatives, saved scenario lists. |
 | 2026-11-14 | Moved into git: `lunar-mission-planner/` is now a git repo, pushed as the `lunar-mission-planner` branch on GitHub. This plan, AI_CONTEXT.md and both PDFs now live in the repo root next to `pipeline/` and `web/`. Every change gets committed and pushed to that branch. |
 | 2026-11-14 | Laptop-first layout applied to the app. Test sizes: 1280×720, 1366×768, 1920×1080. The dial is sized to the window height, Sun and Earth readouts sit side by side, and the time controls (year strip, slider, step buttons) are pinned to the bottom of the window, so the dial, readout and time controls fit on one screen and stay usable while scrolling to the charts. Keyboard: ← → step 1 hour, Shift+← → step 1 day (not while typing in a field). Page width cap raised from 1200 to 1440 px. The existing narrow-screen rules were kept untouched, as decided. |
