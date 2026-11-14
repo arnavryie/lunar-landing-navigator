@@ -123,6 +123,7 @@ interface Props {
   pickError: string
   onOpenSite: () => void
   onCompare: () => void
+  onOpenArtemis?: () => void
 }
 
 export function MapView(p: Props) {
@@ -140,6 +141,18 @@ export function MapView(p: Props) {
     ;(cached ??= loadMap()).then(setData, (e) => setErr(String(e.message ?? e)))
     loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
+
+  useEffect(() => {
+    const s = p.site
+    if (!s) return
+    const match = ARTEMIS_3_SITES.find((a) => {
+      if (s.id === `artemis-${a.id}`) return true
+      if (s.name.toLowerCase().includes(a.name.toLowerCase())) return true
+      const dLon = Math.abs((((a.lon - s.lon) % 360) + 540) % 360 - 180)
+      return Math.hypot(a.lat - s.lat, dLon * Math.cos(((a.lat + s.lat) * 0.5 * Math.PI) / 180)) < 0.5
+    })
+    if (match) setSelectedArtemis(match)
+  }, [p.site])
 
   const layerCanvas = useMemo(() => (data ? render(data, layer) : null), [data, layer])
 
@@ -496,14 +509,26 @@ export function MapView(p: Props) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
                 <button
                   type="button"
-                  style={{ flex: 1, padding: '5px 8px', fontSize: '0.76rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)' }}
-                  onClick={p.onOpenSite}
+                  style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => {
+                    p.onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
+                    p.onOpenSite()
+                  }}
                 >
-                  View Horizon Dial &amp; Timeline (Site Tab) →
+                  Analyze in Site &amp; Plan Tab →
                 </button>
+                {p.onOpenArtemis && (
+                  <button
+                    type="button"
+                    style={{ padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                    onClick={p.onOpenArtemis}
+                  >
+                    Open Artemis Resources Tab
+                  </button>
+                )}
               </div>
             </div>
           )}

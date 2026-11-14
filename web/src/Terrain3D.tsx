@@ -151,7 +151,21 @@ function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, 
   return meToScene([w.vectors[o] - P[0], w.vectors[o + 1] - P[1], w.vectors[o + 2] - P[2]])
 }
 
-export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; sites: SiteSummary[]; i: number; onPickPoint?: (lat: number, lon: number) => void }) {
+export function Terrain3D({
+  site,
+  sites,
+  i,
+  onPickPoint,
+  onOpenSite,
+  onOpenArtemis,
+}: {
+  site: Site | null
+  sites: SiteSummary[]
+  i: number
+  onPickPoint?: (lat: number, lon: number) => void
+  onOpenSite?: () => void
+  onOpenArtemis?: () => void
+}) {
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
   const [ready, setReady] = useState(false)
@@ -566,24 +580,38 @@ export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; 
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
                 {onPickPoint && (
                   <button
                     type="button"
-                    style={{ flex: 1, padding: '5px 8px', fontSize: '0.76rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)' }}
-                    onClick={() => onPickPoint(selectedArtemis.lat, selectedArtemis.lon)}
+                    style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => {
+                      onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
+                      onOpenSite?.()
+                    }}
                   >
-                    Compute Full Mission Profile (Site Tab)
+                    Analyze in Site &amp; Plan Tab →
                   </button>
                 )}
-                <a
-                  href={selectedArtemis.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ padding: '4px 6px', fontSize: '0.72rem', color: 'var(--muted)', textDecoration: 'underline', alignSelf: 'center' }}
-                >
-                  NASA Source
-                </a>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {onOpenArtemis && (
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                      onClick={onOpenArtemis}
+                    >
+                      Open Artemis Resources Tab
+                    </button>
+                  )}
+                  <a
+                    href={selectedArtemis.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ padding: '4px 6px', fontSize: '0.72rem', color: 'var(--muted)', textDecoration: 'underline', alignSelf: 'center' }}
+                  >
+                    NASA Source ↗
+                  </a>
+                </div>
               </div>
             </div>
           )}

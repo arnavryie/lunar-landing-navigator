@@ -76,7 +76,25 @@ function subPoint(v: Float32Array, o: number) {
 const fmtLat = (v: number) => `${Math.abs(v).toFixed(1)}° ${v < 0 ? 'S' : 'N'}`
 const fmtLon = (v: number) => `${Math.abs(v).toFixed(1)}° ${v < 0 ? 'W' : 'E'}`
 
-export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | null; sites: SiteSummary[]; i: number; onPickSite: (id: string) => void; onOpen3D: () => void }) {
+export function Globe({
+  site,
+  sites,
+  i,
+  onPickSite,
+  onOpen3D,
+  onOpenSite,
+  onOpenArtemis,
+  onPickPoint,
+}: {
+  site: Site | null
+  sites: SiteSummary[]
+  i: number
+  onPickSite: (id: string) => void
+  onOpen3D: () => void
+  onOpenSite?: () => void
+  onOpenArtemis?: () => void
+  onPickPoint?: (lat: number, lon: number) => void
+}) {
   const [regions, setRegions] = useState<Region[]>([])
   const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(null)
   useEffect(() => {
@@ -368,14 +386,38 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
               <div style={{ fontSize: '0.74rem', margin: '4px 0' }}>
                 <strong style={{ color: '#f59e0b' }}>ISRU:</strong> {selectedArtemis.resources.isru_applications}
               </div>
-              <button
-                type="button"
-                className="link"
-                style={{ marginTop: '6px', fontSize: '0.78rem' }}
-                onClick={onOpen3D}
-              >
-                Inspect in 3D Terrain view →
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                {onPickPoint && onOpenSite && (
+                  <button
+                    type="button"
+                    style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => {
+                      onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
+                      onOpenSite()
+                    }}
+                  >
+                    Analyze in Site &amp; Plan Tab →
+                  </button>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    style={{ flex: 1, padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#e2e8f0', border: '1px solid var(--rule)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                    onClick={onOpen3D}
+                  >
+                    Inspect in 3D →
+                  </button>
+                  {onOpenArtemis && (
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                      onClick={onOpenArtemis}
+                    >
+                      Resources Tab
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </fieldset>

@@ -21,7 +21,8 @@ import { Contrast } from './explain/Contrast'
 // WS3
 import { Replays } from './Replays'
 import { Validation } from './Validation'
-import { ARTEMIS_3_SITES } from './data/artemisData'
+import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
+import { ArtemisSection } from './ArtemisSection'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -57,8 +58,8 @@ export default function App() {
   const [validation, setValidation] = useState<ValidationData | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
-  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'artemis' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
+  const [view, setView] = useState<View>((['artemis', 'find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [findRadius, setFindRadius] = useState(0) // radius for Find sites when opened from the planner
   useEffect(() => {
     if (view !== 'find') setFindRadius(0)
@@ -82,8 +83,47 @@ export default function App() {
     setView('compare')
   }
 
+  const pickArtemisSite = (a: ArtemisSiteData) => {
+    setSiteId(`artemis-${a.id}`)
+    setBusy(true)
+    setPickError('')
+    computeCustomPoint(a.lat, a.lon)
+      .then((c) => {
+        const customSite: Site = {
+          ...c,
+          id: `artemis-${a.id}`,
+          group: 'Artemis III Candidate Landing Sites',
+          name: `${a.name} (Artemis III Candidate)`,
+        }
+        setSites((prev) => [
+          ...prev.filter((x) => x.id !== `artemis-${a.id}`),
+          {
+            id: customSite.id,
+            group: customSite.group,
+            name: customSite.name,
+            kind: 'custom',
+            metrics: customSite.metrics,
+            lat: customSite.lat,
+            lon: customSite.lon,
+          },
+        ])
+        setSite(customSite)
+        setSiteId(`artemis-${a.id}`)
+      })
+      .catch((e) => setPickError(`Couldn't compute that point: ${e.message}`))
+      .finally(() => setBusy(false))
+  }
+
   // F6a: a map click becomes site 'custom', computed in a Web Worker.
   const pickPoint = (lat: number, lon: number) => {
+    const artemisMatch = ARTEMIS_3_SITES.find((a) => {
+      const dLon = Math.abs((((a.lon - lon) % 360) + 540) % 360 - 180)
+      return Math.hypot(a.lat - lat, dLon * Math.cos(((a.lat + lat) * 0.5 * Math.PI) / 180)) < 0.35
+    })
+    if (artemisMatch) {
+      pickArtemisSite(artemisMatch)
+      return
+    }
     setBusy(true)
     setPickError('')
     computeCustomPoint(lat, lon)
@@ -130,8 +170,14 @@ export default function App() {
         setSites(s)
         const wanted = params.get('site')
         const pin = (params.get('pin') ?? '').split(',').map(Number)
-        if (wanted === 'custom' && pin.length === 2 && pin.every(Number.isFinite)) pickPoint(pin[0], pin[1])
-        else setSiteId(s.some((x) => x.id === wanted) ? wanted! : (s[0]?.id ?? ''))
+        if (wanted?.startsWith('artemis-')) {
+          const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === wanted)
+          if (a) pickArtemisSite(a)
+        } else if (wanted === 'custom' && pin.length === 2 && pin.every(Number.isFinite)) {
+          pickPoint(pin[0], pin[1])
+        } else {
+          setSiteId(s.some((x) => x.id === wanted) ? wanted! : (s[0]?.id ?? ''))
+        }
       })
       .catch((e) => setError(String(e.message ?? e)))
   }, [])
@@ -149,8 +195,7 @@ export default function App() {
   }, [siteId, i, planned, th, view, scenarios, site])
 
   useEffect(() => {
-    if (!siteId) return
-    if (siteId === 'custom') return // set directly by pickPoint
+    if (!siteId || siteId === 'custom' || siteId.startsWith('artemis-')) return
     loadSite(siteId).then(setSite).catch((e) => setError(String(e.message ?? e)))
   }, [siteId])
 
@@ -176,6 +221,9 @@ export default function App() {
         <nav className="seg views" aria-label="Screens">
           <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
             Site and plan
+          </button>
+          <button aria-pressed={view === 'artemis'} onClick={() => setView('artemis')}>
+            Artemis III Resources
           </button>
           <button aria-pressed={view === 'find'} onClick={() => setView('find')}>
             Find sites
@@ -211,7 +259,7 @@ export default function App() {
               const val = e.target.value
               if (val.startsWith('artemis-')) {
                 const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
-                if (a) pickPoint(a.lat, a.lon)
+                if (a) pickArtemisSite(a)
               } else {
                 setSiteId(val)
               }
@@ -271,6 +319,22 @@ export default function App() {
         </section>
       )}
 
+      {view === 'artemis' && (
+        <section className="panel" aria-label="Artemis III Candidate Landing Sites & Resources">
+          <ArtemisSection
+            onAnalyzeSite={(lat, lon) => {
+              const a = ARTEMIS_3_SITES.find((s) => Math.hypot(s.lat - lat, s.lon - lon) < 0.2)
+              if (a) pickArtemisSite(a)
+              else pickPoint(lat, lon)
+              setView('site')
+            }}
+            onOpen3D={() => setView('3d')}
+            onOpenMap={() => setView('map')}
+            onOpenGlobe={() => setView('globe')}
+          />
+        </section>
+      )}
+
       {view === 'globe' && (
         <section className="panel" aria-label="Whole-Moon globe">
           {/* WS3 */}
@@ -281,7 +345,16 @@ export default function App() {
             </div>
           ) : (
             <Suspense fallback={<p className="loading">Loading the globe</p>}>
-              <Globe site={site} sites={sites} i={i} onPickSite={setSiteId} onOpen3D={() => setView('3d')} />
+              <Globe
+                site={site}
+                sites={sites}
+                i={i}
+                onPickSite={setSiteId}
+                onOpen3D={() => setView('3d')}
+                onOpenSite={() => setView('site')}
+                onOpenArtemis={() => setView('artemis')}
+                onPickPoint={pickPoint}
+              />
             </Suspense>
           )}
         </section>
@@ -297,7 +370,14 @@ export default function App() {
             </div>
           ) : (
             <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
-              <Terrain3D site={site} sites={sites} i={i} onPickPoint={pickPoint} />
+              <Terrain3D
+                site={site}
+                sites={sites}
+                i={i}
+                onPickPoint={pickPoint}
+                onOpenSite={() => setView('site')}
+                onOpenArtemis={() => setView('artemis')}
+              />
             </Suspense>
           )}
         </section>
@@ -321,6 +401,7 @@ export default function App() {
             pickError={pickError}
             onOpenSite={() => setView('site')}
             onCompare={addToCompare}
+            onOpenArtemis={() => setView('artemis')}
           />
         </section>
       )}
@@ -334,6 +415,51 @@ export default function App() {
 
       {site && view === 'site' && (
         <>
+          {(() => {
+            const artemisMatch = ARTEMIS_3_SITES.find((a) => {
+              if (site.id === `artemis-${a.id}`) return true
+              if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
+              const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
+              return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
+            })
+            if (!artemisMatch) return null
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  borderRadius: 'var(--radius-s)',
+                  padding: '8px 14px',
+                  marginBottom: '12px',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ fontSize: '0.84rem', color: '#e2e8f0' }}>
+                  <strong style={{ color: '#38bdf8' }}>NASA Artemis III Candidate Region Active:</strong> {artemisMatch.name} ({Math.abs(artemisMatch.lat).toFixed(2)}° S, {Math.abs(artemisMatch.lon).toFixed(1)}° {artemisMatch.lon < 0 ? 'W' : 'E'}) · {artemisMatch.resources.water_ice_potential} Water Ice · {artemisMatch.minerals.crust_type}
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '3px 9px',
+                    background: '#0284c7',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-s)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                  onClick={() => setView('artemis')}
+                >
+                  View All Minerals &amp; Resources Tab →
+                </button>
+              </div>
+            )
+          })()}
           <main className="layout">
             <section className="dial-wrap" aria-label="Horizon dial">
               <HorizonDial site={site} i={i} />
@@ -367,21 +493,40 @@ export default function App() {
 
                     {/* Artemis III Candidate Region Mineral & Resource Panel */}
           {(() => {
-            const artemisMatch = ARTEMIS_3_SITES.find(
-              (a) =>
-                Math.hypot(a.lat - site.lat, (a.lon - site.lon) * Math.cos((site.lat * Math.PI) / 180)) < 0.35 ||
-                site.name.toLowerCase().includes(a.name.toLowerCase())
-            )
+            const artemisMatch = ARTEMIS_3_SITES.find((a) => {
+              if (site.id === `artemis-${a.id}`) return true
+              if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
+              const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
+              return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
+            })
             if (!artemisMatch) return null
             return (
               <section className="panel" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', marginTop: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1rem' }}>
-                    Artemis III Candidate Region: On-Site Minerals &amp; Resources
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
-                    {artemisMatch.resources.water_ice_potential} Water Ice Potential
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1rem' }}>
+                      Artemis III Candidate Region: On-Site Minerals &amp; Resources
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
+                      {artemisMatch.resources.water_ice_potential} Water Ice Potential
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      fontSize: '0.74rem',
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-s)',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                    onClick={() => setView('artemis')}
+                  >
+                    Open Full 9-Site Comparison Matrix →
+                  </button>
                 </div>
                 <p style={{ margin: '8px 0', fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5 }}>
                   {artemisMatch.geology}
