@@ -605,7 +605,7 @@ Everything not yet built, as of commit `88bc64d` (Site and plan, Find sites, Glo
 - **All six start at the same time.** No workstream waits for another: each builds against stubs (marked `// TODO WS<n>`) where it needs someone else's piece. Helpful early merges: #1's first deployment, #5's `mode.ts`, #3's first replay, #6's decisions (name, thresholds, analysis period) on day one.
 
 ### 12.2 Solo build order *(added 2026-11-14)*
-Decision: teammates build their own separate version; this branch is built by one person, assuming none of the `docs/tasks/` briefs get done here (they stay as detailed checklists). Their code isn't merged into this branch. Order = demo value per day of work:
+Decision: teammates build their own separate version; this branch is built by one person, assuming none of the `docs/tasks/` briefs get done here (they stay as detailed checklists). Their code isn't merged into this branch. The solo build lives in its own private repository `mohitbaher/lunar-mission-planner` (branch `lunar-mission-planner`). Order = demo value per day of work:
 
 | Step | What | From | Size |
 |---|---|---|---|
@@ -694,6 +694,7 @@ Newest first. Every new feature, idea or decision gets a line here when it's add
 
 | Date | Change |
 |---|---|
+| 2026-11-14 | Solo build moved to its own private repository `mohitbaher/lunar-mission-planner` (default branch `lunar-mission-planner`, full history). The team repository stays as the git remote `team`; the teammates' commit there is not merged. |
 | 2026-11-14 | Section 12.2 added: solo build order. Teammates build a separate version; this branch is built by one person without relying on the `docs/tasks/` briefs. Order: rules check → deploy + README → finish slip story (find-alternatives button, best landing date) → mission replays + validation page → 2–3 "Why?" cards → pitch. Cut: ellipse, modes, contrast card, phone layout, water-ice, F9, F10. |
 | 2026-11-14 | Task briefs written for the six workstreams: `docs/tasks/00-START-HERE.md` (shared: 60-second project summary, setup incl. data downloads, file-ownership map, `App.tsx` edit spots, git/PR rules, pre-PR checklist) + `01-release-and-quality.md`, `02-explainers.md`, `03-evidence-replays-validation.md`, `04-finder-and-planner.md`, `05-analysis-views.md`, `06-pitch-and-decisions.md` (each: mission, P1/P2/stretch tasks with method hints, owned files, interfaces relied on / provided, done-when). Designed so all six work at once: one owner per file, append-only shared files (`data.ts`, Sources list, change log), per-workstream CSS files, short marked `App.tsx` edits. 12.1 updated to point to them. |
 | 2026-11-14 | Section 12.1 added: all remaining work split into six workstreams (1 release and quality, 2 explainers F8, 3 mission replays + validation page, 4 finder/planner extensions incl. Artemis III regions, 5 analysis views + assessment report, 6 pitch and team decisions), each with P1/P2/stretch tasks, sizes, owned files and a 'done when'; plus working rules (branch per workstream, one owner per file, run check:engine before merging). |
