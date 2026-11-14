@@ -21,12 +21,9 @@ import { Contrast } from './explain/Contrast'
 // WS3
 import { Replays } from './Replays'
 import { Validation } from './Validation'
-<<<<<<< HEAD
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
-=======
 // WS5
 import './styles/analysis.css'
->>>>>>> origin/lunar-mission-planner
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))

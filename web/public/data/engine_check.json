@@ -1,12 +1,8 @@
 {
-<<<<<<< HEAD
- "run_utc": "2026-11-14T18:26Z",
-=======
- "run_utc": "2026-11-14T19:00Z",
->>>>>>> origin/lunar-mission-planner
+ "run_utc": "2026-11-14T19:54Z",
  "engine": {
   "points": 8,
-  "direction_deg": 3.488284108497845e-7,
+  "direction_deg": 3.4882841084978446e-7,
   "sunlit_pp": 0,
   "earth_pp": 0,
   "horizon_deg": 0.00004997389428673671,
