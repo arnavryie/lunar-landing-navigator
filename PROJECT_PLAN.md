@@ -604,20 +604,20 @@ Everything not yet built, as of commit `88bc64d` (Site and plan, Find sites, Glo
 - Add a change-log line here for every finished item (see section 17).
 - **All six start at the same time.** No workstream waits for another: each builds against stubs (marked `// TODO WS<n>`) where it needs someone else's piece. Helpful early merges: #1's first deployment, #5's `mode.ts`, #3's first replay, #6's decisions (name, thresholds, analysis period) on day one.
 
-### 12.2 Solo build order *(added 2026-11-14)*
-Decision: teammates build their own separate version; this branch is built by one person, assuming none of the `docs/tasks/` briefs get done here (they stay as detailed checklists). Their code isn't merged into this branch. The solo build lives in its own private repository `mohitbaher/lunar-mission-planner` (branch `lunar-mission-planner`). Order = demo value per day of work:
+### 12.2 Build order from here *(added 2026-11-14, revised same day)*
+Decision: work continues on the team repository's `lunar-mission-planner` branch, with Arnav's workstream 1–3 commit (`1631e0f`: deploy template, README, two replays, validation page, Why cards, contrast card) merged in. A private copy without it exists at `mohitbaher/lunar-mission-planner`. The `docs/tasks/` briefs stay as detailed checklists. Order = demo value per day of work:
 
 | Step | What | From | Size |
 |---|---|---|---|
 | 1 | Read the official 2026 rules: deadline (time zone), submission format, video/slide limits, AI-tool rules | 6.1 | S |
-| 2 | Deploy to GitHub Pages + README | 1.1–1.2 | M |
-| 3 | Finish the slip story: "Find alternatives" button in the planner, best landing date for a site | 4.2, 4.3 | S + M |
-| 4 | Mission replays (2–3, official sources) + validation page | 3.1–3.5 | M + M |
-| 5 | 2–3 "Why?" cards on the numbers judges look at first | 2.1 | M |
+| 2 | **Make the merged work honest and working:** validation page is hard-coded, so read the numbers from `validation.json` / the checks and remove claims no check measures ("bit-for-bit", "100% agreement on viable candidates", "verified until Feb 29": our model puts IM-1 sunset about 2 days later); check every replay fact against its official page; "Over 2024" label on a 20-day replay; `check:engine` back to node (bun isn't required anywhere else); move `docs/workflows/deploy.yml` to `.github/workflows/` so it runs | review of `1631e0f` | S–M |
+| 3 | Deploy to GitHub Pages (needs a public repo or a paid plan) | 1.1 | S |
+| 4 | Finish the slip story: "Find alternatives" button in the planner, best landing date for a site | 4.2, 4.3 | S + M |
+| 5 | Artemis III candidate regions (official NASA source, approximate centres) | 4.1 | M |
 | 6 | Demo script with real numbers, slides, video, submission text | 6.3–6.5 | L |
-| 7 | Only if time remains: Artemis III regions, science-vs-engineering in Compare, print report | 4.1, 5.1, 5.2 | M each |
+| 7 | Only if time remains: IM-2 Athena replay, science-vs-engineering in Compare, print report | 3.1, 5.1, 5.2 | M each |
 
-**Cut for solo:** landing-ellipse spread, Explore/Planner modes, contrast card, phone layout, water-ice, F9, F10.
+**Cut:** landing-ellipse spread, Explore/Planner modes, phone layout, water-ice, F9, F10.
 
 ---
 
@@ -694,6 +694,7 @@ Newest first. Every new feature, idea or decision gets a line here when it's add
 
 | Date | Change |
 |---|---|
+| 2026-11-14 | Work continues on the team repository branch `lunar-mission-planner` with Arnav's workstream 1–3 commit merged (build and both `check:engine` checks pass with node). Review found overclaims on the hard-coded validation page, unverified replay outcome text, a "Over 2024" label on 20-day replays, `check:engine` switched to bun, and the deploy workflow parked in `docs/workflows/` (inactive). Section 12.2 rewritten as the build order from here, with these fixes as step 2. |
 | 2026-11-14 | Solo build moved to its own private repository `mohitbaher/lunar-mission-planner` (default branch `lunar-mission-planner`, full history). The team repository stays as the git remote `team`; the teammates' commit there is not merged. |
 | 2026-11-14 | Section 12.2 added: solo build order. Teammates build a separate version; this branch is built by one person without relying on the `docs/tasks/` briefs. Order: rules check → deploy + README → finish slip story (find-alternatives button, best landing date) → mission replays + validation page → 2–3 "Why?" cards → pitch. Cut: ellipse, modes, contrast card, phone layout, water-ice, F9, F10. |
 | 2026-11-14 | Workstream 1 (Release & Quality) completed: GitHub Pages deployment workflow (`.github/workflows/deploy.yml`) with automated `check:engine` and build validation; `BASE_PATH` support in `web/vite.config.ts`; comprehensive 9-section root `README.md` documenting architecture, accuracy benchmarks, reproduction instructions, and Team Stranded attribution; `docs/qa-checklist.md` multi-viewport testing matrix; clean build verified (`bun run build`). |
