@@ -40,6 +40,7 @@ export interface Site extends SiteSummary {
   source: string
   source_url: string
   site_height_m: number
+  slope_deg?: number // 240 m terrain; only on points computed in the browser
   obs_height_m: number
   start_utc: string
   step_h: number

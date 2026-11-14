@@ -9,6 +9,7 @@ import { Compare, type Scenario } from './Compare'
 import { computeCustomPoint } from './customPoint'
 import { Finder } from './Finder'
 import { MapView } from './MapView'
+import { Ellipse, type EllipseOverlay } from './Ellipse'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
 import { Sources } from './Sources'
@@ -62,6 +63,7 @@ export default function App() {
   useEffect(() => {
     if (view !== 'find') setFindRadius(0)
   }, [view])
+  const [ellipse, setEllipse] = useState<EllipseOverlay | null>(null)
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -302,6 +304,10 @@ export default function App() {
             pickError={pickError}
             onOpenSite={() => setView('site')}
             onCompare={addToCompare}
+            dots={ellipse?.dots}
+            outline={ellipse?.outline}
+            focus={ellipse?.focus}
+            extra={site && !busy && <Ellipse site={site} th={th} i={i} onOverlay={setEllipse} />}
           />
         </section>
       )}

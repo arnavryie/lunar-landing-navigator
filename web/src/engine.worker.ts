@@ -1,5 +1,5 @@
 // Web Worker: computes a clicked map point with the same maths as the Python pipeline (see engine.ts).
-import { heightM, horizonMask, siteTracks, trackMetrics, type Grid } from './engine'
+import { heightM, horizonMask, polarRowCol, siteTracks, trackMetrics, type Grid } from './engine'
 
 interface Meta {
   dem: { file: string; n: number; scale_m: number }
@@ -26,6 +26,11 @@ self.onmessage = async (e: MessageEvent<{ id: number; lat: number; lon: number }
     const t = siteTracks(vectors, lat, lon, h + meta.obs_height_m, mask)
     const r = (a: Float64Array, nd: number) => Array.from(a, (v) => Math.round(v * 10 ** nd) / 10 ** nd)
     const lonW = lon > 180 ? lon - 360 : lon
+    // Slope from the 240 m terrain, as the map's slope layer does (central differences at the nearest pixel).
+    const [row, col] = polarRowCol(lat, lon, grid.n, grid.scaleM).map(Math.round)
+    const k = row * grid.n + col
+    const dx = ((grid.dn[k + 1] - grid.dn[k - 1]) * 0.5) / (2 * grid.scaleM)
+    const dy = ((grid.dn[k + grid.n] - grid.dn[k - grid.n]) * 0.5) / (2 * grid.scaleM)
     self.postMessage({
       id,
       ok: true,
@@ -35,7 +40,7 @@ self.onmessage = async (e: MessageEvent<{ id: number; lat: number; lon: number }
         lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4,
         note: 'Picked on the map. Horizon and visibility computed in your browser with the same maths as the Python pipeline (checked to match).',
         source: 'Map click', source_url: '#sources',
-        site_height_m: Math.round(h * 10) / 10, obs_height_m: meta.obs_height_m,
+        site_height_m: Math.round(h * 10) / 10, slope_deg: Math.round((Math.atan(Math.hypot(dx, dy)) * 1800) / Math.PI) / 10, obs_height_m: meta.obs_height_m,
         start_utc: meta.vectors.start_utc, step_h: 1, samples: meta.vectors.hours,
         metrics: trackMetrics(t),
         provenance: 'Terrain: NASA LOLA LDEM_60S_240M (240 m/px), cropped to 80–90° S. Ephemeris: JPL DE421 via Skyfield, MOON_ME frame. Computed in the browser; same maths as the validated pipeline.',

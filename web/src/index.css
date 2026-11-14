@@ -337,3 +337,11 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .sb-dark { background: #8d9297; }
 .sb-slope { background: #e4e1da; }
 .globe-label.is-region { font-style: italic; font-size: 0.72rem; }
+
+/* F1 landing ellipse (Map side panel) */
+.ellipse { display: grid; gap: 10px; }
+.ellipse .verdict { margin: 0; }
+.ellipse-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.ellipse-table th, .ellipse-table td { padding: 3px 4px; text-align: right; border-bottom: 1px solid var(--rule); }
+.ellipse-table th[scope='row'] { text-align: left; font-weight: 500; color: var(--muted); }
+.map-side .seg button { flex: 1 1 0; padding-inline: 6px; }

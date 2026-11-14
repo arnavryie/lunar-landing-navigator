@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { R_M, rowColToLatLon } from './engine'
+import { R_M, polarRowCol, rowColToLatLon } from './engine'
 import { ARTEMIS_III_URL, ARTEMIS_NOTE, formatDuration, loadArtemis, type Region, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
@@ -109,6 +109,7 @@ export interface Dot {
   lon: number
   v: Viability
   rank?: number
+  cross?: boolean // draw "not viable" as a visible x (landing-ellipse samples)
 }
 
 interface Props {
@@ -122,6 +123,10 @@ interface Props {
   pickError: string
   onOpenSite: () => void
   onCompare: () => void
+  /** Landing ellipse: outline to draw, and the point/size the "Ellipse" zoom centres on. */
+  outline?: { lat: number; lon: number }[]
+  focus?: { lat: number; lon: number; km: number } | null
+  extra?: ReactNode // extra panel under the picked-point box
 }
 
 export function MapView(p: Props) {
@@ -141,12 +146,24 @@ export function MapView(p: Props) {
 
   const layerCanvas = useMemo(() => (data ? render(data, layer) : null), [data, layer])
 
+  // zoom 0 = centred on the landing ellipse; switch to it when an ellipse appears, back out when it goes.
+  const focusKey = p.focus ? `${p.focus.lat},${p.focus.lon}` : ''
+  useEffect(() => {
+    if (focusKey) setZoom(0)
+    else setZoom((z) => z || 1)
+  }, [focusKey])
+
   // Map pixel <-> canvas position for the current zoom (centred on the pole).
   const view = useMemo(() => {
     if (!data) return null
-    const sw = data.n / zoom
-    return { sx: (data.n - sw) / 2, sw }
-  }, [data, zoom])
+    if (zoom === 0 && p.focus) {
+      const sw = Math.max((p.focus.km * 3000) / data.scale, 16) // ellipse fills about a third of the map
+      const [row, col] = polarRowCol(p.focus.lat, p.focus.lon, data.n, data.scale)
+      return { sx: col + 0.5 - sw / 2, sy: row + 0.5 - sw / 2, sw }
+    }
+    const sw = data.n / (zoom || 1)
+    return { sx: (data.n - sw) / 2, sy: (data.n - sw) / 2, sw }
+  }, [data, zoom, p.focus])
 
   const toCanvas = (lat: number, lon: number, size: number): [number, number] | null => {
     if (!data || !view) return null
@@ -154,7 +171,7 @@ export function MapView(p: Props) {
     const c = data.n / 2 - 0.5
     const row = c - (rr * Math.cos((lon * Math.PI) / 180)) / data.scale
     const col = c + (rr * Math.sin((lon * Math.PI) / 180)) / data.scale
-    return [((col + 0.5 - view.sx) / view.sw) * size, ((row + 0.5 - view.sx) / view.sw) * size]
+    return [((col + 0.5 - view.sx) / view.sw) * size, ((row + 0.5 - view.sy) / view.sw) * size]
   }
 
   const markers = p.sites.filter((s) => s.lat <= -85 && s.kind !== 'custom')
@@ -168,8 +185,10 @@ export function MapView(p: Props) {
     cv.height = size * dpr
     const g = cv.getContext('2d')!
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
-    g.imageSmoothingEnabled = zoom < 4
-    g.drawImage(layerCanvas, view.sx, view.sx, view.sw, view.sw, 0, 0, size, size)
+    g.imageSmoothingEnabled = zoom > 0 && zoom < 4
+    g.fillStyle = '#111418'
+    g.fillRect(0, 0, size, size) // the ellipse zoom can reach past the map edge
+    g.drawImage(layerCanvas, view.sx, view.sy, view.sw, view.sw, 0, 0, size, size)
 
     // Graticule: latitude circles and 30 deg meridians.
     g.strokeStyle = 'rgba(255,255,255,0.32)'
@@ -207,7 +226,7 @@ export function MapView(p: Props) {
       g.textAlign = 'start'
     }
     // F7 candidate spots: viable = filled, marginal = ring, not viable = faint speck; ranked = numbered badge.
-    const r0 = Math.min(2 + zoom, 5)
+    const r0 = zoom ? Math.min(2 + zoom, 5) : 5
     for (const d of p.dots ?? []) {
       if (d.rank || d.v === 'nodata') continue
       const pt = toCanvas(d.lat, d.lon, size)
@@ -224,10 +243,35 @@ export function MapView(p: Props) {
         g.lineWidth = 1.5
         g.strokeStyle = '#e4e1da'
         g.stroke()
+      } else if (d.cross) {
+        g.beginPath()
+        g.moveTo(pt[0] - r0, pt[1] - r0)
+        g.lineTo(pt[0] + r0, pt[1] + r0)
+        g.moveTo(pt[0] + r0, pt[1] - r0)
+        g.lineTo(pt[0] - r0, pt[1] + r0)
+        g.lineWidth = 3.5
+        g.strokeStyle = '#111418'
+        g.stroke()
+        g.lineWidth = 1.5
+        g.strokeStyle = '#e0705c'
+        g.stroke()
       } else {
         g.fillStyle = 'rgba(17,20,24,0.4)'
         g.fill()
       }
+    }
+    // Landing ellipse outline: dark halo + light dashes, readable on every layer.
+    if (p.outline?.length) {
+      const pts = p.outline.map((q) => toCanvas(q.lat, q.lon, size)!)
+      for (const [w, c, dash] of [[4, '#111418', []], [1.8, '#e4e1da', [6, 4]]] as const) {
+        g.beginPath()
+        pts.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)))
+        g.lineWidth = w
+        g.strokeStyle = c
+        g.setLineDash([...dash])
+        g.stroke()
+      }
+      g.setLineDash([])
     }
     g.font = '700 11px "Public Sans", sans-serif'
     g.textAlign = 'center'
@@ -312,7 +356,8 @@ export function MapView(p: Props) {
       }
     }
     // Scale bar.
-    const km = zoom === 1 ? 50 : zoom === 2 ? 20 : 10
+    const viewKm = (view.sw * data.scale) / 1000
+    const km = zoom === 1 ? 50 : zoom === 2 ? 20 : zoom === 4 ? 10 : [10, 5, 2, 1, 0.5].find((k) => k <= viewKm / 4) ?? 0.5
     const len = ((km * 1000) / (view.sw * data.scale)) * size
     g.fillStyle = '#d9d6cf'
     g.fillRect(16, size - 22, len, 3)
@@ -323,7 +368,7 @@ export function MapView(p: Props) {
     if (!data || !view) return null
     const rect = e.currentTarget.getBoundingClientRect()
     const col = view.sx + ((e.clientX - rect.left) / rect.width) * view.sw - 0.5
-    const row = view.sx + ((e.clientY - rect.top) / rect.height) * view.sw - 0.5
+    const row = view.sy + ((e.clientY - rect.top) / rect.height) * view.sw - 0.5
     const [lat, lon] = rowColToLatLon(row, col, data.n, data.scale)
     return { lat, lon, r: Math.round(row), c: Math.round(col), x: e.clientX - rect.left, y: e.clientY - rect.top, size: rect.width }
   }
@@ -404,6 +449,11 @@ export function MapView(p: Props) {
               {z.label}
             </button>
           ))}
+          {p.focus && (
+            <button aria-pressed={zoom === 0} onClick={() => setZoom(0)}>
+              Ellipse
+            </button>
+          )}
         </div>
         <label className="radio">
           <input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} />
@@ -464,6 +514,7 @@ export function MapView(p: Props) {
             </>
           )}
         </div>
+        {p.extra}
         <p className="chart-note">
           Custom points: 85–90° S only, terrain at 240 m. Our numbers are for 2027 at 2 m height; NASA's layers are 18.6-year
           averages at the surface, so they differ a little.

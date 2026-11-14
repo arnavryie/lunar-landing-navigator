@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:engine": "node scripts/check-engine.ts"
+    "check:engine": "node scripts/check-engine.ts",
+    "check:ellipse": "node scripts/check-ellipse.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
