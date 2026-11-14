@@ -330,6 +330,7 @@ export default function App() {
                 sites={sites}
                 i={i}
                 onPickSite={setSiteId}
+                onPickArtemisSite={pickArtemisSite}
                 onOpen3D={() => setView('3d')}
                 onOpenSite={() => setView('site')}
                 onOpenArtemis={() => setView('3d')}
