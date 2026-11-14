@@ -310,3 +310,22 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .globe-label.is-earth { color: var(--earth); }
 .globe-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-variant-numeric: tabular-nums; }
 .globe-facts span { color: var(--muted); }
+
+/* F7 finder */
+.finder { display: grid; gap: 12px; }
+.finder .field.wide { grid-template-columns: 1fr 170px; }
+.finder .field.wide select, .finder .field.wide input { width: 100%; min-width: 0; color-scheme: dark; text-align: left; }
+.finder-count { margin: 0; }
+.shortlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.short-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; width: 100%; text-align: left; padding: 6px 8px; font-weight: 400; }
+.short-rank { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #e4e1da; color: #111418; font-weight: 700; font-size: 0.75rem; }
+.short-main { display: grid; gap: 3px; min-width: 0; }
+.short-where { font-weight: 600; font-variant-numeric: tabular-nums; }
+.short-nums { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.short-score { font-size: 1.1rem; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; display: grid; }
+.short-score .muted { font-size: 0.7rem; }
+.score-bar { display: flex; height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+.sb-power { background: var(--sun); }
+.sb-comms { background: var(--earth); }
+.sb-dark { background: #8d9297; }
+.sb-slope { background: #e4e1da; }

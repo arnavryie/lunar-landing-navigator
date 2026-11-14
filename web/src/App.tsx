@@ -7,6 +7,7 @@ import {
 import { HorizonDial } from './HorizonDial'
 import { Compare, type Scenario } from './Compare'
 import { computeCustomPoint } from './customPoint'
+import { Finder } from './Finder'
 import { MapView } from './MapView'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
@@ -49,8 +50,8 @@ export default function App() {
   const [validation, setValidation] = useState<Validation | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'compare' | 'globe' | 'map' | '3d'
-  const [view, setView] = useState<View>((['compare', 'globe', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d'
+  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -165,6 +166,9 @@ export default function App() {
           <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
             Site and plan
           </button>
+          <button aria-pressed={view === 'find'} onClick={() => setView('find')}>
+            Find sites
+          </button>
           <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}>
             Globe
           </button>
@@ -205,6 +209,25 @@ export default function App() {
 
       {error && <p className="error">{error}</p>}
       {!site && !error && <p className="loading">Loading site data</p>}
+
+      {view === 'find' && (
+        <section className="panel" aria-label="Alternatives finder">
+          <Finder
+            sites={sites}
+            site={site}
+            i={i}
+            setI={setI}
+            th={th}
+            setTh={setTh}
+            onPickSite={setSiteId}
+            onPickPoint={pickPoint}
+            busy={busy}
+            pickError={pickError}
+            onOpenSite={() => setView('site')}
+            onCompare={addToCompare}
+          />
+        </section>
+      )}
 
       {view === 'globe' && (
         <section className="panel" aria-label="Whole-Moon globe">

@@ -78,7 +78,7 @@ export function discFraction(el: number, radius: number, horizonEl: number): num
   return 1 - (Math.acos(x) - x * Math.sqrt(1 - x * x)) / Math.PI
 }
 
-function horizonAtAz(mask: Float64Array, az: number, azStep: number): number {
+function horizonAtAz(mask: ArrayLike<number>, az: number, azStep: number): number {
   const x = (((az % 360) + 360) % 360) / azStep
   const i = Math.floor(x)
   const f = x - i
@@ -91,9 +91,9 @@ export interface Tracks {
 }
 
 /** Hourly Sun/Earth az/el and visible-disc fractions (ephemeris.altaz_from_vectors + timeline.site_timeline).
- *  vectors: float32 [sun x,y,z, earth x,y,z] per hour, km, MOON_ME frame, from the Moon's centre. */
-export function siteTracks(vectors: Float32Array, latDeg: number, lonDeg: number, siteElevM: number, mask: Float64Array, azStep = 0.5): Tracks {
-  const hours = vectors.length / 6
+ *  vectors: float32 [sun x,y,z, earth x,y,z] per hour, km, MOON_ME frame, from the Moon's centre.
+ *  start/hours: compute only that window (index 0 of the result = hour `start`). */
+export function siteTracks(vectors: Float32Array, latDeg: number, lonDeg: number, siteElevM: number, mask: ArrayLike<number>, azStep = 0.5, start = 0, hours = vectors.length / 6 - start): Tracks {
   const p = latDeg * D2R
   const l = lonDeg * D2R
   const up = [Math.cos(p) * Math.cos(l), Math.cos(p) * Math.sin(l), Math.sin(p)]
@@ -103,10 +103,11 @@ export function siteTracks(vectors: Float32Array, latDeg: number, lonDeg: number
   const mk = () => ({ az: new Float64Array(hours), el: new Float64Array(hours), frac: new Float64Array(hours) })
   const out: Tracks = { sun: { ...mk(), power: new Float64Array(hours) }, earth: mk() }
   for (let h = 0; h < hours; h++) {
+    const o = 6 * (start + h)
     for (const [b, off] of [['sun', 0], ['earth', 3]] as const) {
-      const x = vectors[6 * h + off] - rs * up[0]
-      const y = vectors[6 * h + off + 1] - rs * up[1]
-      const z = vectors[6 * h + off + 2] - rs * up[2]
+      const x = vectors[o + off] - rs * up[0]
+      const y = vectors[o + off + 1] - rs * up[1]
+      const z = vectors[o + off + 2] - rs * up[2]
       const dist = Math.hypot(x, y, z)
       const az = ((Math.atan2(east[0] * x + east[1] * y + east[2] * z, north[0] * x + north[1] * y + north[2] * z) / D2R) % 360 + 360) % 360
       const el = Math.asin((up[0] * x + up[1] * y + up[2] * z) / dist) / D2R

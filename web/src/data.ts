@@ -189,7 +189,8 @@ export interface WindowStats {
 }
 
 /** Sunlit %, Earth-visible % and longest darkness over [start, start + hours); null if it runs past the data. */
-export function windowStats(site: Site, start: number, hours: number): WindowStats | null {
+type FracTracks = { samples: number; sun: { frac: ArrayLike<number> }; earth: { frac: ArrayLike<number> } }
+export function windowStats(site: FracTracks, start: number, hours: number): WindowStats | null {
   if (start < 0 || start + hours > site.samples) return null
   let sun = 0
   let earth = 0

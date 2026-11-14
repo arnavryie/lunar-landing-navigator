@@ -200,7 +200,7 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh }: Props
   )
 }
 
-function Field(p: { label: string; unit: string; value: number; step: number; onChange: (v: string) => void }) {
+export function Field(p: { label: string; unit: string; value: number; step: number; onChange: (v: string) => void }) {
   return (
     <label className="field">
       <span>{p.label}</span>

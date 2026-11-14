@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { R_M, rowColToLatLon } from './engine'
-import { formatDuration, type Site, type SiteSummary } from './data'
+import { formatDuration, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
 
@@ -103,7 +103,17 @@ function render(d: MapData, layer: Layer): OffscreenCanvas {
   return oc
 }
 
+/** F7 finder overlay: one dot per candidate spot, ranked ones numbered. */
+export interface Dot {
+  lat: number
+  lon: number
+  v: Viability
+  rank?: number
+}
+
 interface Props {
+  dots?: Dot[]
+  side?: ReactNode // replaces the layer/hover panel (the finder uses it)
   sites: SiteSummary[]
   site: Site | null
   onPickSite: (id: string) => void
@@ -193,6 +203,45 @@ export function MapView(p: Props) {
       label(lon === 0 ? '0°' : lon === 180 ? '180°' : `${Math.abs(lw)}° ${lw > 0 ? 'E' : 'W'}`, lab[0], lab[1] + 4)
       g.textAlign = 'start'
     }
+    // F7 candidate spots: viable = filled, marginal = ring, not viable = faint speck; ranked = numbered badge.
+    const r0 = Math.min(2 + zoom, 5)
+    for (const d of p.dots ?? []) {
+      if (d.rank || d.v === 'nodata') continue
+      const pt = toCanvas(d.lat, d.lon, size)
+      if (!pt) continue
+      g.beginPath()
+      g.arc(pt[0], pt[1], d.v === 'not' ? r0 * 0.45 : r0, 0, 2 * Math.PI)
+      if (d.v === 'viable') {
+        g.fillStyle = '#e4e1da'
+        g.fill()
+        g.lineWidth = 1
+        g.strokeStyle = '#111418'
+        g.stroke()
+      } else if (d.v === 'marginal') {
+        g.lineWidth = 1.5
+        g.strokeStyle = '#e4e1da'
+        g.stroke()
+      } else {
+        g.fillStyle = 'rgba(17,20,24,0.4)'
+        g.fill()
+      }
+    }
+    g.font = '700 11px "Public Sans", sans-serif'
+    g.textAlign = 'center'
+    for (const d of (p.dots ?? []).filter((x) => x.rank).reverse()) {
+      const pt = toCanvas(d.lat, d.lon, size)
+      if (!pt) continue
+      g.beginPath()
+      g.arc(pt[0], pt[1], 8.5, 0, 2 * Math.PI)
+      g.fillStyle = '#e4e1da'
+      g.fill()
+      g.lineWidth = 2
+      g.strokeStyle = '#111418'
+      g.stroke()
+      g.fillStyle = '#111418'
+      g.fillText(String(d.rank), pt[0], pt[1] + 4)
+    }
+    g.textAlign = 'start'
     // Curated sites and the custom pin.
     g.font = '600 12px "Public Sans", sans-serif'
     const placed: number[] = [] // label y positions already used near each other: shift down to avoid overlap
@@ -259,7 +308,12 @@ export function MapView(p: Props) {
       const pt = toCanvas(s.lat, s.lon, q.size)
       return pt && Math.hypot(pt[0] - q.x, pt[1] - q.y) < 9
     })
-    if (near) p.onPickSite(near.id)
+    const ranked = (p.dots ?? []).find((d) => {
+      const pt = d.rank ? toCanvas(d.lat, d.lon, q.size) : null
+      return pt && Math.hypot(pt[0] - q.x, pt[1] - q.y) < 10
+    })
+    if (ranked) p.onPickPoint(ranked.lat, ranked.lon)
+    else if (near) p.onPickSite(near.id)
     else if (q.lat <= -85) p.onPickPoint(q.lat, q.lon)
   }
 
@@ -295,6 +349,8 @@ export function MapView(p: Props) {
       </div>
 
       <aside className="map-side">
+        {!p.side && (
+          <>
         <fieldset className="thresholds">
           <legend>Layer</legend>
           {LAYERS.map((l) => (
@@ -313,6 +369,8 @@ export function MapView(p: Props) {
           )}
         </fieldset>
 
+          </>
+        )}
         <div className="seg" role="group" aria-label="Zoom">
           {ZOOMS.map((z) => (
             <button key={z.z} aria-pressed={zoom === z.z} onClick={() => setZoom(z.z)}>
@@ -321,6 +379,8 @@ export function MapView(p: Props) {
           ))}
         </div>
 
+        {p.side ?? (
+          <>
         <div className="hover-box" aria-live="off">
           {hover && t ? (
             <dl>
@@ -369,6 +429,8 @@ export function MapView(p: Props) {
           Custom points: 85–90° S only, terrain at 240 m. Our numbers are for 2027 at 2 m height; NASA's layers are 18.6-year
           averages at the surface, so they differ a little.
         </p>
+          </>
+        )}
       </aside>
     </div>
   )

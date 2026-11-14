@@ -1,0 +1,22 @@
+{
+ "count": 5487,
+ "fields": [
+  "lat",
+  "lon",
+  "height_m",
+  "slope_deg",
+  "nasa_sun_pct",
+  "nasa_earth_pct"
+ ],
+ "mask": {
+  "az_step_deg": 1,
+  "unit_deg": 0.1,
+  "clip_deg": 12.7,
+  "range_step_m": 240.0
+ },
+ "tile_km": 2.88,
+ "max_slope_deg": 15.0,
+ "min_nasa_sun_pct": 25.0,
+ "obs_height_m": 2.0,
+ "source": "NASA LOLA LDEM_60S_240M (horizons, slope); NASA PGDA AVGVISIB maps (choosing the spot within each tile)"
+}

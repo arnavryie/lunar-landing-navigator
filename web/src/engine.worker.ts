@@ -16,9 +16,9 @@ async function load() {
   return { meta, grid: { dn: new Int16Array(dem), n: meta.dem.n, scaleM: meta.dem.scale_m }, vectors: new Float32Array(vec) }
 }
 
-self.onmessage = async (e: MessageEvent<{ lat: number; lon: number }>) => {
+self.onmessage = async (e: MessageEvent<{ id: number; lat: number; lon: number }>) => {
   try {
-    const { lat, lon } = e.data
+    const { id, lat, lon } = e.data
     const { meta, grid, vectors } = await (data ??= load())
     const h = heightM(grid, lat, lon)
     if (Number.isNaN(h)) throw new Error('Point is outside the terrain map')
@@ -27,6 +27,7 @@ self.onmessage = async (e: MessageEvent<{ lat: number; lon: number }>) => {
     const r = (a: Float64Array, nd: number) => Array.from(a, (v) => Math.round(v * 10 ** nd) / 10 ** nd)
     const lonW = lon > 180 ? lon - 360 : lon
     self.postMessage({
+      id,
       ok: true,
       site: {
         id: 'custom', group: 'Custom', kind: 'custom',
@@ -44,6 +45,6 @@ self.onmessage = async (e: MessageEvent<{ lat: number; lon: number }>) => {
       },
     })
   } catch (err) {
-    self.postMessage({ ok: false, error: String((err as Error).message ?? err) })
+    self.postMessage({ id: e.data.id, ok: false, error: String((err as Error).message ?? err) })
   }
 }
