@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data'
+import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -120,6 +121,7 @@ interface World {
   pointRT: THREE.WebGLRenderTarget
   terrainMat: THREE.ShaderMaterial
   marks: THREE.Group
+  artemisGroup: THREE.Group
   vectors: Float32Array
   n: number
   scale: number
@@ -149,13 +151,14 @@ function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, 
   return meToScene([w.vectors[o] - P[0], w.vectors[o + 1] - P[1], w.vectors[o + 2] - P[2]])
 }
 
-export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSummary[]; i: number }) {
+export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; sites: SiteSummary[]; i: number; onPickPoint?: (lat: number, lon: number) => void }) {
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState('')
   const [exag, setExag] = useState(1)
   const [check, setCheck] = useState('')
+  const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(null)
   const currentExagRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
 
@@ -214,6 +217,8 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         scene.add(new THREE.Mesh(geo, terrainMat))
         const marks = new THREE.Group()
         scene.add(marks)
+        const artemisGroup = new THREE.Group()
+        scene.add(artemisGroup)
 
         const resize = () => {
           const el = host.current
@@ -229,7 +234,7 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         camera.position.set(0, 260, 330)
         controls.target.set(0, 0, 0)
         controls.update()
-        world.current = { renderer, scene, camera, controls, visScene, visCam, visMat, visRT, pointRT, terrainMat, marks, vectors: new Float32Array(vecBuf), n, scale, heights }
+        world.current = { renderer, scene, camera, controls, visScene, visCam, visMat, visRT, pointRT, terrainMat, marks, artemisGroup, vectors: new Float32Array(vecBuf), n, scale, heights }
         resize()
         setReady(true)
         cleanup = () => {
@@ -274,6 +279,36 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
         w.marks.add(line)
       }
     }
+
+    // Render Artemis III candidate landing site zones & markers
+    w.artemisGroup.clear()
+    for (const a of ARTEMIS_3_SITES) {
+      const p = scenePos(w, a.lat, a.lon, curExag)
+      const isSel = selectedArtemis?.id === a.id
+
+      // Circular landing zone ring (~15 km scale on terrain)
+      const ringGeo = new THREE.RingGeometry(1.0, 1.4, 24)
+      ringGeo.rotateX(-Math.PI / 2)
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: isSel ? '#f59e0b' : '#38bdf8',
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: isSel ? 0.95 : 0.65,
+      })
+      const ring = new THREE.Mesh(ringGeo, ringMat)
+      ring.position.set(p.x, p.y + 0.08, p.z)
+      w.artemisGroup.add(ring)
+
+      // Center diamond pin
+      const diamondGeo = new THREE.OctahedronGeometry(isSel ? 0.9 : 0.6)
+      const diamondMat = new THREE.MeshBasicMaterial({
+        color: isSel ? '#f59e0b' : '#38bdf8',
+      })
+      const diamond = new THREE.Mesh(diamondGeo, diamondMat)
+      diamond.position.set(p.x, p.y + 1.0, p.z)
+      w.artemisGroup.add(diamond)
+    }
+
     w.renderer.render(w.scene, w.camera)
   }
 
@@ -344,6 +379,17 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
       }
     }
   }, [exag, ready, site, i])
+
+    const inspectArtemis = (siteData: ArtemisSiteData) => {
+    setSelectedArtemis(siteData)
+    const w = world.current
+    if (!w) return
+    const p = scenePos(w, siteData.lat, siteData.lon, currentExagRef.current)
+    w.camera.position.set(p.x - 22, p.y + 16, p.z - 20)
+    w.controls.target.copy(p)
+    w.controls.update()
+    drawMarksAndRender(w, currentExagRef.current)
+  }
 
   const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
     const w = world.current
@@ -442,6 +488,106 @@ export function Terrain3D({ site, sites, i }: { site: Site | null; sites: SiteSu
             </button>
           ))}
         </div>
+                <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>🚀 Artemis III Candidate Landing Sites</legend>
+          <p className="chart-note" style={{ margin: '0 0 8px' }}>
+            NASA downselected 9 landing zones (Oct 2024). Click any site to view minerals, water-ice potential, and ISRU resources:
+          </p>
+          <div className="slips" style={{ gap: '6px' }}>
+            {ARTEMIS_3_SITES.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 7px',
+                  minWidth: 'auto',
+                  borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                  color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  fontWeight: selectedArtemis?.id === a.id ? 600 : 400
+                }}
+                onClick={() => inspectArtemis(a)}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedArtemis && (
+            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid #38bdf8', borderRadius: 'var(--radius-s)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
+                    {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '0.68rem',
+                  padding: '2px 5px',
+                  borderRadius: '3px',
+                  fontWeight: 600,
+                  background: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? 'rgba(31, 163, 138, 0.25)' : 'rgba(56, 189, 248, 0.2)',
+                  color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#38bdf8',
+                  border: '1px solid currentColor'
+                }}>
+                  {selectedArtemis.resources.water_ice_potential} Water Ice
+                </span>
+              </div>
+
+              <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
+
+              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                <strong style={{ color: '#e2e8f0' }}>💎 Mineral Composition:</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
+                  {selectedArtemis.minerals.primary.map((m) => (
+                    <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 5px', borderRadius: '3px', fontSize: '0.7rem' }}>
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
+              </div>
+
+              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                <strong style={{ color: '#38bdf8' }}>🧊 Water-Ice & Volatiles:</strong>
+                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                  Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
+                </div>
+              </div>
+
+              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                <strong style={{ color: '#f59e0b' }}>⚡ ISRU Resources:</strong>
+                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                  Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {onPickPoint && (
+                  <button
+                    type="button"
+                    style={{ flex: 1, padding: '5px 8px', fontSize: '0.76rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)' }}
+                    onClick={() => onPickPoint(selectedArtemis.lat, selectedArtemis.lon)}
+                  >
+                    Compute Full Mission Profile (Site Tab)
+                  </button>
+                )}
+                <a
+                  href={selectedArtemis.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ padding: '4px 6px', fontSize: '0.72rem', color: 'var(--muted)', textDecoration: 'underline', alignSelf: 'center' }}
+                >
+                  NASA Source
+                </a>
+              </div>
+            </div>
+          )}
+        </fieldset>
         <fieldset className="thresholds">
           <legend>Camera</legend>
           <div className="slips">

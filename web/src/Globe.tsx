@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { ARTEMIS_NOTE, STATE_LABEL, loadArtemis, stateAt, type Region, type Site, type SiteSummary } from './data'
+import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
 
 // F6c: whole-Moon globe. Lit from the true Sun direction for the selected hour (same Skyfield vectors as
 // the Map and 3D views). Colour: NASA CGI Moon Kit (LROC). Relief: normals from our LOLA LDEM_16.
@@ -77,6 +78,7 @@ const fmtLon = (v: number) => `${Math.abs(v).toFixed(1)}° ${v < 0 ? 'W' : 'E'}`
 
 export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | null; sites: SiteSummary[]; i: number; onPickSite: (id: string) => void; onOpen3D: () => void }) {
   const [regions, setRegions] = useState<Region[]>([])
+  const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(null)
   useEffect(() => {
     loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
@@ -239,7 +241,11 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
     }
     // NASA candidate landing regions: small white octahedra (approximate centres), names when zoomed in.
     for (const r of regions) {
-      const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.007), new THREE.MeshBasicMaterial({ color: '#d9d6cf', wireframe: true }))
+      const isSel = selectedArtemis?.name.toLowerCase() === r.name.toLowerCase()
+      const m = new THREE.Mesh(
+        new THREE.OctahedronGeometry(isSel ? 0.012 : 0.007),
+        new THREE.MeshBasicMaterial({ color: isSel ? '#f59e0b' : '#38bdf8', wireframe: !isSel })
+      )
       m.position.copy(unitAt(r.lat, r.lon).multiplyScalar(1.003))
       w.markers.add(m)
       const l = label(r.name, 'is-region')
@@ -272,6 +278,16 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
     }
     w.draw()
   }, [i, site, sites, relief, ready, regions])
+
+    const flyArtemis = (a: ArtemisSiteData) => {
+    setSelectedArtemis(a)
+    const w = world.current
+    if (!w) return
+    w.camera.position.copy(unitAt(a.lat, a.lon).multiplyScalar(1.8))
+    w.controls.target.copy(unitAt(a.lat, a.lon))
+    w.controls.update()
+    w.draw()
+  }
 
   const fly = (k: 'earth' | 'sun' | 'south' | 'site' | 'system') => {
     const w = world.current
@@ -306,6 +322,63 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
           Lit from the true Sun direction at the selected time, so the day/night line is real. Drag to spin, scroll to
           zoom, click a marker to pick a site. Dashed ring: 80° S, the 3D terrain area.
         </p>
+                <fieldset className="thresholds" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>🚀 Artemis III Candidate Landing Sites</legend>
+          <div className="slips" style={{ gap: '6px' }}>
+            {ARTEMIS_3_SITES.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '3px 7px',
+                  minWidth: 'auto',
+                  borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                  color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  fontWeight: selectedArtemis?.id === a.id ? 600 : 400
+                }}
+                onClick={() => flyArtemis(a)}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedArtemis && (
+            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid #38bdf8', borderRadius: 'var(--radius-s)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
+                    {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.68rem', padding: '2px 5px', borderRadius: '3px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
+                  {selectedArtemis.resources.water_ice_potential} Ice
+                </span>
+              </div>
+              <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
+              <div style={{ fontSize: '0.74rem', margin: '4px 0' }}>
+                <strong style={{ color: '#e2e8f0' }}>Minerals:</strong> {selectedArtemis.minerals.primary.join(', ')}
+              </div>
+              <div style={{ fontSize: '0.74rem', margin: '4px 0' }}>
+                <strong style={{ color: '#38bdf8' }}>Water & Volatiles:</strong> {selectedArtemis.resources.water_ice_details}
+              </div>
+              <div style={{ fontSize: '0.74rem', margin: '4px 0' }}>
+                <strong style={{ color: '#f59e0b' }}>ISRU:</strong> {selectedArtemis.resources.isru_applications}
+              </div>
+              <button
+                type="button"
+                className="link"
+                style={{ marginTop: '6px', fontSize: '0.78rem' }}
+                onClick={onOpen3D}
+              >
+                Inspect in 3D Terrain view →
+              </button>
+            </div>
+          )}
+        </fieldset>
         <fieldset className="thresholds">
           <legend>Camera</legend>
           <div className="slips">

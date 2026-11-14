@@ -21,6 +21,7 @@ import { Contrast } from './explain/Contrast'
 // WS3
 import { Replays } from './Replays'
 import { Validation } from './Validation'
+import { ARTEMIS_3_SITES } from './data/artemisData'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -204,7 +205,25 @@ export default function App() {
         {view !== 'compare' && (
         <label className="site-pick">
           <span>Site</span>
-          <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+          <select
+            value={siteId}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val.startsWith('artemis-')) {
+                const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
+                if (a) pickPoint(a.lat, a.lon)
+              } else {
+                setSiteId(val)
+              }
+            }}
+          >
+            <optgroup label="🚀 Artemis III Candidate Landing Sites">
+              {ARTEMIS_3_SITES.map((a) => (
+                <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
+                  {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})
+                </option>
+              ))}
+            </optgroup>
             {[...new Set(sites.map((s) => s.group))].map((g) => (
               <optgroup key={g} label={g}>
                 {sites
@@ -278,7 +297,7 @@ export default function App() {
             </div>
           ) : (
             <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
-              <Terrain3D site={site} sites={sites} i={i} />
+              <Terrain3D site={site} sites={sites} i={i} onPickPoint={pickPoint} />
             </Suspense>
           )}
         </section>
