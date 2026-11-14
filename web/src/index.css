@@ -336,3 +336,4 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .sb-comms { background: var(--earth); }
 .sb-dark { background: #8d9297; }
 .sb-slope { background: #e4e1da; }
+.globe-label.is-region { font-style: italic; font-size: 0.72rem; }

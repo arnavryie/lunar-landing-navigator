@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { R_M, rowColToLatLon } from './engine'
-import { formatDuration, type Site, type SiteSummary, type Viability } from './data'
+import { ARTEMIS_III_URL, ARTEMIS_NOTE, formatDuration, loadArtemis, type Region, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
 
@@ -131,9 +131,12 @@ export function MapView(p: Props) {
   const [zoom, setZoom] = useState(1)
   const [hover, setHover] = useState<{ lat: number; lon: number; r: number; c: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
+  const [regions, setRegions] = useState<Region[]>([])
+  const [showRegions, setShowRegions] = useState(true)
 
   useEffect(() => {
     ;(cached ??= loadMap()).then(setData, (e) => setErr(String(e.message ?? e)))
+    loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
 
   const layerCanvas = useMemo(() => (data ? render(data, layer) : null), [data, layer])
@@ -269,6 +272,30 @@ export function MapView(p: Props) {
       }
       label(s.name, pt[0] + 10, ly)
     }
+    // NASA candidate landing regions: hollow diamonds at approximate centres.
+    if (showRegions)
+      for (const r of regions) {
+        const pt = r.lat <= -85 ? toCanvas(r.lat, r.lon, size) : null
+        if (!pt) continue
+        g.beginPath()
+        g.moveTo(pt[0], pt[1] - 7)
+        g.lineTo(pt[0] + 7, pt[1])
+        g.lineTo(pt[0], pt[1] + 7)
+        g.lineTo(pt[0] - 7, pt[1])
+        g.closePath()
+        g.lineWidth = 3.5
+        g.strokeStyle = '#111418'
+        g.stroke()
+        g.lineWidth = 1.5
+        g.strokeStyle = '#d9d6cf'
+        g.stroke()
+        let ly = pt[1] + 4
+        while (placed.some((y) => Math.abs(y - ly) < 15)) ly += 15
+        placed.push(ly)
+        g.font = 'italic 12px "Public Sans", sans-serif'
+        label(r.name, pt[0] + 11, ly)
+      }
+    g.font = '600 12px "Public Sans", sans-serif'
     if (p.site?.kind === 'custom') {
       const pt = toCanvas(p.site.lat, p.site.lon, size)
       if (pt) {
@@ -378,6 +405,18 @@ export function MapView(p: Props) {
             </button>
           ))}
         </div>
+        <label className="radio">
+          <input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} />
+          NASA candidate landing regions ◇
+        </label>
+        {showRegions && regions.length > 0 && (
+          <p className="chart-note">
+            {ARTEMIS_NOTE} {regions.filter((r) => r.lat > -85).map((r) => r.name).join(', ')} lie north of 85° S, off this
+            map; see the Globe.{' '}
+            <a href={regions[0].source_url} target="_blank" rel="noopener noreferrer">NASA regions</a> ·{' '}
+            <a href={ARTEMIS_III_URL} target="_blank" rel="noopener noreferrer">Artemis III today</a>
+          </p>
+        )}
 
         {p.side ?? (
           <>

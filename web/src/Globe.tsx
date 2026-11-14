@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import { STATE_LABEL, stateAt, type Site, type SiteSummary } from './data'
+import { ARTEMIS_NOTE, STATE_LABEL, loadArtemis, stateAt, type Region, type Site, type SiteSummary } from './data'
 
 // F6c: whole-Moon globe. Lit from the true Sun direction for the selected hour (same Skyfield vectors as
 // the Map and 3D views). Colour: NASA CGI Moon Kit (LROC). Relief: normals from our LOLA LDEM_16.
@@ -76,6 +76,10 @@ const fmtLat = (v: number) => `${Math.abs(v).toFixed(1)}° ${v < 0 ? 'S' : 'N'}`
 const fmtLon = (v: number) => `${Math.abs(v).toFixed(1)}° ${v < 0 ? 'W' : 'E'}`
 
 export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | null; sites: SiteSummary[]; i: number; onPickSite: (id: string) => void; onOpen3D: () => void }) {
+  const [regions, setRegions] = useState<Region[]>([])
+  useEffect(() => {
+    loadArtemis().then(setRegions, () => setRegions([]))
+  }, [])
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
   const [ready, setReady] = useState(false)
@@ -148,7 +152,7 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
             b.visible = !(camera.position.length() > b.position.length() - 0.6 && camera.position.clone().normalize().dot(b.position.clone().normalize()) > 0.98)
           for (const m of markers.children) {
             if (m instanceof THREE.Mesh) m.scale.setScalar(Math.min(1, Math.max(0.1, alt / 3.2))) // ~constant on-screen size
-            else m.visible = m.position.dot(camera.position.clone().sub(m.position)) > 0 // hide labels on the far side
+            else m.visible = m.position.dot(camera.position.clone().sub(m.position)) > 0 && (!m.userData.region || alt < 0.45) // far side hidden; region names only when zoomed in
           }
           renderer.render(scene, camera)
           labels.render(scene, camera)
@@ -233,6 +237,16 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
       })
       g.clear() // fires 'removed', which also deletes CSS2D label elements
     }
+    // NASA candidate landing regions: small white octahedra (approximate centres), names when zoomed in.
+    for (const r of regions) {
+      const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.007), new THREE.MeshBasicMaterial({ color: '#d9d6cf', wireframe: true }))
+      m.position.copy(unitAt(r.lat, r.lon).multiplyScalar(1.003))
+      w.markers.add(m)
+      const l = label(r.name, 'is-region')
+      l.position.copy(m.position).multiplyScalar(1.01)
+      l.userData.region = true
+      w.markers.add(l)
+    }
     for (const s of sites) {
       const selected = s.id === site?.id
       const st = selected && site ? stateAt(site, i) : null
@@ -257,7 +271,7 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
       }
     }
     w.draw()
-  }, [i, site, sites, relief, ready])
+  }, [i, site, sites, relief, ready, regions])
 
   const fly = (k: 'earth' | 'sun' | 'south' | 'site' | 'system') => {
     const w = world.current
@@ -332,6 +346,9 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
           <input type="range" min={1} max={4} step={0.5} value={relief} aria-label="Relief shading strength" onChange={(e) => setRelief(Number(e.target.value))} />
           <span className="unit">{relief}×</span>
         </label>
+        <p className="chart-note">
+          ◇ NASA candidate landing regions: names show when you zoom in close; the Map tab lists them clearly. {ARTEMIS_NOTE}
+        </p>
         <p className="chart-note">
           Colour: NASA CGI Moon Kit (LROC). Relief: slopes from our LOLA LDEM_16 terrain. Terrain doesn't cast shadows on
           the globe; the 3D terrain view computes those.

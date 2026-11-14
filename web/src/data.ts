@@ -298,3 +298,21 @@ export const loadEngineCheck = () => getJson<EngineCheck>('engine_check.json')
 
 export const inAnalysisYear = (s: Site) => s.start_utc.startsWith('2027-01-01') && s.samples === 8760
 
+
+// --- NASA south-pole candidate landing regions (pipeline/artemis_regions.py) ---
+export interface Region {
+  name: string
+  lat: number
+  lon: number
+  approximate: boolean
+  source: string
+  source_url: string
+  map_url: string
+}
+let artemis: Promise<Region[]> | null = null
+export const loadArtemis = () => (artemis ??= getJson<Region[]>('artemis.json'))
+export const ARTEMIS_III_URL = 'https://www.nasa.gov/mission/artemis-iii/'
+export const ARTEMIS_NOTE =
+  "Approximate centres (about ±5 km) read from NASA's region map; NASA publishes the regions as areas, not coordinates. " +
+  'NASA chose these nine in Oct 2024 for Artemis III, which it has since changed to an Earth-orbit test flight; ' +
+  'we found no newer region list (checked 14 Nov 2026).'

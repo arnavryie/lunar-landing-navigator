@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { computeCustomPoint } from './customPoint'
 import {
-  MARGIN, VIABILITY_LABEL, formatDate, formatDuration, viability, windowStats,
-  type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
+  MARGIN, VIABILITY_LABEL, formatDate, formatDuration, loadArtemis, viability, windowStats,
+  type Region, type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
 } from './data'
 import { siteTracks } from './engine'
 import { MapView, type Dot } from './MapView'
@@ -45,7 +45,8 @@ interface Hit {
   lat: number
   lon: number
   slope: number
-  km: number | null // distance from the selected site
+  km: number | null // distance from the search centre (the site, or the nearest NASA region)
+  near?: string // nearest NASA region, when searching near regions
   stats: WindowStats | null
   v: Viability
   score: number
@@ -100,15 +101,18 @@ export function Finder(p: Props) {
     polar && p.initialRadius ? { name: polar.name, lat: polar.lat, lon: polar.lon } : null,
   ) // radius centre, frozen when chosen
   const [exact, setExact] = useState<{ key: string; hits: Map<number, WindowStats | null>; done: number } | null>(null)
+  const [nearRegions, setNearRegions] = useState(false) // radius is around NASA's candidate regions, not the site
+  const [regions, setRegions] = useState<Region[]>([])
 
   useEffect(() => {
     ;(cached ??= load()).then(setData, (e) => setErr(String(e.message ?? e)))
+    loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
 
   const hours = th.missionDays * 24
   const origin = polar
-  const centre = radius ? anchor : null
-  const key = `${i}|${hours}|${th.minSunPct}|${th.maxDarkH}|${th.minEarthPct}|${maxSlope}|${radius}|${centre?.lat},${centre?.lon}`
+  const centre = radius && !nearRegions ? anchor : null
+  const key = `${i}|${hours}|${th.minSunPct}|${th.maxDarkH}|${th.minEarthPct}|${maxSlope}|${radius}|${nearRegions}|${centre?.lat},${centre?.lon}`
 
   // Coarse stage: every candidate within the slope and area limits, for this exact mission window.
   const coarse = useMemo(() => {
@@ -119,8 +123,16 @@ export function Finder(p: Props) {
     for (let k = 0; k < data.n; k++) {
       const [lat, lon, h, slope] = data.rec.subarray(6 * k, 6 * k + 4)
       if (slope > maxSlope) continue
-      const km = centre ? kmBetween(centre.lat, centre.lon, lat, lon) : null
-      if (centre && km! > radius) continue
+      let km = centre ? kmBetween(centre.lat, centre.lon, lat, lon) : null
+      let near: string | undefined
+      if (radius && nearRegions) {
+        for (const r of regions) {
+          const d = kmBetween(r.lat, r.lon, lat, lon)
+          if (km === null || d < km) [km, near] = [d, r.name]
+        }
+        if (km === null) continue
+      }
+      if (radius && km! > radius) continue
       let stats: WindowStats | null = null
       if (fits) {
         const t = siteTracks(data.vectors, lat, lon, h + data.obs, data.masks.subarray(360 * k, 360 * k + 360), 1, i, hours)
@@ -128,7 +140,7 @@ export function Finder(p: Props) {
       }
       const v = viability(stats, th)
       const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, slope, th, maxSlope) : null
-      out.push({ k, lat, lon, slope, km, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? { power: 0, comms: 0, dark: 0, slope: 0 } })
+      out.push({ k, lat, lon, slope, km, near, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? { power: 0, comms: 0, dark: 0, slope: 0 } })
     }
     out.sort(rankSort)
     const picks: Hit[] = []
@@ -137,7 +149,7 @@ export function Finder(p: Props) {
       if (picks.every((q) => kmBetween(q.lat, q.lon, h.lat, h.lon) >= SPREAD_KM)) picks.push(h)
     }
     return { hits: out, picks, ms: performance.now() - t0 }
-  }, [data, i, hours, th, maxSlope, radius, centre])
+  }, [data, i, hours, th, maxSlope, radius, centre, nearRegions, regions])
 
   // Fine stage: recompute the top few exactly (0.5 deg horizon, 120 m steps, same engine as a map click).
   useEffect(() => {
@@ -219,7 +231,7 @@ export function Finder(p: Props) {
                 <span className="short-main">
                   <span className="short-where">
                     {fmtPoint(h.lat, h.lon)}
-                    {h.km !== null && <span className="muted"> · {h.km.toFixed(1)} km away</span>}
+                    {h.km !== null && <span className="muted"> · {h.km.toFixed(1)} km from {h.near ? `${h.near} region` : 'the site'}</span>}
                   </span>
                   <span className="short-nums">
                     {VIABILITY_LABEL[h.v]} · sunlit {h.stats!.sunPct.toFixed(0)}% · {h.stats!.longestDarkH ? `longest dark ${formatDuration(h.stats!.longestDarkH)}` : 'no darkness'} · Earth {h.stats!.earthPct.toFixed(0)}% ·
@@ -287,16 +299,23 @@ export function Finder(p: Props) {
         <label className="field wide">
           <span>Search</span>
           <select
-            value={radius}
+            value={radius ? `${nearRegions ? 'a' : 's'}${radius}` : '0'}
             onChange={(e) => {
-              setRadius(Number(e.target.value))
-              if (origin) setAnchor({ name: origin.name, lat: origin.lat, lon: origin.lon })
+              const v = e.target.value
+              setRadius(Number(v.replace(/^[as]/, '')))
+              setNearRegions(v.startsWith('a'))
+              if (origin && v.startsWith('s')) setAnchor({ name: origin.name, lat: origin.lat, lon: origin.lon })
             }}
           >
-            <option value={0}>Whole region, 85–90° S</option>
+            <option value="0">Whole region, 85–90° S</option>
             {[10, 25, 50].map((r) => (
-              <option key={r} value={r} disabled={!origin}>
-                Within {r} km of {radius && anchor ? anchor.name : origin ? origin.name : 'a polar site'}
+              <option key={r} value={`s${r}`} disabled={!origin}>
+                Within {r} km of {radius && anchor && !nearRegions ? anchor.name : origin ? origin.name : 'a polar site'}
+              </option>
+            ))}
+            {[5, 10].map((r) => (
+              <option key={`a${r}`} value={`a${r}`} disabled={!regions.length}>
+                Within {r} km of a NASA candidate region
               </option>
             ))}
           </select>

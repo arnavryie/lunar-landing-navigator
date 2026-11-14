@@ -8,8 +8,9 @@ const SOURCES = [
   { name: 'NASA PGDA Lunar Polar Illumination (Mazarico et al. 2011)', use: 'Reference for checking sunlight and Earth visibility', url: 'https://pgda.gsfc.nasa.gov/products/69' },
   { name: 'NASA SVS CGI Moon Kit (LROC WAC colour, lroc_color_2k.jpg)', use: 'Globe surface colour', url: 'https://svs.gsfc.nasa.gov/4720/' },
   { name: 'LROC, NASA, IAU Gazetteer of Planetary Nomenclature', use: 'Site coordinates (cited per site)', url: 'https://planetarynames.wr.usgs.gov/' },
-  { name: 'ISRO Chandrayaan-3 Mission Telemetry & Landing Confirmation', use: 'Chandrayaan-3 Vikram replay epoch and outcome validation', url: 'https://www.isro.gov.in/Chandrayaan3_Details.html' },
-  { name: 'Intuitive Machines IM-1 Lunar Mission Operations Updates', use: 'IM-1 Odysseus replay epoch and operational outcome verification', url: 'https://www.intuitivemachines.com/im-1' },
+  { name: 'ISRO Chandrayaan-3 mission updates', use: 'Chandrayaan-3 replay landing date and operations timeline', url: 'https://www.isro.gov.in/Chandrayaan3.html' },
+  { name: 'NASA IM-1 Odysseus: LRO landing image and 23 Feb 2024 release', use: 'IM-1 replay landing time, coordinates and early operations', url: 'https://www.nasa.gov/news-release/nasa-tech-contributes-to-soft-moon-landing-agency-science-underway/' },
+  { name: 'NASA, Artemis III candidate landing regions (Oct 2024); region map from George et al., LPSC 2026', use: 'Candidate landing regions on Map, Find sites and Globe (approximate centres read from the map)', url: 'https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/' },
 ]
 
 /** Data sources, how the numbers were checked, and known limits. */
