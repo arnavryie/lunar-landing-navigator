@@ -97,7 +97,11 @@ Build an **intuitive tool** to compare lunar landing **sites and dates**, especi
 - **F5 Credibility layer.** Validate Sun/Earth directions against **JPL Horizons** (the Phase 1 gate); assumptions panel; provenance on every number. *Phase 2:* mission replays of real landings (every fact sourced and cited). *Phase 3:* full validation page incl. comparison with LOLA illumination maps (Mazarico et al., 2011).
 
 ### 🔵 Differentiators: only after core matches Horizons (Phase 2)
-- **F6 Lunar globe.** "Google Earth for the Moon": spin/zoom 3D Moon, site markers, Artemis III regions (approximate), sunlight/Earth heatmaps, PSRs, slope layer, true day/night line, time scrubbing, **shadow time-lapse**. Sun/Earth models: **sizes and distances NOT to scale, directions TRUE**, labelled so. Engine: CesiumJS vs Three.js (open decision).
+- **F6 Lunar globe, south-pole map, 3D terrain. Engine: Three.js (decided).**
+  - **F6a 2D south-pole map (first Phase 2 item):** 85°S–90°S, 0°E up, plain canvas. Layers: shaded relief, NASA sunlight/Earth %, PSRs, slope, Artemis III regions, lit-now. **Click anywhere** → a Web Worker runs the pipeline maths (horizon from an 80°S–90°S 240 m DEM crop + exported hourly Sun/Earth vectors in Moon ME + `timeline.py` metrics) and every panel switches to that point. Must match Python at curated sites (0.001°, 0.5 pp).
+  - **F6b 3D south-pole terrain:** Three.js mesh of the same DEM. **Shadows from a horizon-physics shader, never Three.js shadow maps** (inaccurate at 1–2° Sun). Earth-visible tint, camera presets, line-of-sight rays, **shadow time-lapse**. Fallback: plain light labelled "illustrative".
+  - **F6c whole-Moon globe:** NASA CGI Moon Kit textures lit from the true Sun direction, site markers, Artemis III regions. Sun/Earth models: **sizes and distances NOT to scale, directions TRUE**, labelled so.
+  - Screens: Site / Plan / Map / 3D / Compare / Validation, one shared point + time (see PROJECT_PLAN.md section 4).
 - **F7 Alternatives finder.** Constraints in (sunlight, darkness, Earth visibility, max slope ~8–10°, date window, radius) → suitability heatmap + ranked shortlist with score breakdown. Only science option: water-ice proximity. Coarse-to-fine search.
 - **F8 Explainer + Moon vs Earth.** "Why?" cards linked from the data (Sun skims the horizon, ridge blocks Sun, libration, why 5 km matters, why dates matter, no twilight). Contrast cards ("Highest Sun here: 1.2°; in your city today: 58°"; use a city picker, not geolocation).
 
@@ -127,7 +131,7 @@ Validation vs Horizons / LOLA   ──┘   Lit / Earth-visible grids     └─
 |---|---|---|
 | Offline pipeline | Python + Skyfield (not SPICE); code lives in `lunar-mission-planner/` | File format (JSON vs binary) |
 | Web app | React + Vite + TypeScript in `lunar-mission-planner/web/`; Public Sans font; hand-drawn SVG charts | Charting library (if ever needed), hosting |
-| 3D globe | — | CesiumJS vs Three.js (test Cesium's lunar support first) |
+| 3D globe, map, terrain | Three.js; shadows from a horizon-physics shader; map on plain canvas | — |
 
 ---
 
@@ -135,7 +139,7 @@ Validation vs Horizons / LOLA   ──┘   Lit / Earth-visible grids     └─
 | Phase | Contents | Done when |
 |---|---|---|
 | 1 Core | Python pipeline (~10 curated sites + south-pole grid, ≥1 year daily metrics); F1 + dial; F2 + survival calculator; F3 calendar + slip + slip budget; F4; F5 Horizons check | Sun/Earth positions match JPL Horizons; a slip scenario answered in seconds for every curated site |
-| 2 Differentiators | F6 globe + slope + time-lapse; F7; F8; Explore/Planner modes; F4 sci-vs-eng; F1 ellipse; F5 replays | End-to-end demo works on one laptop |
+| 2 Differentiators | F6a map + click-anywhere (first); F6b 3D terrain + time-lapse; F6c globe + slope; F7; F8; Explore/Planner modes; F4 sci-vs-eng; F1 ellipse; F5 replays | End-to-end demo works on one laptop |
 | 3 Polish + stretch | F5 validation page; export + permalinks; F4 report; pitch + video; then F9, F10 if time | Validation in-app; demo rehearsed |
 
 **Gate:** don't start Phase 2 until Phase 1 numbers match JPL Horizons.

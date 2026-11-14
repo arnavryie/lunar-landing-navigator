@@ -559,7 +559,7 @@ Confirmed so far (Phase 1):
 | Phase | Goal | Contents | Done when |
 |---|---|---|---|
 | **1 Core** | The brief, correct and easy | Python pipeline (ephemeris; horizons with curvature for ~10 curated sites + a south-pole grid; a year of daily metrics); F1; F2; F3 calendar + slip buttons + slip budget; F1 horizon dial; F2 lander survival calculator; F4; F5 Horizons check | Sun/Earth positions match JPL Horizons; a slip scenario answered in seconds for every curated site |
-| **2 Differentiators** | Stand out | F6 globe; F7 alternatives finder (+ F3 nearby alternatives); F8 explainer + contrast cards; Explore/Planner modes; F4 science-vs-engineering view; F6 slope layer; F1 landing-ellipse dispersion; F6 shadow time-lapse; F5 mission replays | End-to-end demo path works on one laptop |
+| **2 Differentiators** | Stand out | F6a south-pole map + click-anywhere (first); F6b 3D terrain + shadow shader; F6c globe; F7 alternatives finder (+ F3 nearby alternatives); F8 explainer + contrast cards; Explore/Planner modes; F4 science-vs-engineering view; F6 slope layer; F1 landing-ellipse dispersion; F6 shadow time-lapse; F5 mission replays | End-to-end demo path works on one laptop |
 | **3 Polish + stretch** | Expert trust, smooth pitch | F5 full validation page; export + permalinks; F4 site assessment report; presentation and video. Then, only if time remains: F9 relay, F10 rover MVP, phone-friendly layout | Validation published in-app; demo rehearsed |
 
 > **Gating rules:**
