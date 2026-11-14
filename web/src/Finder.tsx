@@ -29,6 +29,11 @@ type Part = keyof typeof W_BASE
 const PARTS = Object.keys(W_BASE) as Part[]
 const VRANK = { ok: 3, caution: 2, fail: 1 } as const
 const RANK: Record<Viability, number> = { viable: 3, marginal: 2, not: 1, nodata: 0 }
+/** "Year-round ideal" preset: whole 2027 data year as the mission. Example thresholds: only a handful of the
+ *  5,487 candidates pass (coarse check: 7 viable, 22 viable or marginal at slope <= 8 deg). */
+const YEAR_ROUND: Thresholds = { missionDays: 365, minSunPct: 70, maxDarkH: 168, minEarthPct: 50 }
+/** Saved spots that passed the landing check (pipeline/sites.json group). */
+const SAFE_GROUP = 'Safe landing spots (found by us)'
 const ELLIPSE_POINTS = 12 // grid points per landing ellipse (+ the target and 12 on the edge): ~25 exact points per spot
 
 /** Landing-ellipse check of one shortlisted spot. */
@@ -322,6 +327,7 @@ export function Finder(p: Props) {
     return (coarse?.hits ?? []).map((h) => ({ lat: h.lat, lon: h.lon, v: h.v, rank: rankOf.get(h.k) }))
   }, [coarse, ranked])
 
+  const safe = p.sites.filter((s) => s.group === SAFE_GROUP)
   const start = data ? Date.parse(data.start) : 0
   const setNum = (k: keyof Thresholds, v: string) => p.setTh({ ...th, [k]: Math.max(k === 'missionDays' ? 1 : 0, Number(v) || 0) })
   const checking = exact?.key === key && coarse ? Math.min(EXACT, coarse.picks.length) : 0
@@ -398,6 +404,24 @@ export function Finder(p: Props) {
         </p>
       )}
 
+      {safe.length > 0 && (
+        <fieldset className="thresholds">
+          <legend>{SAFE_GROUP}</legend>
+          <div className="pick-actions">
+            {safe.map((s) => (
+              <button key={s.id} onClick={() => p.onPickSite(s.id)} title={`${s.name}: ${fmtPoint(s.lat, s.lon)}`}>
+                {s.name.replace('Safe landing spot ', '')}
+              </button>
+            ))}
+          </div>
+          <p className="chart-note">
+            Spots this tab rated "Meets your needs" (≥ 95% chance over a 4 km landing circle) for one landing date each,
+            saved as sites for the picker, Map, Globe and Compare. They are safe only for the date named; check other dates
+            here.
+          </p>
+        </fieldset>
+      )}
+
       <fieldset className="thresholds">
         <legend>Landing ellipse</legend>
         <label className="radio">
@@ -421,6 +445,27 @@ export function Finder(p: Props) {
 
       <fieldset className="thresholds">
         <legend>Mission</legend>
+        <div className="pick-actions">
+          <button
+            onClick={() => {
+              p.setI(0)
+              p.setTh(YEAR_ROUND)
+            }}
+            title="Land 1 Jan 2027 and stay the whole year: finds spots that keep power, Earth contact and a safe landing area whatever the launch date"
+          >
+            Year-round ideal sites (all of 2027)
+          </button>
+        </div>
+        {th.missionDays * 24 >= (data?.hours ?? Infinity) && (
+          <p className="chart-note">
+            Whole-year search: sunlit ≥ {th.minSunPct}%, darkness ≤ {th.maxDarkH} h, Earth ≥ {th.minEarthPct}%. These are
+            example values (team to agree). Over a full year no spot near the pole stays lit all the time. The best still
+            has a dark spell of about 3 days, so the lander must survive one. The spots that pass are small sunlit ridge
+            tops: in our check, even a 1 km landing circle around them had at most 2 of 21 points pass. So a lander needs
+            pin-point landing to use them, or a chosen landing date: a 14-day window has spots with 95% or more of the
+            landing area suitable.
+          </p>
+        )}
         <label className="field wide">
           <span>Landing</span>
           <input

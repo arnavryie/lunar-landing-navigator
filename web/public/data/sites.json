@@ -136,6 +136,57 @@
   }
  },
  {
+  "id": "safe-a",
+  "group": "Safe landing spots (found by us)",
+  "name": "Safe landing spot A (Jan window)",
+  "lat": -85.1623,
+  "lon": 26.0413,
+  "kind": "derived",
+  "metrics": {
+   "sunlit_pct": 50.59,
+   "mean_sun_disc_pct": 49.47,
+   "mean_power_index_pct": 49.38,
+   "earth_visible_pct": 72.97,
+   "sun_and_earth_pct": 37.13,
+   "longest_dark_h": 367.0,
+   "longest_no_earth_h": 186.0
+  }
+ },
+ {
+  "id": "safe-b",
+  "group": "Safe landing spots (found by us)",
+  "name": "Safe landing spot B (Jan window)",
+  "lat": -85.1756,
+  "lon": 357.8859,
+  "kind": "derived",
+  "metrics": {
+   "sunlit_pct": 37.37,
+   "mean_sun_disc_pct": 35.8,
+   "mean_power_index_pct": 35.71,
+   "earth_visible_pct": 55.3,
+   "sun_and_earth_pct": 22.39,
+   "longest_dark_h": 454.0,
+   "longest_no_earth_h": 297.0
+  }
+ },
+ {
+  "id": "safe-c",
+  "group": "Safe landing spots (found by us)",
+  "name": "Safe landing spot C (Oct window)",
+  "lat": -86.9193,
+  "lon": 278.0468,
+  "kind": "derived",
+  "metrics": {
+   "sunlit_pct": 36.26,
+   "mean_sun_disc_pct": 33.44,
+   "mean_power_index_pct": 33.39,
+   "earth_visible_pct": 45.64,
+   "sun_and_earth_pct": 18.36,
+   "longest_dark_h": 513.0,
+   "longest_no_earth_h": 357.0
+  }
+ },
+ {
   "id": "replay-chandrayaan-3",
   "group": "Mission replays",
   "name": "Replay: Chandrayaan-3 Vikram (Aug 2023)",
