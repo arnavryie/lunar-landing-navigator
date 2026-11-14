@@ -346,4 +346,14 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .ellipse-table th[scope='row'] { text-align: left; font-weight: 500; color: var(--muted); }
 .map-side .seg button { flex: 1 1 0; padding-inline: 6px; }
 .ell-line { display: block; }
-.ell-line.ell-ok { color: var(--both); }
+.verdict.v-ok { border-left-color: #3fb27f; }
+.verdict.v-caution { border-left-color: #e6c15a; }
+.verdict.v-fail { border-left-color: #d9534f; }
+.ramp-area { background: linear-gradient(90deg, #d9534f, #e6c15a 75%, #3fb27f 95%); }
+.landing-legend { display: grid; gap: 4px; font-size: 0.8rem; }
+.layer-pick { display: grid; gap: 6px; }
+.layer-pick .field.wide { grid-template-columns: 1fr 170px; }
+.layer-pick select { width: 100%; min-width: 0; color-scheme: dark; }
+.ell-line.ell-ok strong { color: #3fb27f; }
+.ell-line.ell-caution strong { color: #e6c15a; }
+.ell-line.ell-fail strong { color: #e8776f; }

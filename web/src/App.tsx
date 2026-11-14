@@ -10,6 +10,7 @@ import { computeCustomPoint } from './customPoint'
 import { Finder } from './Finder'
 import { MapView } from './MapView'
 import { Ellipse, type EllipseOverlay } from './Ellipse'
+import { saved as ellipseSaved } from './ellipseCheck'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
 import { Sources } from './Sources'
@@ -310,6 +311,10 @@ export default function App() {
             dots={ell?.dots}
             outline={ell?.outline}
             focus={ell?.focus}
+            cells={ell?.cells}
+            verdict={ell?.verdict}
+            maxSlope={ell?.maxSlope ?? ellipseSaved.maxSlope}
+            areaKm={ell?.focus.km ?? ellipseSaved.spec.lengthKm}
             extra={site && !busy && <Ellipse site={site} th={th} i={i} onOverlay={setEllipse} />}
           />
         </section>

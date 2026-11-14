@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeSamples, judge, saved, type Run, type Sample } from './ellipseCheck'
+import {
+  VERDICT_CUTOFF, VERDICT_LABEL, computeSamples, judge, landingChance, reasons, saved, verdictOf,
+  type Run, type Sample, type Verdict,
+} from './ellipseCheck'
 import { ellipseOutline, ellipseSamples, type EllipseSpec, type LatLon } from './ellipseGeometry'
 import type { Dot } from './MapView'
 import { Field } from './Planner'
-import { VIABILITY_LABEL, formatDuration, formatUtc, inAnalysisYear, timeAt, type Site, type Thresholds, type WindowStats } from './data'
+import { VIABILITY_LABEL, formatDuration, formatUtc, inAnalysisYear, timeAt, type Site, type Thresholds, type Viability, type WindowStats } from './data'
 
 // F1 landing-ellipse dispersion: the lander comes down somewhere inside the ellipse, not exactly on the target.
 // Every sample point is computed exactly (same engine as a map click) and judged with the planner's mission needs.
@@ -12,6 +15,9 @@ export interface EllipseOverlay {
   dots: Dot[]
   outline: LatLon[]
   focus: LatLon & { km: number }
+  cells: { corners: LatLon[]; v: Viability }[] // one tile per grid point, coloured by its result
+  verdict: Verdict | null // null until every point is computed
+  maxSlope: number
 }
 
 interface Props {
@@ -41,41 +47,63 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
 
   const analyse = async () => {
     const id = ++runId.current
-    const { points, spacingM } = ellipseSamples(centre, e)
+    const { points, spacingM, weights, cells } = ellipseSamples(centre, e)
     const out: (Sample | null)[] = []
-    setRun({ key, points: out, total: points.length, spacingM })
+    setRun({ key, points: out, total: points.length, spacingM, weights, cells })
     await computeSamples(points, () => id === runId.current, (j, p) => {
       out[j] = p
-      setRun({ key, points: out.slice(), total: points.length, spacingM })
+      setRun({ key, points: out.slice(), total: points.length, spacingM, weights, cells })
     })
   }
 
-  // Opened from Find sites ("See its landing area on the Map"): analyse right away.
+  // Opened from Find sites ("See its landing area on the Map"), or left mid-run: analyse right away.
+  // Leaving the Map mid-run stops the run and asks for this restart.
   useEffect(() => {
     if (saved.autoRun && usable) {
       saved.autoRun = false
       analyse()
+    }
+    const ids = runId
+    return () => {
+      const r = saved.run
+      if (r && r.points.filter((p) => p !== undefined).length < r.total) {
+        ids.current++
+        saved.run = null
+        saved.autoRun = true
+      }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Judge every finished point for the current landing time and mission needs (no recompute needed when those change).
   const judged = useMemo(() => {
     if (!current) return []
-    return current.points.flatMap((p, j) => (p ? [{ ...p, j, ...judge(p, i, hours, th, maxSlope) }] : []))
+    return current.points.flatMap((p, j) => {
+      if (!p) return []
+      const r = judge(p, i, hours, th, maxSlope)
+      return [{ ...p, j, ...r, why: reasons(p, r, th, maxSlope) }]
+    })
   }, [current, i, hours, th, maxSlope])
 
   const done = current ? current.points.filter((p) => p !== undefined).length : 0
   const finished = !!current && done === current.total
+  const chance = current?.weights ? landingChance(judged, current.weights) : null // old saved runs have no weights
+  const verdict = finished && chance ? verdictOf(chance.ok) : null
 
   useEffect(() => {
     if (!usable) return onOverlay(null)
     const longKm = Math.max(e.lengthKm, e.widthKm)
     onOverlay({
       outline: ellipseOutline(centre, e),
-      dots: judged.map((p) => ({ lat: p.lat, lon: p.lon, v: p.v, cross: true })),
+      dots: judged.map((p) => ({
+        lat: p.lat, lon: p.lon, v: p.v, cross: true,
+        note: `${p.j === 0 ? 'Target' : 'Ellipse point'}: ${VIABILITY_LABEL[p.v].toLowerCase()}${p.why.length ? ', ' + p.why.map((w) => w.text).join(', ') : ''}`,
+      })),
+      cells: judged.flatMap((p) => (current?.cells?.[p.j] ? [{ corners: current.cells[p.j]!, v: p.v }] : [])),
+      verdict,
+      maxSlope,
       focus: { ...centre, km: Math.max(longKm, 1) },
     })
-  }, [key, judged, usable]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, judged, usable, verdict, maxSlope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!usable)
     return (
@@ -92,7 +120,16 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
   const set = (k: keyof EllipseSpec, v: string) => setSpec({ ...spec, [k]: Math.max(0, Number(v) || 0) })
   const counts = { viable: 0, marginal: 0, not: 0, nodata: 0 }
   judged.forEach((p) => counts[p.v]++)
-  const steep = judged.filter((p) => p.steep).length
+  const why = { steep: 0, sun: 0, dark: 0, earth: 0, data: 0 }
+  judged.forEach((p) => new Set(p.why.map((w) => w.k)).forEach((k) => why[k]++))
+  const whyText = [
+    why.steep && `${why.steep} too steep (> ${maxSlope}°)`,
+    why.sun && `${why.sun} too little sunlight`,
+    why.dark && `${why.dark} night too long`,
+    why.earth && `${why.earth} Earth hidden too often`,
+    why.data && `${why.data} past the 2027 data`,
+  ].filter(Boolean)
+  const pct = (x: number) => `${(100 * x).toFixed(0)}%`
   const target = judged.find((p) => p.j === 0)
 
   const rows = (
@@ -143,17 +180,19 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
 
       {current && judged.length > 0 && (
         <>
-          <div className={`verdict ${finished && counts.viable === judged.length ? 'ok' : counts.viable < judged.length ? 'fail' : ''}`}>
-            <p className="verdict-line">
-              {counts.viable === judged.length && finished
-                ? `All ${judged.length} sampled points meet your mission needs`
-                : `${counts.viable} of ${judged.length} sampled points viable`}
-            </p>
+          <div className={`verdict ${verdict ? `v-${verdict}` : ''}`}>
+            {chance && (
+              <p className="verdict-line">
+                {verdict ? `${VERDICT_LABEL[verdict]}: ` : 'So far: '}
+                {pct(chance.ok)} chance of landing on ground that meets your needs
+              </p>
+            )}
             <p className="muted">
-              {counts.marginal} marginal · {counts.not} not viable{steep ? ` (${steep} steeper than ${maxSlope}°)` : ''}
-              {counts.nodata ? ` · ${counts.nodata} run past the 2027 data` : ''}
+              {chance && chance.marginal >= 0.005 ? `+ ${pct(chance.marginal)} on marginal ground · ` : ''}
+              {counts.viable} of {judged.length} points viable, {counts.marginal} marginal, {counts.not} not
               {target ? ` · target point: ${VIABILITY_LABEL[target.v].toLowerCase()}` : ''}
             </p>
+            {whyText.length > 0 && <p className="muted">Why points miss: {whyText.join(' · ')}.</p>}
           </div>
           <table className="ellipse-table">
             <thead>
@@ -185,7 +224,10 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
             </tbody>
           </table>
           <p className="chart-note">
-            Map: ● viable, ○ marginal, × not viable. {current.total} points
+            Chance = each point weighted by how likely the lander is to come down in its tile (bell curve, ellipse edge at
+            3 sigma, so the middle counts most; each point stands for the part of the ellipse nearest to it). Green ≥ {pct(VERDICT_CUTOFF.ok)},
+            amber ≥ {pct(VERDICT_CUTOFF.caution)}, red below: example cut-offs. Map: tiles and ● green = viable, ○ amber =
+            marginal, × red = not viable; hover a point for the reason. {current.total} points
             {current.spacingM ? ` about ${(current.spacingM / 1000).toFixed(2)} km apart plus 12 on the edge` : ''}, each computed
             exactly. Typical = median. Terrain is 240 m per pixel: boulders and small craters are smaller than that, and real
             landers avoid them with onboard hazard detection, so this checks Sun, Earth and slope, not touchdown safety.

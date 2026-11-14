@@ -1,18 +1,32 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { R_M, polarRowCol, rowColToLatLon } from './engine'
-import { loadMapData, terrainAt, type MapData } from './mapData'
+import { loadMapData, slopeGrid, terrainAt, type MapData } from './mapData'
+import { VCOLOR, VERDICT_CUTOFF, VERDICT_COLOR, type Verdict } from './ellipseCheck'
 import { ARTEMIS_III_URL, ARTEMIS_NOTE, formatDuration, loadArtemis, type Region, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
 
-type Layer = 'relief' | 'sun' | 'earth' | 'psr' | 'slope'
+type Layer = 'relief' | 'sun' | 'earth' | 'psr' | 'slope' | 'landing' | 'area'
 const LAYERS: { id: Layer; label: string; source: string }[] = [
   { id: 'relief', label: 'Shaded relief', source: 'Our shading of NASA LOLA terrain, 240 m' },
   { id: 'sun', label: 'Sunlit % (NASA)', source: 'NASA PGDA illumination map, 18.6-year average, 60 m averaged to 240 m' },
   { id: 'earth', label: 'Earth in view % (NASA)', source: 'NASA PGDA Earth visibility map, 18.6-year average' },
   { id: 'psr', label: 'Permanent shadow (NASA)', source: 'NASA PGDA permanently shadowed regions, 60 m' },
   { id: 'slope', label: 'Slope', source: 'From NASA LOLA terrain at 240 m; real slopes at lander scale are steeper' },
+  {
+    id: 'landing', label: 'Landing terrain',
+    source: 'Your slope limit applied to NASA LOLA terrain (240 m), plus NASA permanent shadow (no sunlight for a solar lander). Boulders and small craters are smaller than a pixel, so this is not a touchdown-safety map.',
+  },
+  {
+    id: 'area', label: 'Landing area',
+    source: 'Share of landable ground (within your slope limit, not in permanent shadow) in a square as wide as your landing ellipse around each point. Bright green = you can land anywhere nearby.',
+  },
 ]
+const rgb = (hex: string) => [1, 3, 5].map((j) => parseInt(hex.slice(j, j + 2), 16))
+const GREEN = rgb(VCOLOR.viable)
+const AMBER = rgb(VCOLOR.marginal)
+const RED = rgb(VCOLOR.not)
+const mix = (a: number[], b: number[], f: number) => a.map((x, j) => x + (b[j] - x) * f)
 const ZOOMS = [
   { z: 1, label: '85–90° S' },
   { z: 2, label: '87.5–90° S' },
@@ -20,10 +34,40 @@ const ZOOMS = [
 ]
 // Colour ramps, night -> light, per the plan's colour language (amber Sun, blue Earth).
 const NIGHT = [26, 31, 38]
-const RAMPS: Record<Exclude<Layer, 'relief' | 'psr'>, number[]> = { sun: [242, 190, 92], earth: [128, 170, 235], slope: [226, 150, 205] }
+const RAMPS: Record<'sun' | 'earth' | 'slope', number[]> = { sun: [242, 190, 92], earth: [128, 170, 235], slope: [226, 150, 205] }
 const PSR = [70, 90, 200]
 
-function render(d: MapData, layer: Layer): OffscreenCanvas {
+/** Landing-area share for every pixel: landable pixels (slope <= limit, not permanent shadow) in a square of
+ *  side areaKm around it, from an integral image (instant at any size). NaN where the window is off the map. */
+function landingArea(d: MapData, maxSlope: number, areaKm: number): Float32Array {
+  const n = d.n
+  const slope = slopeGrid(d)
+  const I = new Float64Array((n + 1) * (n + 1)) // I[(r+1)(n+1) + c+1] = landable pixels in [0..r] x [0..c]
+  const C = new Float64Array((n + 1) * (n + 1)) // same, pixels with data
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      const k = r * n + c
+      const known = Number.isFinite(slope[k]) && d.psr[k] !== 255 ? 1 : 0
+      const ok = known && slope[k] <= maxSlope && d.psr[k] !== 100 ? 1 : 0
+      const o = (r + 1) * (n + 1) + c + 1
+      I[o] = ok + I[o - 1] + I[o - n - 1] - I[o - n - 2]
+      C[o] = known + C[o - 1] + C[o - n - 1] - C[o - n - 2]
+    }
+  const h = Math.max(1, Math.round((areaKm * 500) / d.scale))
+  const out = new Float32Array(n * n)
+  const box = (A: Float64Array, r0: number, c0: number, r1: number, c1: number) =>
+    A[(r1 + 1) * (n + 1) + c1 + 1] - A[r0 * (n + 1) + c1 + 1] - A[(r1 + 1) * (n + 1) + c0] + A[r0 * (n + 1) + c0]
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      const r0 = Math.max(0, r - h), r1 = Math.min(n - 1, r + h), c0 = Math.max(0, c - h), c1 = Math.min(n - 1, c + h)
+      const known = box(C, r0, c0, r1, c1)
+      out[r * n + c] = known > 0.5 * (2 * h + 1) ** 2 ? box(I, r0, c0, r1, c1) / known : NaN
+    }
+  return out
+}
+
+function render(d: MapData, layer: Layer, maxSlope: number, areaKm: number): OffscreenCanvas {
+  const area = layer === 'area' ? landingArea(d, maxSlope, areaKm) : null
   const img = new ImageData(d.n, d.n)
   const px = img.data
   const L = [-Math.SQRT1_2, -Math.SQRT1_2, 1] // light from the upper left, 45 deg up
@@ -38,7 +82,16 @@ function render(d: MapData, layer: Layer): OffscreenCanvas {
       const shade = Math.max(0, (nx * L[0] + ny * L[1] + L[2]) / (Math.hypot(nx, ny, 1) * ln))
       const g = 20 + 150 * shade ** 1.3 // flat ground ~ mid-dark grey so overlays and labels stay readable
       let rgb = [g, g, g]
-      if (layer !== 'relief') {
+      if (layer === 'landing' || layer === 'area') {
+        const s = 0.6 + 0.4 * shade
+        if (layer === 'area') {
+          const f = area![k]
+          rgb = Number.isNaN(f) ? [g * 0.35, g * 0.35, g * 0.35]
+            : (f < VERDICT_CUTOFF.caution ? mix(RED, AMBER, f / VERDICT_CUTOFF.caution) : mix(AMBER, GREEN, Math.min(1, (f - VERDICT_CUTOFF.caution) / (VERDICT_CUTOFF.ok - VERDICT_CUTOFF.caution)))).map((x) => x * s)
+        } else if (d.psr[k] === 255) rgb = [g * 0.35, g * 0.35, g * 0.35]
+        else if (d.psr[k] === 100) rgb = PSR.map((x) => x * s)
+        else rgb = (t.slope <= maxSlope ? GREEN : t.slope <= 1.5 * maxSlope ? AMBER : RED).map((x) => x * s)
+      } else if (layer !== 'relief') {
         const v = layer === 'slope' ? Math.min(t.slope, 30) / 30 : layer === 'psr' ? d.psr[k] : d[layer][k] / 100
         if ((layer === 'sun' || layer === 'earth' || layer === 'psr') && d[layer][k] === 255) rgb = [g * 0.35, g * 0.35, g * 0.35]
         else if (layer === 'psr') rgb = d.psr[k] === 100 ? PSR.map((x) => x * (0.6 + 0.4 * shade)) : [g * 0.55, g * 0.55, g * 0.55]
@@ -64,7 +117,8 @@ export interface Dot {
   lon: number
   v: Viability
   rank?: number
-  cross?: boolean // draw "not viable" as a visible x (landing-ellipse samples)
+  cross?: boolean // landing-ellipse sample: green / amber / red, "not viable" as an x
+  note?: string // shown when hovering the point
 }
 
 interface Props {
@@ -81,6 +135,10 @@ interface Props {
   /** Landing ellipse: outline to draw, and the point/size the "Ellipse" zoom centres on. */
   outline?: { lat: number; lon: number }[]
   focus?: { lat: number; lon: number; km: number } | null
+  cells?: { corners: { lat: number; lon: number }[]; v: Viability }[] // ellipse tiles, coloured by result
+  verdict?: Verdict | null // ellipse outline colour
+  maxSlope?: number // for the landing layers
+  areaKm?: number // landing-area layer window (ellipse size)
   extra?: ReactNode // extra panel under the picked-point box
 }
 
@@ -89,7 +147,7 @@ export function MapView(p: Props) {
   const [err, setErr] = useState('')
   const [layer, setLayer] = useState<Layer>('relief')
   const [zoom, setZoom] = useState(1)
-  const [hover, setHover] = useState<{ lat: number; lon: number; r: number; c: number } | null>(null)
+  const [hover, setHover] = useState<{ lat: number; lon: number; r: number; c: number; x: number; y: number; size: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [regions, setRegions] = useState<Region[]>([])
   const [showRegions, setShowRegions] = useState(true)
@@ -99,7 +157,10 @@ export function MapView(p: Props) {
     loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
 
-  const layerCanvas = useMemo(() => (data ? render(data, layer) : null), [data, layer])
+  const maxSlope = p.maxSlope ?? 8
+  const areaKm = p.areaKm ?? 4
+  const needs = layer === 'landing' || layer === 'area' ? `${maxSlope}|${layer === 'area' ? areaKm : ''}` : ''
+  const layerCanvas = useMemo(() => (data ? render(data, layer, maxSlope, areaKm) : null), [data, layer, needs]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // zoom 0 = centred on the landing ellipse; switch to it when an ellipse appears, back out when it goes.
   const focusKey = p.focus ? `${p.focus.lat},${p.focus.lon}` : ''
@@ -189,14 +250,14 @@ export function MapView(p: Props) {
       g.beginPath()
       g.arc(pt[0], pt[1], d.v === 'not' ? r0 * 0.45 : r0, 0, 2 * Math.PI)
       if (d.v === 'viable') {
-        g.fillStyle = '#e4e1da'
+        g.fillStyle = d.cross ? VCOLOR.viable : '#e4e1da'
         g.fill()
         g.lineWidth = 1
         g.strokeStyle = '#111418'
         g.stroke()
       } else if (d.v === 'marginal') {
-        g.lineWidth = 1.5
-        g.strokeStyle = '#e4e1da'
+        g.lineWidth = d.cross ? 2.5 : 1.5
+        g.strokeStyle = d.cross ? VCOLOR.marginal : '#e4e1da'
         g.stroke()
       } else if (d.cross) {
         g.beginPath()
@@ -208,17 +269,41 @@ export function MapView(p: Props) {
         g.strokeStyle = '#111418'
         g.stroke()
         g.lineWidth = 1.5
-        g.strokeStyle = '#e0705c'
+        g.strokeStyle = VCOLOR.not
         g.stroke()
       } else {
         g.fillStyle = 'rgba(17,20,24,0.4)'
         g.fill()
       }
     }
-    // Landing ellipse outline: dark halo + light dashes, readable on every layer.
+    // Landing ellipse outline: dark halo + light dashes while computing, then solid green / amber / red by verdict.
     if (p.outline?.length) {
       const pts = p.outline.map((q) => toCanvas(q.lat, q.lon, size)!)
-      for (const [w, c, dash] of [[4, '#111418', []], [1.8, '#e4e1da', [6, 4]]] as const) {
+      const ring = () => {
+        g.beginPath()
+        pts.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)))
+      }
+      // Tiles: each sample's share of the ellipse, coloured by its result, clipped to the ellipse.
+      if (p.cells?.length) {
+        g.save()
+        ring()
+        g.clip()
+        g.globalAlpha = 0.42
+        for (const cell of p.cells) {
+          g.beginPath()
+          cell.corners.forEach((q, j) => {
+            const [x, y] = toCanvas(q.lat, q.lon, size)!
+            if (j) g.lineTo(x, y)
+            else g.moveTo(x, y)
+          })
+          g.closePath()
+          g.fillStyle = VCOLOR[cell.v]
+          g.fill()
+        }
+        g.restore()
+      }
+      const line = p.verdict ? VERDICT_COLOR[p.verdict] : '#e4e1da'
+      for (const [w, c, dash] of [[p.verdict ? 5 : 4, '#111418', []], [p.verdict ? 2.8 : 1.8, line, p.verdict ? [] : [6, 4]]] as const) {
         g.beginPath()
         pts.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)))
         g.lineWidth = w
@@ -353,7 +438,51 @@ export function MapView(p: Props) {
     return ''
   }
   const lonW = hover ? (hover.lon > 180 ? hover.lon - 360 : hover.lon) : 0
+  // Landing-ellipse point under the mouse (within 12 px): its result and why.
+  const note = hover
+    ? (p.dots ?? []).find((d) => {
+        const pt = d.note ? toCanvas(d.lat, d.lon, hover.size) : null
+        return pt && Math.hypot(pt[0] - hover.x, pt[1] - hover.y) < 12
+      })?.note
+    : undefined
   const active = LAYERS.find((l) => l.id === layer)!
+
+  const legend = (
+    <>
+      <p className="chart-note">{active.source}</p>
+      {layer === 'landing' ? (
+        <div className="legend landing-legend">
+          {(
+            [
+              [VCOLOR.viable, `≤ ${maxSlope}° slope`],
+              [VCOLOR.marginal, `${maxSlope}–${+(1.5 * maxSlope).toFixed(1)}° (caution)`],
+              [VCOLOR.not, `> ${+(1.5 * maxSlope).toFixed(1)}° (too steep)`],
+              [`rgb(${PSR.join(',')})`, 'permanent shadow'],
+            ] as const
+          ).map(([c, t]) => (
+            <span key={t}>
+              <span className="swatch" style={{ background: c }} aria-hidden="true" />
+              {t}
+            </span>
+          ))}
+        </div>
+      ) : layer === 'area' ? (
+        <div className="ramp">
+          <span className="ramp-bar ramp-area" />
+          <span className="muted">0% landable</span>
+          <span className="muted">100% within {areaKm} km, slope ≤ {maxSlope}°</span>
+        </div>
+      ) : (
+        layer !== 'relief' && layer !== 'psr' && (
+          <div className="ramp">
+            <span className={`ramp-bar ramp-${layer}`} />
+            <span className="muted">{layer === 'slope' ? '0°' : '0%'}</span>
+            <span className="muted">{layer === 'slope' ? '30°+' : '100%'}</span>
+          </div>
+        )
+      )}
+    </>
+  )
 
   return (
     <div className="map-screen">
@@ -386,17 +515,25 @@ export function MapView(p: Props) {
               {l.label}
             </label>
           ))}
-          <p className="chart-note">{active.source}</p>
-          {layer !== 'relief' && layer !== 'psr' && (
-            <div className="ramp">
-              <span className={`ramp-bar ramp-${layer}`} />
-              <span className="muted">{layer === 'slope' ? '0°' : '0%'}</span>
-              <span className="muted">{layer === 'slope' ? '30°+' : '100%'}</span>
-            </div>
-          )}
+          {legend}
         </fieldset>
 
           </>
+        )}
+        {p.side && (
+          <div className="layer-pick">
+            <label className="field wide">
+              <span>Map layer</span>
+              <select value={layer} onChange={(e) => setLayer(e.target.value as Layer)}>
+                {LAYERS.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {layer !== 'relief' && legend}
+          </div>
         )}
         <div className="seg" role="group" aria-label="Zoom">
           {ZOOMS.map((z) => (
@@ -442,6 +579,12 @@ export function MapView(p: Props) {
               <dd>{layerValue('earth')}</dd>
               <dt>Permanent shadow</dt>
               <dd>{layerValue('psr')}</dd>
+              {note && (
+                <>
+                  <dt>Landing ellipse</dt>
+                  <dd>{note}</dd>
+                </>
+              )}
             </dl>
           ) : (
             <p className="muted">Hover the map to read terrain and NASA values. Click anywhere to analyse that point, or click a site marker.</p>

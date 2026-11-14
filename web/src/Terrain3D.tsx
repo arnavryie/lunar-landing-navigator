@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data'
 import type { EllipseOverlay } from './Ellipse'
+import { VCOLOR, VERDICT_COLOR } from './ellipseCheck'
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -13,7 +14,6 @@ const R_KM = 1737.4
 const VIS_RES = 1024
 const base = `${import.meta.env.BASE_URL}data/map/`
 const COLORS = { sun: '#c98419', earth: '#5590d8', both: '#1fa38a', none: '#30363e' }
-const ELLIPSE_DOT = { viable: '#e4e1da', marginal: '#8d9297', not: '#e0705c', nodata: '#30363e' } // as on the Map
 
 // Shared GLSL: heightmap lookup and the ray march (same geometry as horizon.py, coarser steps far out).
 const MARCH = /* glsl */ `
@@ -287,13 +287,13 @@ export function Terrain3D({ site, sites, i, ellipse }: { site: Site | null; site
       const onTop = <M extends THREE.Material>(m: M) => Object.assign(m, { depthTest: false, transparent: true })
       const ring = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(ellipse.outline.map((q) => scenePos(w, q.lat, q.lon, exag))),
-        onTop(new THREE.LineBasicMaterial({ color: '#e4e1da' })),
+        onTop(new THREE.LineBasicMaterial({ color: ellipse.verdict ? VERDICT_COLOR[ellipse.verdict] : '#e4e1da' })),
       )
       ring.renderOrder = 10
       w.marks.add(ring)
       const ball = new THREE.SphereGeometry(Math.max(0.02, 0.015 * ellipse.focus.km))
       for (const d of ellipse.dots) {
-        const m = new THREE.Mesh(ball, onTop(new THREE.MeshBasicMaterial({ color: ELLIPSE_DOT[d.v] })))
+        const m = new THREE.Mesh(ball, onTop(new THREE.MeshBasicMaterial({ color: VCOLOR[d.v] })))
         m.position.copy(scenePos(w, d.lat, d.lon, exag))
         m.renderOrder = 11
         w.marks.add(m)
@@ -418,7 +418,7 @@ export function Terrain3D({ site, sites, i, ellipse }: { site: Site | null; site
               {ellipse && (
                 <>
                   {' '}
-                  Landing ellipse from the Map: {ellipse.dots.length ? 'light = viable, grey = marginal, red = not viable for the mission' : 'outline only; press "Analyse ellipse" on the Map to colour its points'}.
+                  Landing ellipse from the Map: {ellipse.dots.length ? 'green = viable, amber = marginal, red = not viable for the mission; the outline takes the overall verdict colour' : 'outline only; press "Analyse ellipse" on the Map to colour its points'}.
                 </>
               )}
             </p>

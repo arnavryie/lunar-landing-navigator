@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { computeCustomPoint } from './customPoint'
-import { computeSamples, judge, saved as ellipseSaved } from './ellipseCheck'
+import { VERDICT_LABEL, computeSamples, judge, saved as ellipseSaved, verdictOf } from './ellipseCheck'
 import { ellipseSamples } from './ellipseGeometry'
 import {
   MARGIN, VIABILITY_LABEL, formatDate, formatDuration, loadArtemis, viability, windowStats,
@@ -35,6 +35,7 @@ interface EllCheck {
   worstSun: number
   worstDark: number
   steep: number
+  chance: number // chance of landing on viable ground (points weighted by the landing bell curve)
 }
 
 interface Cands {
@@ -237,15 +238,15 @@ export function Finder(p: Props) {
     setEll({ key: ellKey, res })
     ;(async () => {
       for (const h of coarse.picks) {
-        const { points } = ellipseSamples({ lat: h.lat, lon: h.lon }, { lengthKm: ellKm, widthKm: ellKm, headingDeg: 0 }, ELLIPSE_POINTS)
-        const c: EllCheck = { total: points.length, done: 0, viable: 0, marginal: 0, worstSun: 100, worstDark: 0, steep: 0 }
+        const { points, weights } = ellipseSamples({ lat: h.lat, lon: h.lon }, { lengthKm: ellKm, widthKm: ellKm, headingDeg: 0 }, ELLIPSE_POINTS)
+        const c: EllCheck = { total: points.length, done: 0, viable: 0, marginal: 0, worstSun: 100, worstDark: 0, steep: 0, chance: 0 }
         res.set(h.k, c)
-        await computeSamples(points, () => alive, (_, pt) => {
+        await computeSamples(points, () => alive, (j, pt) => {
           c.done++
           if (pt) {
             const { stats, v, steep } = judge(pt, i, hours, th, maxSlope)
             if (steep) c.steep++
-            if (v === 'viable') c.viable++
+            if (v === 'viable') [c.viable, c.chance] = [c.viable + 1, c.chance + weights[j]]
             if (v === 'marginal') c.marginal++
             if (stats) [c.worstSun, c.worstDark] = [Math.min(c.worstSun, stats.sunPct), Math.max(c.worstDark, stats.longestDarkH)]
           }
@@ -272,11 +273,9 @@ export function Finder(p: Props) {
       return { ...h, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? h.parts, exact: true }
     })
     const out = list.sort(rankSort).filter((h) => h.v === 'viable' || h.v === 'marginal')
-    // Once every ellipse is checked, spots whose whole ellipse works come first (stable sort keeps the score order).
-    if (ellDone && ellRes) {
-      const share = (k: number) => { const c = ellRes.get(k)!; return c.viable / c.total }
-      out.sort((a, b) => share(b.k) - share(a.k))
-    }
+    // Once every ellipse is checked, the best chance of landing on ground that meets the needs comes first
+    // (stable sort keeps the score order for ties).
+    if (ellDone && ellRes) out.sort((a, b) => ellRes.get(b.k)!.chance - ellRes.get(a.k)!.chance)
     return out
   }, [coarse, exact, key, th, maxSlope, ellDone, ellRes])
 
@@ -387,8 +386,9 @@ export function Finder(p: Props) {
               The approach direction isn't fixed while choosing a site, so each spot's landing area is a circle this wide
               (covers the ellipse in any direction). Step 1, every spot: the shortlist favours spots with the most flat
               (≤ slope limit) ground with long-term sunlight and Earth view around them (NASA 240 m layers). Step 2, the shortlist: ~21 points per
-              spot computed exactly for your dates, about 4 s per spot; the list then sorts by how much of each area is
-              viable. For a set direction and full detail, pick a spot and use the Map tab.
+              spot computed exactly for your dates, about 4 s per spot; the list then sorts by the chance of landing on
+              ground that meets your needs (points near the centre count most, as landers come down there more often).
+              Map layers "Landing terrain" and "Landing area" show where the ground itself allows a landing. For a set direction and full detail, pick a spot and use the Map tab.
             </p>
           </>
         )}
@@ -487,6 +487,8 @@ export function Finder(p: Props) {
       onCompare={p.onCompare}
       dots={dots}
       side={side}
+      maxSlope={maxSlope}
+      areaKm={ellKm || 4}
     />
   )
 }
@@ -494,10 +496,13 @@ export function Finder(p: Props) {
 function EllipseLine({ c, km, maxSlope }: { c: EllCheck; km: number; maxSlope: number }) {
   if (c.done < c.total)
     return <span className="short-nums muted">Landing ellipse {km} km: checking {c.done}/{c.total}…</span>
-  const all = c.viable === c.total
+  const v = verdictOf(c.chance)
   return (
-    <span className={`short-nums ell-line${all ? ' ell-ok' : ''}`}>
-      Landing ellipse {km} km: {all ? `all ${c.total} points viable` : `${c.viable} of ${c.total} viable${c.marginal ? `, ${c.marginal} marginal` : ''}`} · worst sunlit{' '}
+    <span className={`short-nums ell-line ell-${v}`}>
+      <strong>
+        {VERDICT_LABEL[v]}: {(100 * c.chance).toFixed(0)}% chance of landing on suitable ground
+      </strong>{' '}
+      ({km} km; {c.viable} of {c.total} points viable{c.marginal ? `, ${c.marginal} marginal` : ''}) · worst sunlit{' '}
       {c.worstSun.toFixed(0)}%, worst dark {c.worstDark ? formatDuration(c.worstDark) : '0 h'} ·{' '}
       {c.steep ? `${c.steep} steeper than ${maxSlope}°` : `slope ≤ ${maxSlope}° everywhere`}
     </span>
