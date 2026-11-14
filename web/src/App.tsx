@@ -374,9 +374,23 @@ export default function App() {
                 site={site}
                 sites={sites}
                 i={i}
+                setI={setI}
+                planned={planned}
+                setPlanned={setPlanned}
+                th={th}
+                setTh={setTh}
                 onPickPoint={pickPoint}
+                onPickArtemisSite={pickArtemisSite}
                 onOpenSite={() => setView('site')}
                 onOpenArtemis={() => setView('artemis')}
+                onFindAlternatives={
+                  site && inAnalysisYear(site)
+                    ? () => {
+                        setFindRadius(site.lat <= -84 ? 25 : 0)
+                        setView('find')
+                      }
+                    : undefined
+                }
               />
             </Suspense>
           )}

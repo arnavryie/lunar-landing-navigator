@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { formatUtc, loadSite, timeAt, type Site, type SiteSummary } from './data'
+import {
+  DEFAULT_THRESHOLDS,
+  formatUtc,
+  loadSite,
+  timeAt,
+  type Site,
+  type SiteSummary,
+  type Thresholds,
+} from './data'
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
+import { Planner } from './Planner'
+import { Timeline } from './Timeline'
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -151,30 +161,76 @@ function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, 
   return meToScene([w.vectors[o] - P[0], w.vectors[o + 1] - P[1], w.vectors[o + 2] - P[2]])
 }
 
+export interface Terrain3DProps {
+  site: Site | null
+  sites: SiteSummary[]
+  i: number
+  setI?: (i: number) => void
+  planned?: number
+  setPlanned?: (d: number) => void
+  th?: Thresholds
+  setTh?: (t: Thresholds) => void
+  onPickPoint?: (lat: number, lon: number) => void
+  onPickArtemisSite?: (a: ArtemisSiteData) => void
+  onOpenSite?: () => void
+  onOpenArtemis?: () => void
+  onFindAlternatives?: () => void
+}
+
 export function Terrain3D({
   site,
   sites,
   i,
+  setI,
+  planned,
+  setPlanned,
+  th,
+  setTh,
   onPickPoint,
+  onPickArtemisSite,
   onOpenSite,
   onOpenArtemis,
-}: {
-  site: Site | null
-  sites: SiteSummary[]
-  i: number
-  onPickPoint?: (lat: number, lon: number) => void
-  onOpenSite?: () => void
-  onOpenArtemis?: () => void
-}) {
+  onFindAlternatives,
+}: Terrain3DProps) {
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState('')
   const [exag, setExag] = useState(1)
   const [check, setCheck] = useState('')
-  const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(null)
+  type SideTab = 'artemis' | 'planner' | 'controls'
+  const [sideTab, setSideTab] = useState<SideTab>('artemis')
+
+  const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(() => {
+    if (site) {
+      const match = ARTEMIS_3_SITES.find(
+        (a) => site.id === `artemis-${a.id}` || site.name.toLowerCase().includes(a.name.toLowerCase()),
+      )
+      if (match) return match
+    }
+    return ARTEMIS_3_SITES[0]
+  })
+
   const currentExagRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
+
+  const localTh = th ?? DEFAULT_THRESHOLDS
+  const localSetTh = setTh ?? (() => {})
+  const localPlanned = planned ?? 0
+  const localSetPlanned = setPlanned ?? (() => {})
+  const localSetI = setI ?? (() => {})
+
+  // Synchronize selected Artemis region when site changes
+  useEffect(() => {
+    if (!site) return
+    const match = ARTEMIS_3_SITES.find((a) => {
+      if (site.id === `artemis-${a.id}`) return true
+      if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
+      const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
+      return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
+    })
+    if (match) setSelectedArtemis(match)
+  }, [site])
 
   // Build the scene once.
   useEffect(() => {
@@ -183,7 +239,10 @@ export function Terrain3D({
     ;(async () => {
       try {
         const meta = await (await fetch(base + 'meta.json')).json()
-        const [demBuf, vecBuf] = await Promise.all([fetch(base + meta.dem.file), fetch(base + meta.vectors.file)].map(async (r) => (await r).arrayBuffer()))
+        const [demBuf, vecBuf] = await Promise.all([
+          fetch(base + meta.dem.file),
+          fetch(base + meta.vectors.file),
+        ].map(async (r) => (await r).arrayBuffer()))
         if (disposed || !host.current) return
         const n: number = meta.dem.n
         const scale = meta.dem.scale_m / 1000
@@ -209,7 +268,14 @@ export function Terrain3D({
         const visRT = new THREE.WebGLRenderTarget(VIS_RES, VIS_RES, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter })
         const pointRT = new THREE.WebGLRenderTarget(1, 1)
         const visMat = new THREE.ShaderMaterial({
-          uniforms: { ...common, uObs: { value: 0.002 }, uSun: { value: new THREE.Vector3() }, uEarth: { value: new THREE.Vector3() }, uPointMode: { value: 0 }, uPoint: { value: new THREE.Vector2() } },
+          uniforms: {
+            ...common,
+            uObs: { value: 0.002 },
+            uSun: { value: new THREE.Vector3() },
+            uEarth: { value: new THREE.Vector3() },
+            uPointMode: { value: 0 },
+            uPoint: { value: new THREE.Vector2() },
+          },
           vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
           fragmentShader: VIS_FRAG,
         })
@@ -219,9 +285,14 @@ export function Terrain3D({
 
         const terrainMat = new THREE.ShaderMaterial({
           uniforms: {
-            ...common, uVis: { value: visRT.texture }, uW: { value: W }, uExag: { value: 1 },
-            uSunC: { value: new THREE.Color(COLORS.sun) }, uEarthC: { value: new THREE.Color(COLORS.earth) },
-            uBothC: { value: new THREE.Color(COLORS.both) }, uNoneC: { value: new THREE.Color(COLORS.none) },
+            ...common,
+            uVis: { value: visRT.texture },
+            uW: { value: W },
+            uExag: { value: 1 },
+            uSunC: { value: new THREE.Color(COLORS.sun) },
+            uEarthC: { value: new THREE.Color(COLORS.earth) },
+            uBothC: { value: new THREE.Color(COLORS.both) },
+            uNoneC: { value: new THREE.Color(COLORS.none) },
           },
           vertexShader: TERRAIN_VERT,
           fragmentShader: TERRAIN_FRAG,
@@ -248,7 +319,24 @@ export function Terrain3D({
         camera.position.set(0, 260, 330)
         controls.target.set(0, 0, 0)
         controls.update()
-        world.current = { renderer, scene, camera, controls, visScene, visCam, visMat, visRT, pointRT, terrainMat, marks, artemisGroup, vectors: new Float32Array(vecBuf), n, scale, heights }
+        world.current = {
+          renderer,
+          scene,
+          camera,
+          controls,
+          visScene,
+          visCam,
+          visMat,
+          visRT,
+          pointRT,
+          terrainMat,
+          marks,
+          artemisGroup,
+          vectors: new Float32Array(vecBuf),
+          n,
+          scale,
+          heights,
+        }
         resize()
         setReady(true)
         cleanup = () => {
@@ -327,8 +415,6 @@ export function Terrain3D({
   }
 
   // Recompute visibility map on GPU when the hour/ephemeris time changes.
-  // Note: visRT ray-marching depends ONLY on sun/earth ephemeris directions and true DEM elevations.
-  // It does NOT re-run during visual vertical exaggeration changes, preventing massive GPU frame drops.
   useEffect(() => {
     const w = world.current
     if (!w || !ready) return
@@ -345,7 +431,7 @@ export function Terrain3D({
     drawMarksAndRender(w, currentExagRef.current)
   }, [i, site, ready])
 
-  // Smoothly animate vertical exaggeration transitions using a frame-rate-independent cubic ease-out.
+  // Smoothly animate vertical exaggeration transitions using cubic ease-out.
   useEffect(() => {
     const w = world.current
     if (!w || !ready) return
@@ -370,7 +456,6 @@ export function Terrain3D({
     const step = (now: number) => {
       const elapsed = now - start
       const progress = Math.min(1, elapsed / duration)
-      // Smooth cubic ease-out: 1 - (1 - progress)^3
       const ease = 1 - Math.pow(1 - progress, 3)
       const val = from + (to - from) * ease
       currentExagRef.current = val
@@ -394,7 +479,7 @@ export function Terrain3D({
     }
   }, [exag, ready, site, i])
 
-    const inspectArtemis = (siteData: ArtemisSiteData) => {
+  const inspectArtemis = (siteData: ArtemisSiteData) => {
     setSelectedArtemis(siteData)
     const w = world.current
     if (!w) return
@@ -403,6 +488,20 @@ export function Terrain3D({
     w.controls.target.copy(p)
     w.controls.update()
     drawMarksAndRender(w, currentExagRef.current)
+  }
+
+  const selectAndPlanArtemis = (siteData: ArtemisSiteData) => {
+    inspectArtemis(siteData)
+    if (onPickArtemisSite) {
+      onPickArtemisSite(siteData)
+    } else if (onPickPoint) {
+      onPickPoint(siteData.lat, siteData.lon)
+    }
+  }
+
+  const openPlannerForSite = (siteData: ArtemisSiteData) => {
+    selectAndPlanArtemis(siteData)
+    setSideTab('planner')
   }
 
   const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
@@ -462,187 +561,538 @@ export function Terrain3D({
     }
     w.renderer.setRenderTarget(null)
     u.uPointMode.value = 0
-    setCheck(`${agree} of ${total} Sun/Earth visible-or-not values agree with the validated pipeline.${misses.length ? ' Differences: ' + misses.join('; ') : ''}`)
+    setCheck(
+      `${agree} of ${total} Sun/Earth visible-or-not values agree with the validated pipeline.${misses.length ? ' Differences: ' + misses.join('; ') : ''}`,
+    )
   }
 
   return (
-    <div className="three-screen">
-      <div className="three-wrap" ref={host}>
-        {!ready && !err && <p className="loading three-msg">Loading terrain (about 13 MB, once)</p>}
-        {err && <p className="error three-msg">3D view couldn't start: {err}</p>}
-        <span className="three-label">{exag > 1 ? `Heights exaggerated ${exag.toFixed(1).replace(/\.0$/, '')}×, not to scale` : 'True vertical scale'}</span>
-      </div>
-      <aside className="map-side">
-        <div className="legend three-legend">
-          {(['sun', 'earth', 'both', 'none'] as const).map((k) => (
-            <span key={k}>
-              <span className={`swatch st-${k}`} aria-hidden="true" />
-              {k === 'sun' ? 'Sunlit' : k === 'earth' ? 'Earth in view' : k === 'both' ? 'Both' : 'Neither'}
-            </span>
-          ))}
+    <div className="terrain-3d-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="three-screen">
+        <div className="three-wrap" ref={host}>
+          {!ready && !err && <p className="loading three-msg">Loading terrain (about 13 MB, once)</p>}
+          {err && <p className="error three-msg">3D view couldn't start: {err}</p>}
+          <span className="three-label">
+            {exag > 1 ? `Heights exaggerated ${exag.toFixed(1).replace(/\.0$/, '')}×, not to scale` : 'True vertical scale'}
+          </span>
         </div>
-        <p className="chart-note">
-          Colours are computed, not drawn: each point steps across the real terrain toward the Sun and Earth at the selected
-          time, with the Moon's curvature. Grey relief shading is only for readability.
-        </p>
-        <label className="field exag">
-          <span>Vertical exaggeration</span>
-          <input type="range" min={1} max={5} step={0.1} value={exag} aria-label="Vertical exaggeration" onChange={(e) => setExag(Number(e.target.value))} />
-          <span className="unit">{exag.toFixed(1).replace(/\.0$/, '')}×</span>
-        </label>
-        <div className="seg" style={{ marginTop: '6px', marginBottom: '14px' }}>
-          {[1, 1.5, 2, 3, 5].map((val) => (
+
+        <aside className="map-side">
+          {/* Sub-tab navigation inside the 3D sidebar */}
+          <div className="seg views" style={{ width: '100%', marginBottom: '8px', display: 'flex' }}>
             <button
-              key={val}
               type="button"
-              aria-pressed={exag === val}
-              onClick={() => setExag(val)}
+              aria-pressed={sideTab === 'artemis'}
+              onClick={() => setSideTab('artemis')}
+              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
-              {val === 1 ? '1× (True)' : `${val}×`}
+              Artemis Resources
             </button>
-          ))}
-        </div>
-                <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites</legend>
-          <p className="chart-note" style={{ margin: '0 0 8px' }}>
-            NASA downselected 9 landing zones (Oct 2024). Click any site to view minerals, water-ice potential, and ISRU resources:
-          </p>
-          <div className="slips" style={{ gap: '6px' }}>
-            {ARTEMIS_3_SITES.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                style={{
-                  fontSize: '0.76rem',
-                  padding: '4px 7px',
-                  minWidth: 'auto',
-                  borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
-                  background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
-                  color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
-                  fontWeight: selectedArtemis?.id === a.id ? 600 : 400
-                }}
-                onClick={() => inspectArtemis(a)}
-              >
-                {a.name}
-              </button>
-            ))}
+            <button
+              type="button"
+              aria-pressed={sideTab === 'planner'}
+              onClick={() => setSideTab('planner')}
+              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
+            >
+              Site Planner
+            </button>
+            <button
+              type="button"
+              aria-pressed={sideTab === 'controls'}
+              onClick={() => setSideTab('controls')}
+              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
+            >
+              3D &amp; Lighting
+            </button>
           </div>
 
-          {selectedArtemis && (
-            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid #38bdf8', borderRadius: 'var(--radius-s)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                <div>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-                    {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: '0.68rem',
-                  padding: '2px 5px',
-                  borderRadius: '3px',
-                  fontWeight: 600,
-                  background: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? 'rgba(31, 163, 138, 0.25)' : 'rgba(56, 189, 248, 0.2)',
-                  color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#38bdf8',
-                  border: '1px solid currentColor'
-                }}>
-                  {selectedArtemis.resources.water_ice_potential} Water Ice
-                </span>
-              </div>
-
-              <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
-
-              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
-                  {selectedArtemis.minerals.primary.map((m) => (
-                    <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 5px', borderRadius: '3px', fontSize: '0.7rem' }}>
-                      {m}
-                    </span>
+          {/* TAB 1: ARTEMIS III RESOURCES */}
+          {sideTab === 'artemis' && (
+            <>
+              <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites &amp; Resources</legend>
+                <p className="chart-note" style={{ margin: '0 0 8px' }}>
+                  NASA downselected 9 landing zones (Oct 2024). Click any site to fly camera in 3D and view resources:
+                </p>
+                <div className="slips" style={{ gap: '6px' }}>
+                  {ARTEMIS_3_SITES.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      style={{
+                        fontSize: '0.76rem',
+                        padding: '4px 7px',
+                        minWidth: 'auto',
+                        borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                        background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                        color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                        fontWeight: selectedArtemis?.id === a.id ? 600 : 400,
+                      }}
+                      onClick={() => selectAndPlanArtemis(a)}
+                    >
+                      {a.name}
+                    </button>
                   ))}
                 </div>
-                <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
-              </div>
 
-              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#38bdf8' }}>Water-Ice & Volatiles:</strong>
-                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
-                  Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
-                </div>
-              </div>
-
-              <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#f59e0b' }}>ISRU Resources:</strong>
-                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
-                  Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-                {onPickPoint && (
-                  <button
-                    type="button"
-                    style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
-                    onClick={() => {
-                      onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
-                      onOpenSite?.()
+                {selectedArtemis && (
+                  <div
+                    style={{
+                      marginTop: '10px',
+                      padding: '10px',
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      border: '1px solid #38bdf8',
+                      borderRadius: 'var(--radius-s)',
                     }}
                   >
-                    Analyze in Site &amp; Plan Tab →
-                  </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
+                          {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          padding: '2px 5px',
+                          borderRadius: '3px',
+                          fontWeight: 600,
+                          background:
+                            selectedArtemis.resources.water_ice_potential === 'Exceptional'
+                              ? 'rgba(31, 163, 138, 0.25)'
+                              : 'rgba(56, 189, 248, 0.2)',
+                          color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#38bdf8',
+                          border: '1px solid currentColor',
+                        }}
+                      >
+                        {selectedArtemis.resources.water_ice_potential} Ice
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
+
+                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                      <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
+                        {selectedArtemis.minerals.primary.map((m) => (
+                          <span
+                            key={m}
+                            style={{
+                              background: 'rgba(255,255,255,0.08)',
+                              padding: '2px 5px',
+                              borderRadius: '3px',
+                              fontSize: '0.7rem',
+                            }}
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
+                    </div>
+
+                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                      <strong style={{ color: '#38bdf8' }}>Water-Ice &amp; Volatiles:</strong>
+                      <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                        Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
+                      </div>
+                    </div>
+
+                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                      <strong style={{ color: '#f59e0b' }}>ISRU Resources:</strong>
+                      <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                        Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '0.78rem',
+                          background: '#0284c7',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 'var(--radius-s)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => openPlannerForSite(selectedArtemis)}
+                      >
+                        Plan Landing Windows for this Region →
+                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          style={{
+                            flex: 1,
+                            padding: '5px 8px',
+                            fontSize: '0.74rem',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            color: '#e2e8f0',
+                            border: '1px solid var(--rule)',
+                            borderRadius: 'var(--radius-s)',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => inspectArtemis(selectedArtemis)}
+                        >
+                          Fly Camera Here
+                        </button>
+                        <a
+                          href="#artemis-3d-matrix"
+                          style={{
+                            flex: 1,
+                            padding: '5px 8px',
+                            fontSize: '0.74rem',
+                            background: 'rgba(56, 189, 248, 0.1)',
+                            color: '#38bdf8',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            borderRadius: 'var(--radius-s)',
+                            textAlign: 'center',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Comparison Matrix ↓
+                        </a>
+                      </div>
+                      {(onOpenSite || onOpenArtemis) && (
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                          {onOpenSite && (
+                            <button
+                              type="button"
+                              style={{
+                                flex: 1,
+                                padding: '4px 6px',
+                                fontSize: '0.7rem',
+                                background: 'transparent',
+                                color: 'var(--muted)',
+                                border: '1px solid var(--rule)',
+                                borderRadius: 'var(--radius-s)',
+                                cursor: 'pointer',
+                              }}
+                              onClick={onOpenSite}
+                            >
+                              Open in Site Tab ↗
+                            </button>
+                          )}
+                          {onOpenArtemis && (
+                            <button
+                              type="button"
+                              style={{
+                                flex: 1,
+                                padding: '4px 6px',
+                                fontSize: '0.7rem',
+                                background: 'transparent',
+                                color: 'var(--muted)',
+                                border: '1px solid var(--rule)',
+                                borderRadius: 'var(--radius-s)',
+                                cursor: 'pointer',
+                              }}
+                              onClick={onOpenArtemis}
+                            >
+                              Full Resources Tab ↗
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {onOpenArtemis && (
+              </fieldset>
+            </>
+          )}
+
+          {/* TAB 2: SITE PLANNER */}
+          {sideTab === 'planner' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {site ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>Active Site: {site.name}</span>
                     <button
                       type="button"
-                      style={{ flex: 1, padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
-                      onClick={onOpenArtemis}
+                      style={{ fontSize: '0.72rem', padding: '2px 6px', background: 'transparent', color: 'var(--muted)', border: '1px solid var(--rule)', borderRadius: '3px', cursor: 'pointer' }}
+                      onClick={() => setSideTab('artemis')}
                     >
-                      Open Artemis Resources Tab
+                      Change Site
                     </button>
-                  )}
-                  <a
-                    href={selectedArtemis.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ padding: '4px 6px', fontSize: '0.72rem', color: 'var(--muted)', textDecoration: 'underline', alignSelf: 'center' }}
-                  >
-                    NASA Source ↗
-                  </a>
+                  </div>
+                  <Planner
+                    site={site}
+                    i={i}
+                    setI={localSetI}
+                    planned={localPlanned}
+                    setPlanned={localSetPlanned}
+                    th={localTh}
+                    setTh={localSetTh}
+                    onFindAlternatives={onFindAlternatives}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="pick-box">
+                  <p>Calculating 2027 orbital illumination &amp; terrain horizon for the selected site...</p>
+                  <button
+                    type="button"
+                    style={{ marginTop: '8px', padding: '6px 10px', fontSize: '0.76rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)' }}
+                    onClick={() => setSideTab('artemis')}
+                  >
+                    Select an Artemis III Landing Site
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </fieldset>
-        <fieldset className="thresholds">
-          <legend>Camera</legend>
-          <div className="slips">
-            <button onClick={() => preset('overview')}>Overview</button>
-            <button onClick={() => preset('overhead')}>Overhead</button>
-            <button onClick={() => preset('shackleton')}>Over Shackleton</button>
-            <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>From the site, look at the Sun</button>
-            <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>Look at Earth</button>
-          </div>
-          <p className="chart-note">Drag to rotate, right-drag to pan, scroll to zoom.</p>
-        </fieldset>
-        <div className="pick-box">
-          {site && site.lat <= -80.5 ? (
-            <p>
-              <strong>{site.name}</strong>: lines to the Sun and Earth; solid when visible, red dashed when blocked by terrain.
-            </p>
-          ) : (
-            <p className="muted">The selected site is outside 80–90° S, so it isn't shown here. Pick a polar site or click the Map.</p>
+
+          {/* TAB 3: 3D CONTROLS & LIGHTING */}
+          {sideTab === 'controls' && (
+            <>
+              <div className="legend three-legend">
+                {(['sun', 'earth', 'both', 'none'] as const).map((k) => (
+                  <span key={k}>
+                    <span className={`swatch st-${k}`} aria-hidden="true" />
+                    {k === 'sun' ? 'Sunlit' : k === 'earth' ? 'Earth in view' : k === 'both' ? 'Both' : 'Neither'}
+                  </span>
+                ))}
+              </div>
+              <p className="chart-note">
+                Colours are computed, not drawn: each point steps across the real terrain toward the Sun and Earth at the selected
+                time, with the Moon's curvature. Grey relief shading is only for readability.
+              </p>
+              <label className="field exag">
+                <span>Vertical exaggeration</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={0.1}
+                  value={exag}
+                  aria-label="Vertical exaggeration"
+                  onChange={(e) => setExag(Number(e.target.value))}
+                />
+                <span className="unit">{exag.toFixed(1).replace(/\.0$/, '')}×</span>
+              </label>
+              <div className="seg" style={{ marginTop: '6px', marginBottom: '14px' }}>
+                {[1, 1.5, 2, 3, 5].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    aria-pressed={exag === val}
+                    onClick={() => setExag(val)}
+                  >
+                    {val === 1 ? '1× (True)' : `${val}×`}
+                  </button>
+                ))}
+              </div>
+              <fieldset className="thresholds">
+                <legend>Camera</legend>
+                <div className="slips">
+                  <button onClick={() => preset('overview')}>Overview</button>
+                  <button onClick={() => preset('overhead')}>Overhead</button>
+                  <button onClick={() => preset('shackleton')}>Over Shackleton</button>
+                  <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>
+                    From site, look at Sun
+                  </button>
+                  <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>
+                    Look at Earth
+                  </button>
+                </div>
+                <p className="chart-note">Drag to rotate, right-drag to pan, scroll to zoom.</p>
+              </fieldset>
+              <div className="pick-box">
+                {site && site.lat <= -80.5 ? (
+                  <p>
+                    <strong>{site.name}</strong>: lines to the Sun and Earth; solid when visible, red dashed when blocked by terrain.
+                  </p>
+                ) : (
+                  <p className="muted">The selected site is outside 80–90° S, so it isn't shown here. Pick a polar site or click the Map.</p>
+                )}
+              </div>
+              <div>
+                <button onClick={runCheck} disabled={!ready}>
+                  Check shadows against the pipeline
+                </button>
+                {check && <p className="chart-note">{check}</p>}
+              </div>
+            </>
           )}
-        </div>
-        <div>
-          <button onClick={runCheck} disabled={!ready}>
-            Check shadows against the pipeline
+        </aside>
+      </div>
+
+      {/* Interactive 2027 Sun & Earth Availability Timeline (scrubs hour i and updates 3D GPU raymarched shadows) */}
+      {site && (
+        <section className="panel" aria-label="Interactive 2027 Availability Timeline">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '0.96rem', color: '#e2e8f0' }}>
+                2027 Sun &amp; Earth Availability Timeline (Interactive 3D Shadow Scrubber)
+              </h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--muted)' }}>
+                Click or drag anywhere along the timeline to rotate Sun &amp; Earth vectors and sweep GPU shadows across the 3D terrain.
+              </p>
+            </div>
+            <span style={{ fontSize: '0.76rem', color: '#38bdf8' }}>
+              Active Site: <strong>{site.name}</strong>
+            </span>
+          </div>
+          <Timeline site={site} i={i} onPick={localSetI} />
+        </section>
+      )}
+
+      {/* Full-width Landing Date Planner (if site loaded and sideTab is not already showing it) */}
+      {site && sideTab !== 'planner' && (
+        <section className="panel" aria-label="Landing Date Planner Calendar">
+          <Planner
+            site={site}
+            i={i}
+            setI={localSetI}
+            planned={localPlanned}
+            setPlanned={localSetPlanned}
+            th={localTh}
+            setTh={localSetTh}
+            onFindAlternatives={onFindAlternatives}
+          />
+        </section>
+      )}
+
+      {/* Artemis III Candidate Landing Regions Comparative Resource Matrix */}
+      <section
+        id="artemis-3d-matrix"
+        className="panel"
+        style={{ borderColor: 'rgba(56, 189, 248, 0.35)' }}
+        aria-label="Artemis III Comparative Resource Matrix"
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', color: '#f8fafc', fontWeight: 600 }}>
+              Artemis III Candidate Landing Regions: Complete Resource &amp; Mineral Matrix
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Comprehensive on-site mineralogy, water-ice cold trap depth, cryogenic volatiles, and lander ISRU utility across all 9 regions.
+            </p>
+          </div>
+          <button
+            type="button"
+            style={{
+              padding: '5px 10px',
+              fontSize: '0.74rem',
+              background: 'rgba(56, 189, 248, 0.15)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              borderRadius: 'var(--radius-s)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            Back to 3D Viewport ↑
           </button>
-          {check && <p className="chart-note">{check}</p>}
         </div>
-      </aside>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '0.78rem',
+              color: '#cbd5e1',
+              textAlign: 'left',
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--rule)', color: 'var(--muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>
+                <th style={{ padding: '8px 10px' }}>Region Name</th>
+                <th style={{ padding: '8px 10px' }}>Lat / Lon</th>
+                <th style={{ padding: '8px 10px' }}>Elev.</th>
+                <th style={{ padding: '8px 10px' }}>Water Ice Potential</th>
+                <th style={{ padding: '8px 10px' }}>Depth Estimate</th>
+                <th style={{ padding: '8px 10px' }}>Primary Minerals</th>
+                <th style={{ padding: '8px 10px' }}>Lander ISRU Utility</th>
+                <th style={{ padding: '8px 10px' }}>3D Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ARTEMIS_3_SITES.map((a) => {
+                const isSelected = selectedArtemis?.id === a.id
+                return (
+                  <tr
+                    key={a.id}
+                    style={{
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                      background: isSelected ? 'rgba(56, 189, 248, 0.08)' : undefined,
+                    }}
+                  >
+                    <td style={{ padding: '10px 10px', fontWeight: 600, color: isSelected ? '#38bdf8' : '#f8fafc' }}>
+                      {a.name}
+                    </td>
+                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                      {Math.abs(a.lat).toFixed(2)}° S, {Math.abs(a.lon).toFixed(1)}° {a.lon < 0 ? 'W' : 'E'}
+                    </td>
+                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                      +{a.elevation_km} km
+                    </td>
+                    <td style={{ padding: '10px 10px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          fontWeight: 600,
+                          background:
+                            a.resources.water_ice_potential === 'Exceptional'
+                              ? 'rgba(34, 197, 94, 0.2)'
+                              : a.resources.water_ice_potential === 'Very High'
+                              ? 'rgba(56, 189, 248, 0.2)'
+                              : a.resources.water_ice_potential === 'Strategic'
+                              ? 'rgba(245, 158, 11, 0.2)'
+                              : 'rgba(168, 85, 247, 0.2)',
+                          color:
+                            a.resources.water_ice_potential === 'Exceptional'
+                              ? '#4ade80'
+                              : a.resources.water_ice_potential === 'Very High'
+                              ? '#38bdf8'
+                              : a.resources.water_ice_potential === 'Strategic'
+                              ? '#fbbf24'
+                              : '#c084fc',
+                        }}
+                      >
+                        {a.resources.water_ice_potential}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 10px' }}>{a.resources.depth_estimate}</td>
+                    <td style={{ padding: '10px 10px' }}>{a.minerals.primary.slice(0, 2).join(', ')}</td>
+                    <td style={{ padding: '10px 10px', maxWidth: '240px' }}>{a.resources.isru_applications}</td>
+                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.72rem',
+                          background: isSelected ? '#0284c7' : 'rgba(255,255,255,0.06)',
+                          color: '#fff',
+                          border: isSelected ? 'none' : '1px solid var(--rule)',
+                          borderRadius: 'var(--radius-s)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                        onClick={() => {
+                          selectAndPlanArtemis(a)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                      >
+                        Fly in 3D →
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }
