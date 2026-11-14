@@ -6,7 +6,8 @@ import {
   MARGIN, VIABILITY_LABEL, formatDate, formatDuration, loadArtemis, viability, windowStats,
   type Region, type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
 } from './data'
-import { siteTracks } from './engine'
+import { polarRowCol, siteTracks } from './engine'
+import { loadMapData, slopeGrid, type MapData } from './mapData'
 import { MapView, type Dot } from './MapView'
 import { Field } from './Planner'
 
@@ -33,6 +34,7 @@ interface EllCheck {
   marginal: number
   worstSun: number
   worstDark: number
+  steep: number
 }
 
 interface Cands {
@@ -65,6 +67,30 @@ interface Hit {
   score: number
   parts: Record<keyof typeof W, number>
   exact?: boolean
+  ell?: { lit: number; flat: number } // quick landing-area screen (see ellipseScreen)
+}
+
+/** Quick landing-area screen from the 240 m map layers: over a circle `km` wide around the spot,
+ *  `flat` = share of ground no steeper than maxSlope, `lit` = average NASA long-term sunlit % counting too-steep
+ *  ground as 0. Pixels off the map or without NASA data are skipped. Used only to choose which spots to check exactly. */
+function ellipseScreen(m: MapData, slope: Float32Array, lat: number, lon: number, km: number, maxSlope: number) {
+  const [r0, c0] = polarRowCol(lat, lon, m.n, m.scale)
+  const R = (km * 500) / m.scale
+  let n = 0
+  let flat = 0
+  let lit = 0
+  for (let r = Math.ceil(r0 - R); r <= r0 + R; r++)
+    for (let c = Math.ceil(c0 - R); c <= c0 + R; c++) {
+      if ((r - r0) ** 2 + (c - c0) ** 2 > R * R || r < 1 || c < 1 || r >= m.n - 1 || c >= m.n - 1) continue
+      const k = r * m.n + c
+      if (m.sun[k] === 255) continue
+      n++
+      if (slope[k] <= maxSlope) {
+        flat++
+        lit += m.sun[k]
+      }
+    }
+  return n ? { lit: lit / n, flat: flat / n } : { lit: 0, flat: 0 }
 }
 
 function score(s: WindowStats, slope: number, th: Thresholds, maxSlope: number) {
@@ -119,10 +145,12 @@ export function Finder(p: Props) {
   const [ellOn, setEllOn] = useState(false)
   const [ellKm, setEllKm] = useState(ellipseSaved.spec.lengthKm) // same size as the Map's ellipse to start with
   const [ell, setEll] = useState<{ key: string; res: Map<number, EllCheck> } | null>(null)
+  const [map, setMap] = useState<MapData | null>(null)
 
   useEffect(() => {
     ;(cached ??= load()).then(setData, (e) => setErr(String(e.message ?? e)))
     loadArtemis().then(setRegions, () => setRegions([]))
+    loadMapData().then(setMap, () => setMap(null))
   }, [])
 
   const hours = th.missionDays * 24
@@ -158,14 +186,20 @@ export function Finder(p: Props) {
       const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, slope, th, maxSlope) : null
       out.push({ k, lat, lon, slope, km, near, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? { power: 0, comms: 0, dark: 0, slope: 0 } })
     }
-    out.sort(rankSort)
+    // Landing-ellipse mode: among spots whose centre works, prefer those with the most flat, long-term-lit ground
+    // around them, so the shortlist is chosen for the whole landing area, not just its centre.
+    if (ellOn && map && ellKm > 0) {
+      const slope = slopeGrid(map)
+      for (const h of out) if (h.v === 'viable' || h.v === 'marginal') h.ell = ellipseScreen(map, slope, h.lat, h.lon, ellKm, maxSlope)
+      out.sort((a, b) => RANK[b.v] - RANK[a.v] || (b.ell?.lit ?? 0) - (a.ell?.lit ?? 0) || b.score - a.score)
+    } else out.sort(rankSort)
     const picks: Hit[] = []
     for (const h of out) {
       if (picks.length === SHORTLIST || (h.v !== 'viable' && h.v !== 'marginal')) break
       if (picks.every((q) => kmBetween(q.lat, q.lon, h.lat, h.lon) >= SPREAD_KM)) picks.push(h)
     }
     return { hits: out, picks, ms: performance.now() - t0 }
-  }, [data, i, hours, th, maxSlope, radius, centre, nearRegions, regions])
+  }, [data, i, hours, th, maxSlope, radius, centre, nearRegions, regions, ellOn, ellKm, map])
 
   // Fine stage: recompute the top few exactly (0.5 deg horizon, 120 m steps, same engine as a map click).
   useEffect(() => {
@@ -198,12 +232,13 @@ export function Finder(p: Props) {
     ;(async () => {
       for (const h of coarse.picks) {
         const { points } = ellipseSamples({ lat: h.lat, lon: h.lon }, { lengthKm: ellKm, widthKm: ellKm, headingDeg: 0 }, ELLIPSE_POINTS)
-        const c: EllCheck = { total: points.length, done: 0, viable: 0, marginal: 0, worstSun: 100, worstDark: 0 }
+        const c: EllCheck = { total: points.length, done: 0, viable: 0, marginal: 0, worstSun: 100, worstDark: 0, steep: 0 }
         res.set(h.k, c)
         await computeSamples(points, () => alive, (_, pt) => {
           c.done++
           if (pt) {
-            const { stats, v } = judge(pt, i, hours, th, maxSlope)
+            const { stats, v, steep } = judge(pt, i, hours, th, maxSlope)
+            if (steep) c.steep++
             if (v === 'viable') c.viable++
             if (v === 'marginal') c.marginal++
             if (stats) [c.worstSun, c.worstDark] = [Math.min(c.worstSun, stats.sunPct), Math.max(c.worstDark, stats.longestDarkH)]
@@ -292,7 +327,7 @@ export function Finder(p: Props) {
                     {VIABILITY_LABEL[h.v]} · sunlit {h.stats!.sunPct.toFixed(0)}% · {h.stats!.longestDarkH ? `longest dark ${formatDuration(h.stats!.longestDarkH)}` : 'no darkness'} · Earth {h.stats!.earthPct.toFixed(0)}% ·
                     slope {h.slope.toFixed(1)}°
                   </span>
-                  {ellRes?.get(h.k) && <EllipseLine c={ellRes.get(h.k)!} km={ellKm} />}
+                  {ellRes?.get(h.k) && <EllipseLine c={ellRes.get(h.k)!} km={ellKm} maxSlope={maxSlope} />}
                   <span className="score-bar" aria-label={`Score ${h.score.toFixed(0)} of 100`}>
                     {(Object.keys(W) as (keyof typeof W)[]).map((c) => (
                       <span key={c} className={`sb-${c}`} style={{ width: `${W[c] * h.parts[c] * 100}%` }} title={`${c}: ${(W[c] * h.parts[c] * 100).toFixed(0)} of ${W[c] * 100}`} />
@@ -337,15 +372,17 @@ export function Finder(p: Props) {
         <legend>Landing ellipse</legend>
         <label className="radio">
           <input type="checkbox" checked={ellOn} onChange={(e) => setEllOn(e.target.checked)} />
-          Check the whole landing area of each shortlisted spot
+          Choose spots for their whole landing area
         </label>
         {ellOn && (
           <>
             <Field label="Ellipse length (long side)" unit="km" value={ellKm} step={0.5} onChange={(v) => setEllKm(Math.min(20, Math.max(0, Number(v) || 0)))} />
             <p className="chart-note">
-              The approach direction isn't fixed while choosing a site, so each spot is checked over a circle this wide (covers
-              the ellipse in any direction): ~25 points per spot, each computed exactly; about 2–3 s per spot. For a set
-              direction and full detail, pick a spot and use the Map tab.
+              The approach direction isn't fixed while choosing a site, so each spot's landing area is a circle this wide
+              (covers the ellipse in any direction). Step 1, every spot: the shortlist favours spots with the most flat
+              (≤ slope limit), long-term-sunlit ground around them (NASA 240 m layers). Step 2, the shortlist: ~21 points per
+              spot computed exactly for your dates, about 4 s per spot; the list then sorts by how much of each area is
+              viable. For a set direction and full detail, pick a spot and use the Map tab.
             </p>
           </>
         )}
@@ -438,14 +475,15 @@ export function Finder(p: Props) {
   )
 }
 
-function EllipseLine({ c, km }: { c: EllCheck; km: number }) {
+function EllipseLine({ c, km, maxSlope }: { c: EllCheck; km: number; maxSlope: number }) {
   if (c.done < c.total)
     return <span className="short-nums muted">Landing ellipse {km} km: checking {c.done}/{c.total}…</span>
   const all = c.viable === c.total
   return (
     <span className={`short-nums ell-line${all ? ' ell-ok' : ''}`}>
       Landing ellipse {km} km: {all ? `all ${c.total} points viable` : `${c.viable} of ${c.total} viable${c.marginal ? `, ${c.marginal} marginal` : ''}`} · worst sunlit{' '}
-      {c.worstSun.toFixed(0)}%, worst dark {c.worstDark ? formatDuration(c.worstDark) : '0 h'}
+      {c.worstSun.toFixed(0)}%, worst dark {c.worstDark ? formatDuration(c.worstDark) : '0 h'} ·{' '}
+      {c.steep ? `${c.steep} steeper than ${maxSlope}°` : `slope ≤ ${maxSlope}° everywhere`}
     </span>
   )
 }

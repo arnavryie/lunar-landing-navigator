@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { R_M, polarRowCol, rowColToLatLon } from './engine'
+import { loadMapData, terrainAt, type MapData } from './mapData'
 import { ARTEMIS_III_URL, ARTEMIS_NOTE, formatDuration, loadArtemis, type Region, type Site, type SiteSummary, type Viability } from './data'
 
 // F6a: top-down map of 85-90 S, 0 E up (same orientation as the pipeline). Plain canvas, no map library.
@@ -21,52 +22,6 @@ const ZOOMS = [
 const NIGHT = [26, 31, 38]
 const RAMPS: Record<Exclude<Layer, 'relief' | 'psr'>, number[]> = { sun: [242, 190, 92], earth: [128, 170, 235], slope: [226, 150, 205] }
 const PSR = [70, 90, 200]
-
-interface MapData {
-  n: number
-  scale: number
-  demN: number
-  dem: Int16Array
-  sun: Uint8ClampedArray
-  earth: Uint8ClampedArray
-  psr: Uint8ClampedArray
-}
-
-const base = `${import.meta.env.BASE_URL}data/map/`
-
-async function grey(file: string): Promise<Uint8ClampedArray> {
-  const bmp = await createImageBitmap(await (await fetch(base + file)).blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
-  const c = new OffscreenCanvas(bmp.width, bmp.height)
-  const g = c.getContext('2d')!
-  g.drawImage(bmp, 0, 0)
-  const rgba = g.getImageData(0, 0, bmp.width, bmp.height).data
-  const out = new Uint8ClampedArray(bmp.width * bmp.height)
-  for (let k = 0; k < out.length; k++) out[k] = rgba[4 * k]
-  return out
-}
-
-async function loadMap(): Promise<MapData> {
-  const meta = await (await fetch(base + 'meta.json')).json()
-  const [dem, sun, earth, psr] = await Promise.all([
-    fetch(base + meta.dem.file).then((r) => r.arrayBuffer()),
-    grey('sun_pct.png'),
-    grey('earth_pct.png'),
-    grey('psr.png'),
-  ])
-  return { n: meta.layers.n, scale: meta.layers.scale_m, demN: meta.dem.n, dem: new Int16Array(dem), sun, earth, psr }
-}
-
-let cached: Promise<MapData> | null = null
-
-/** Height (m) and slope (deg) at a map pixel, from the DEM crop (map grid sits in its centre). */
-function terrainAt(d: MapData, r: number, c: number) {
-  const off = (d.demN - d.n) / 2
-  const k = (r + off) * d.demN + (c + off)
-  const h = d.dem[k] * 0.5
-  const dx = ((d.dem[k + 1] - d.dem[k - 1]) * 0.5) / (2 * d.scale)
-  const dy = ((d.dem[k + d.demN] - d.dem[k - d.demN]) * 0.5) / (2 * d.scale)
-  return { h, slope: (Math.atan(Math.hypot(dx, dy)) * 180) / Math.PI, dx, dy }
-}
 
 function render(d: MapData, layer: Layer): OffscreenCanvas {
   const img = new ImageData(d.n, d.n)
@@ -140,7 +95,7 @@ export function MapView(p: Props) {
   const [showRegions, setShowRegions] = useState(true)
 
   useEffect(() => {
-    ;(cached ??= loadMap()).then(setData, (e) => setErr(String(e.message ?? e)))
+    ;loadMapData().then(setData, (e) => setErr(String(e.message ?? e)))
     loadArtemis().then(setRegions, () => setRegions([]))
   }, [])
 
