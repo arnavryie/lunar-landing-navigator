@@ -1,0 +1,74 @@
+{
+  "check": "Sun/Earth topocentric az/el: Skyfield (DE421, MOON_ME_DE421) vs JPL Horizons (DE441, MEAN_ME), airless",
+  "period_utc": [
+    "2027-01-01 00:00",
+    "2027-01-31 00:00"
+  ],
+  "step": "1h",
+  "tolerance_deg": 0.01,
+  "worst_separation_deg": 3.313294288966385e-05,
+  "passed": true,
+  "results": [
+    {
+      "point": "near_pole",
+      "lat_deg": -89.5,
+      "east_lon_deg": 0.0,
+      "body": "sun",
+      "samples": 721,
+      "max_separation_deg": 1.3870685802918179e-05,
+      "max_elevation_diff_deg": 1.3268707615199382e-05,
+      "mean_separation_deg": 8.276540467468817e-06
+    },
+    {
+      "point": "near_pole",
+      "lat_deg": -89.5,
+      "east_lon_deg": 0.0,
+      "body": "earth",
+      "samples": 721,
+      "max_separation_deg": 3.313294288966385e-05,
+      "max_elevation_diff_deg": 3.2620289563745075e-05,
+      "mean_separation_deg": 1.796070367071796e-05
+    },
+    {
+      "point": "polar",
+      "lat_deg": -84.0,
+      "east_lon_deg": 155.0,
+      "body": "sun",
+      "samples": 721,
+      "max_separation_deg": 1.3841306721119987e-05,
+      "max_elevation_diff_deg": 1.3376148474186778e-05,
+      "mean_separation_deg": 8.282119321929744e-06
+    },
+    {
+      "point": "polar",
+      "lat_deg": -84.0,
+      "east_lon_deg": 155.0,
+      "body": "earth",
+      "samples": 721,
+      "max_separation_deg": 3.246086610200862e-05,
+      "max_elevation_diff_deg": 3.189182651119893e-05,
+      "mean_separation_deg": 1.780990778793221e-05
+    },
+    {
+      "point": "mid_lat",
+      "lat_deg": -44.6,
+      "east_lon_deg": 91.2,
+      "body": "sun",
+      "samples": 721,
+      "max_separation_deg": 1.3751446390161503e-05,
+      "max_elevation_diff_deg": 9.917294676142774e-06,
+      "mean_separation_deg": 8.29318782788321e-06
+    },
+    {
+      "point": "mid_lat",
+      "lat_deg": -44.6,
+      "east_lon_deg": 91.2,
+      "body": "earth",
+      "samples": 721,
+      "max_separation_deg": 2.808812784971726e-05,
+      "max_elevation_diff_deg": 2.6459304219739188e-05,
+      "mean_separation_deg": 1.8951939475671617e-05
+    }
+  ],
+  "generated_utc": "2026-11-14T06:22:15+00:00"
+}

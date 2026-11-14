@@ -1,0 +1,670 @@
+{
+ "check": "Sunlit % and Earth-visible % (any part of disc) vs NASA LOLA AVGVISIB_85S_060M_201608 maps",
+ "ours": "LDEM_75S_240M horizon, obs height 0.0 m, 18.6 yr hourly from 2009",
+ "criteria": {
+  "min_correlation": 0.9,
+  "max_median_abs_diff_pp": 5.0
+ },
+ "summary": {
+  "sun": {
+   "correlation": 0.9913,
+   "median_abs_diff_pp": 0.31,
+   "mean_diff_pp": 0.62,
+   "p90_abs_diff_pp": 2.02,
+   "max_abs_diff_pp": 15.42,
+   "passed": true
+  },
+  "earth": {
+   "correlation": 0.9949,
+   "median_abs_diff_pp": 0.17,
+   "mean_diff_pp": 0.85,
+   "p90_abs_diff_pp": 3.77,
+   "max_abs_diff_pp": 13.06,
+   "passed": true
+  }
+ },
+ "passed": true,
+ "points": [
+  {
+   "lat_deg": -87.5992,
+   "east_lon_deg": 237.7279,
+   "sun_ours_pct": 12.52,
+   "sun_nasa_pct": 12.69,
+   "earth_ours_pct": 29.21,
+   "earth_nasa_pct": 29.05
+  },
+  {
+   "lat_deg": -85.713,
+   "east_lon_deg": 88.3988,
+   "sun_ours_pct": 38.08,
+   "sun_nasa_pct": 37.41,
+   "earth_ours_pct": 24.33,
+   "earth_nasa_pct": 11.27
+  },
+  {
+   "lat_deg": -89.1801,
+   "east_lon_deg": 276.6661,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 2.01,
+   "earth_ours_pct": 19.2,
+   "earth_nasa_pct": 17.76
+  },
+  {
+   "lat_deg": -85.7208,
+   "east_lon_deg": 76.2029,
+   "sun_ours_pct": 1.88,
+   "sun_nasa_pct": 0.58,
+   "earth_ours_pct": 41.56,
+   "earth_nasa_pct": 40.15
+  },
+  {
+   "lat_deg": -88.4591,
+   "east_lon_deg": 299.2589,
+   "sun_ours_pct": 34.37,
+   "sun_nasa_pct": 33.98,
+   "earth_ours_pct": 58.44,
+   "earth_nasa_pct": 58.39
+  },
+  {
+   "lat_deg": -87.9797,
+   "east_lon_deg": 22.5785,
+   "sun_ours_pct": 11.17,
+   "sun_nasa_pct": 11.0,
+   "earth_ours_pct": 41.46,
+   "earth_nasa_pct": 35.83
+  },
+  {
+   "lat_deg": -86.2409,
+   "east_lon_deg": 297.1756,
+   "sun_ours_pct": 34.94,
+   "sun_nasa_pct": 32.04,
+   "earth_ours_pct": 55.56,
+   "earth_nasa_pct": 55.49
+  },
+  {
+   "lat_deg": -88.0404,
+   "east_lon_deg": 59.2226,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 33.85,
+   "earth_nasa_pct": 33.59
+  },
+  {
+   "lat_deg": -87.4367,
+   "east_lon_deg": 135.0529,
+   "sun_ours_pct": 34.97,
+   "sun_nasa_pct": 33.93,
+   "earth_ours_pct": 16.72,
+   "earth_nasa_pct": 13.59
+  },
+  {
+   "lat_deg": -89.6815,
+   "east_lon_deg": 114.0257,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.5599,
+   "east_lon_deg": 248.8813,
+   "sun_ours_pct": 9.6,
+   "sun_nasa_pct": 10.1,
+   "earth_ours_pct": 43.2,
+   "earth_nasa_pct": 43.13
+  },
+  {
+   "lat_deg": -87.486,
+   "east_lon_deg": 64.2859,
+   "sun_ours_pct": 18.54,
+   "sun_nasa_pct": 18.78,
+   "earth_ours_pct": 15.82,
+   "earth_nasa_pct": 15.64
+  },
+  {
+   "lat_deg": -88.3822,
+   "east_lon_deg": 142.6522,
+   "sun_ours_pct": 5.17,
+   "sun_nasa_pct": 5.16,
+   "earth_ours_pct": 5.77,
+   "earth_nasa_pct": 2.29
+  },
+  {
+   "lat_deg": -86.4098,
+   "east_lon_deg": 2.0969,
+   "sun_ours_pct": 13.8,
+   "sun_nasa_pct": 13.97,
+   "earth_ours_pct": 2.7,
+   "earth_nasa_pct": 2.31
+  },
+  {
+   "lat_deg": -88.4963,
+   "east_lon_deg": 94.4981,
+   "sun_ours_pct": 11.19,
+   "sun_nasa_pct": 10.76,
+   "earth_ours_pct": 43.62,
+   "earth_nasa_pct": 43.52
+  },
+  {
+   "lat_deg": -87.85,
+   "east_lon_deg": 151.628,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.34,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -89.2236,
+   "east_lon_deg": 38.1316,
+   "sun_ours_pct": 10.32,
+   "sun_nasa_pct": 10.13,
+   "earth_ours_pct": 35.96,
+   "earth_nasa_pct": 35.65
+  },
+  {
+   "lat_deg": -88.0666,
+   "east_lon_deg": 227.9376,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 19.05,
+   "earth_nasa_pct": 19.1
+  },
+  {
+   "lat_deg": -88.9251,
+   "east_lon_deg": 136.9527,
+   "sun_ours_pct": 36.5,
+   "sun_nasa_pct": 35.97,
+   "earth_ours_pct": 31.74,
+   "earth_nasa_pct": 28.0
+  },
+  {
+   "lat_deg": -88.6721,
+   "east_lon_deg": 261.1058,
+   "sun_ours_pct": 1.51,
+   "sun_nasa_pct": 1.48,
+   "earth_ours_pct": 7.43,
+   "earth_nasa_pct": 6.54
+  },
+  {
+   "lat_deg": -86.5734,
+   "east_lon_deg": 235.3918,
+   "sun_ours_pct": 18.57,
+   "sun_nasa_pct": 17.6,
+   "earth_ours_pct": 37.06,
+   "earth_nasa_pct": 36.09
+  },
+  {
+   "lat_deg": -88.5942,
+   "east_lon_deg": 155.2416,
+   "sun_ours_pct": 6.18,
+   "sun_nasa_pct": 6.38,
+   "earth_ours_pct": 15.0,
+   "earth_nasa_pct": 14.7
+  },
+  {
+   "lat_deg": -87.7137,
+   "east_lon_deg": 312.2354,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -85.5828,
+   "east_lon_deg": 227.5686,
+   "sun_ours_pct": 27.45,
+   "sun_nasa_pct": 26.85,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -85.6649,
+   "east_lon_deg": 291.6988,
+   "sun_ours_pct": 40.17,
+   "sun_nasa_pct": 40.57,
+   "earth_ours_pct": 57.72,
+   "earth_nasa_pct": 57.68
+  },
+  {
+   "lat_deg": -86.6834,
+   "east_lon_deg": 123.0461,
+   "sun_ours_pct": 33.36,
+   "sun_nasa_pct": 33.59,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.01
+  },
+  {
+   "lat_deg": -87.4727,
+   "east_lon_deg": 195.7209,
+   "sun_ours_pct": 22.73,
+   "sun_nasa_pct": 22.83,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -88.6094,
+   "east_lon_deg": 70.6669,
+   "sun_ours_pct": 22.51,
+   "sun_nasa_pct": 22.26,
+   "earth_ours_pct": 56.92,
+   "earth_nasa_pct": 56.86
+  },
+  {
+   "lat_deg": -89.1092,
+   "east_lon_deg": 358.6108,
+   "sun_ours_pct": 7.93,
+   "sun_nasa_pct": 6.39,
+   "earth_ours_pct": 27.08,
+   "earth_nasa_pct": 22.22
+  },
+  {
+   "lat_deg": -85.6293,
+   "east_lon_deg": 87.5576,
+   "sun_ours_pct": 37.69,
+   "sun_nasa_pct": 37.96,
+   "earth_ours_pct": 14.17,
+   "earth_nasa_pct": 16.79
+  },
+  {
+   "lat_deg": -87.5809,
+   "east_lon_deg": 92.4723,
+   "sun_ours_pct": 11.31,
+   "sun_nasa_pct": 11.59,
+   "earth_ours_pct": 44.65,
+   "earth_nasa_pct": 44.53
+  },
+  {
+   "lat_deg": -89.3018,
+   "east_lon_deg": 26.3484,
+   "sun_ours_pct": 32.54,
+   "sun_nasa_pct": 17.12,
+   "earth_ours_pct": 47.25,
+   "earth_nasa_pct": 45.33
+  },
+  {
+   "lat_deg": -87.119,
+   "east_lon_deg": 92.8091,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 38.02,
+   "earth_nasa_pct": 37.9
+  },
+  {
+   "lat_deg": -86.4603,
+   "east_lon_deg": 274.7263,
+   "sun_ours_pct": 15.32,
+   "sun_nasa_pct": 12.62,
+   "earth_ours_pct": 45.25,
+   "earth_nasa_pct": 45.09
+  },
+  {
+   "lat_deg": -87.1641,
+   "east_lon_deg": 251.2417,
+   "sun_ours_pct": 8.85,
+   "sun_nasa_pct": 8.63,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -85.8556,
+   "east_lon_deg": 46.3224,
+   "sun_ours_pct": 23.13,
+   "sun_nasa_pct": 23.03,
+   "earth_ours_pct": 2.23,
+   "earth_nasa_pct": 2.64
+  },
+  {
+   "lat_deg": -89.6298,
+   "east_lon_deg": 135.4459,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -87.5271,
+   "east_lon_deg": 151.5317,
+   "sun_ours_pct": 39.22,
+   "sun_nasa_pct": 40.75,
+   "earth_ours_pct": 14.53,
+   "earth_nasa_pct": 13.59
+  },
+  {
+   "lat_deg": -87.8249,
+   "east_lon_deg": 239.3943,
+   "sun_ours_pct": 29.47,
+   "sun_nasa_pct": 29.81,
+   "earth_ours_pct": 0.1,
+   "earth_nasa_pct": 0.19
+  },
+  {
+   "lat_deg": -89.5319,
+   "east_lon_deg": 164.1344,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 32.8,
+   "earth_nasa_pct": 32.62
+  },
+  {
+   "lat_deg": -87.0423,
+   "east_lon_deg": 211.1466,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.1337,
+   "east_lon_deg": 302.2865,
+   "sun_ours_pct": 28.52,
+   "sun_nasa_pct": 28.84,
+   "earth_ours_pct": 51.99,
+   "earth_nasa_pct": 51.93
+  },
+  {
+   "lat_deg": -87.2504,
+   "east_lon_deg": 261.5305,
+   "sun_ours_pct": 47.18,
+   "sun_nasa_pct": 43.34,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 2.71
+  },
+  {
+   "lat_deg": -88.6816,
+   "east_lon_deg": 131.4026,
+   "sun_ours_pct": 50.6,
+   "sun_nasa_pct": 47.29,
+   "earth_ours_pct": 15.65,
+   "earth_nasa_pct": 9.35
+  },
+  {
+   "lat_deg": -86.1885,
+   "east_lon_deg": 161.4227,
+   "sun_ours_pct": 32.4,
+   "sun_nasa_pct": 32.58,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -87.6092,
+   "east_lon_deg": 132.3718,
+   "sun_ours_pct": 21.06,
+   "sun_nasa_pct": 21.28,
+   "earth_ours_pct": 40.12,
+   "earth_nasa_pct": 39.44
+  },
+  {
+   "lat_deg": -87.6032,
+   "east_lon_deg": 39.5045,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.562,
+   "east_lon_deg": 73.167,
+   "sun_ours_pct": 16.35,
+   "sun_nasa_pct": 16.19,
+   "earth_ours_pct": 46.07,
+   "earth_nasa_pct": 45.83
+  },
+  {
+   "lat_deg": -89.1639,
+   "east_lon_deg": 102.1703,
+   "sun_ours_pct": 28.18,
+   "sun_nasa_pct": 24.98,
+   "earth_ours_pct": 51.65,
+   "earth_nasa_pct": 47.18
+  },
+  {
+   "lat_deg": -86.2756,
+   "east_lon_deg": 113.0882,
+   "sun_ours_pct": 34.5,
+   "sun_nasa_pct": 34.03,
+   "earth_ours_pct": 3.48,
+   "earth_nasa_pct": 4.11
+  },
+  {
+   "lat_deg": -86.8619,
+   "east_lon_deg": 112.6972,
+   "sun_ours_pct": 41.94,
+   "sun_nasa_pct": 41.43,
+   "earth_ours_pct": 28.01,
+   "earth_nasa_pct": 23.98
+  },
+  {
+   "lat_deg": -86.4155,
+   "east_lon_deg": 207.6119,
+   "sun_ours_pct": 39.95,
+   "sun_nasa_pct": 39.6,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -88.9761,
+   "east_lon_deg": 349.8084,
+   "sun_ours_pct": 6.41,
+   "sun_nasa_pct": 6.26,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.3498,
+   "east_lon_deg": 278.8791,
+   "sun_ours_pct": 29.02,
+   "sun_nasa_pct": 28.7,
+   "earth_ours_pct": 25.46,
+   "earth_nasa_pct": 24.99
+  },
+  {
+   "lat_deg": -88.9773,
+   "east_lon_deg": 284.8082,
+   "sun_ours_pct": 19.28,
+   "sun_nasa_pct": 19.77,
+   "earth_ours_pct": 46.3,
+   "earth_nasa_pct": 45.51
+  },
+  {
+   "lat_deg": -89.4493,
+   "east_lon_deg": 273.3367,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 1.49,
+   "earth_nasa_pct": 2.49
+  },
+  {
+   "lat_deg": -86.1225,
+   "east_lon_deg": 214.9156,
+   "sun_ours_pct": 23.98,
+   "sun_nasa_pct": 23.28,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.0965,
+   "east_lon_deg": 330.3692,
+   "sun_ours_pct": 38.41,
+   "sun_nasa_pct": 38.58,
+   "earth_ours_pct": 53.14,
+   "earth_nasa_pct": 52.62
+  },
+  {
+   "lat_deg": -86.0309,
+   "east_lon_deg": 248.2669,
+   "sun_ours_pct": 22.52,
+   "sun_nasa_pct": 22.21,
+   "earth_ours_pct": 57.49,
+   "earth_nasa_pct": 57.49
+  },
+  {
+   "lat_deg": -87.7708,
+   "east_lon_deg": 180.1283,
+   "sun_ours_pct": 35.89,
+   "sun_nasa_pct": 35.93,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -88.6216,
+   "east_lon_deg": 27.7502,
+   "sun_ours_pct": 14.89,
+   "sun_nasa_pct": 15.05,
+   "earth_ours_pct": 48.82,
+   "earth_nasa_pct": 46.18
+  },
+  {
+   "lat_deg": -89.7695,
+   "east_lon_deg": 175.8417,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -87.0234,
+   "east_lon_deg": 76.6192,
+   "sun_ours_pct": 0.0,
+   "sun_nasa_pct": 0.0,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.7044,
+   "east_lon_deg": 47.7707,
+   "sun_ours_pct": 27.01,
+   "sun_nasa_pct": 25.43,
+   "earth_ours_pct": 0.49,
+   "earth_nasa_pct": 2.33
+  },
+  {
+   "lat_deg": -86.2071,
+   "east_lon_deg": 182.1834,
+   "sun_ours_pct": 26.26,
+   "sun_nasa_pct": 25.5,
+   "earth_ours_pct": 22.12,
+   "earth_nasa_pct": 17.95
+  },
+  {
+   "lat_deg": -88.5879,
+   "east_lon_deg": 282.6307,
+   "sun_ours_pct": 16.8,
+   "sun_nasa_pct": 15.42,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -88.8746,
+   "east_lon_deg": 106.2023,
+   "sun_ours_pct": 38.11,
+   "sun_nasa_pct": 34.25,
+   "earth_ours_pct": 58.03,
+   "earth_nasa_pct": 53.28
+  },
+  {
+   "lat_deg": -87.0509,
+   "east_lon_deg": 276.7578,
+   "sun_ours_pct": 35.51,
+   "sun_nasa_pct": 35.43,
+   "earth_ours_pct": 49.28,
+   "earth_nasa_pct": 48.92
+  },
+  {
+   "lat_deg": -86.3383,
+   "east_lon_deg": 189.2266,
+   "sun_ours_pct": 31.61,
+   "sun_nasa_pct": 29.99,
+   "earth_ours_pct": 7.12,
+   "earth_nasa_pct": 6.83
+  },
+  {
+   "lat_deg": -85.6562,
+   "east_lon_deg": 53.6573,
+   "sun_ours_pct": 28.3,
+   "sun_nasa_pct": 26.17,
+   "earth_ours_pct": 30.7,
+   "earth_nasa_pct": 30.82
+  },
+  {
+   "lat_deg": -89.1527,
+   "east_lon_deg": 347.3884,
+   "sun_ours_pct": 0.02,
+   "sun_nasa_pct": 0.02,
+   "earth_ours_pct": 5.91,
+   "earth_nasa_pct": 5.09
+  },
+  {
+   "lat_deg": -87.7265,
+   "east_lon_deg": 144.589,
+   "sun_ours_pct": 39.1,
+   "sun_nasa_pct": 37.61,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -85.9527,
+   "east_lon_deg": 106.2843,
+   "sun_ours_pct": 32.16,
+   "sun_nasa_pct": 31.58,
+   "earth_ours_pct": 24.04,
+   "earth_nasa_pct": 23.57
+  },
+  {
+   "lat_deg": -87.9823,
+   "east_lon_deg": 304.9194,
+   "sun_ours_pct": 16.87,
+   "sun_nasa_pct": 17.16,
+   "earth_ours_pct": 40.52,
+   "earth_nasa_pct": 38.43
+  },
+  {
+   "lat_deg": -87.2651,
+   "east_lon_deg": 44.8057,
+   "sun_ours_pct": 6.78,
+   "sun_nasa_pct": 6.27,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -89.6947,
+   "east_lon_deg": 264.0926,
+   "sun_ours_pct": 21.47,
+   "sun_nasa_pct": 21.63,
+   "earth_ours_pct": 54.18,
+   "earth_nasa_pct": 54.17
+  },
+  {
+   "lat_deg": -86.9041,
+   "east_lon_deg": 67.6169,
+   "sun_ours_pct": 30.98,
+   "sun_nasa_pct": 29.94,
+   "earth_ours_pct": 43.47,
+   "earth_nasa_pct": 43.43
+  },
+  {
+   "lat_deg": -85.8479,
+   "east_lon_deg": 141.297,
+   "sun_ours_pct": 44.7,
+   "sun_nasa_pct": 44.13,
+   "earth_ours_pct": 0.0,
+   "earth_nasa_pct": 0.0
+  },
+  {
+   "lat_deg": -86.2447,
+   "east_lon_deg": 83.484,
+   "sun_ours_pct": 40.31,
+   "sun_nasa_pct": 39.89,
+   "earth_ours_pct": 50.27,
+   "earth_nasa_pct": 50.21
+  },
+  {
+   "lat_deg": -85.9923,
+   "east_lon_deg": 302.8421,
+   "sun_ours_pct": 23.13,
+   "sun_nasa_pct": 23.38,
+   "earth_ours_pct": 49.1,
+   "earth_nasa_pct": 48.99
+  }
+ ],
+ "generated_utc": "2026-11-14T06:45:05+00:00"
+}

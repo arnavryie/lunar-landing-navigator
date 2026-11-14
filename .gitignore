@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+pipeline/kernels/
+pipeline/data/lola/
+node_modules/
+web/dist/
