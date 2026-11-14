@@ -173,7 +173,6 @@ export interface Terrain3DProps {
   onPickPoint?: (lat: number, lon: number) => void
   onPickArtemisSite?: (a: ArtemisSiteData) => void
   onOpenSite?: () => void
-  onOpenArtemis?: () => void
   onFindAlternatives?: () => void
 }
 
@@ -189,7 +188,6 @@ export function Terrain3D({
   onPickPoint,
   onPickArtemisSite,
   onOpenSite,
-  onOpenArtemis,
   onFindAlternatives,
 }: Terrain3DProps) {
   const host = useRef<HTMLDivElement>(null)
@@ -759,44 +757,24 @@ export function Terrain3D({
                           Comparison Matrix ↓
                         </a>
                       </div>
-                      {(onOpenSite || onOpenArtemis) && (
+                      {onOpenSite && (
                         <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                          {onOpenSite && (
-                            <button
-                              type="button"
-                              style={{
-                                flex: 1,
-                                padding: '4px 6px',
-                                fontSize: '0.7rem',
-                                background: 'transparent',
-                                color: 'var(--muted)',
-                                border: '1px solid var(--rule)',
-                                borderRadius: 'var(--radius-s)',
-                                cursor: 'pointer',
-                              }}
-                              onClick={onOpenSite}
-                            >
-                              Open in Site Tab ↗
-                            </button>
-                          )}
-                          {onOpenArtemis && (
-                            <button
-                              type="button"
-                              style={{
-                                flex: 1,
-                                padding: '4px 6px',
-                                fontSize: '0.7rem',
-                                background: 'transparent',
-                                color: 'var(--muted)',
-                                border: '1px solid var(--rule)',
-                                borderRadius: 'var(--radius-s)',
-                                cursor: 'pointer',
-                              }}
-                              onClick={onOpenArtemis}
-                            >
-                              Full Resources Tab ↗
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            style={{
+                              flex: 1,
+                              padding: '4px 6px',
+                              fontSize: '0.7rem',
+                              background: 'transparent',
+                              color: 'var(--muted)',
+                              border: '1px solid var(--rule)',
+                              borderRadius: 'var(--radius-s)',
+                              cursor: 'pointer',
+                            }}
+                            onClick={onOpenSite}
+                          >
+                            Open in Site &amp; Plan Tab (Horizon Dial) ↗
+                          </button>
                         </div>
                       )}
                     </div>

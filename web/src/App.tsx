@@ -22,7 +22,6 @@ import { Contrast } from './explain/Contrast'
 import { Replays } from './Replays'
 import { Validation } from './Validation'
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
-import { ArtemisSection } from './ArtemisSection'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -58,8 +57,8 @@ export default function App() {
   const [validation, setValidation] = useState<ValidationData | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'artemis' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
-  const [view, setView] = useState<View>((['artemis', 'find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
+  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [findRadius, setFindRadius] = useState(0) // radius for Find sites when opened from the planner
   useEffect(() => {
     if (view !== 'find') setFindRadius(0)
@@ -222,9 +221,6 @@ export default function App() {
           <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
             Site and plan
           </button>
-          <button aria-pressed={view === 'artemis'} onClick={() => setView('artemis')}>
-            Artemis III Resources
-          </button>
           <button aria-pressed={view === 'find'} onClick={() => setView('find')}>
             Find sites
           </button>
@@ -319,22 +315,6 @@ export default function App() {
         </section>
       )}
 
-      {view === 'artemis' && (
-        <section className="panel" aria-label="Artemis III Candidate Landing Sites & Resources">
-          <ArtemisSection
-            onAnalyzeSite={(lat, lon) => {
-              const a = ARTEMIS_3_SITES.find((s) => Math.hypot(s.lat - lat, s.lon - lon) < 0.2)
-              if (a) pickArtemisSite(a)
-              else pickPoint(lat, lon)
-              setView('site')
-            }}
-            onOpen3D={() => setView('3d')}
-            onOpenMap={() => setView('map')}
-            onOpenGlobe={() => setView('globe')}
-          />
-        </section>
-      )}
-
       {view === 'globe' && (
         <section className="panel" aria-label="Whole-Moon globe">
           {/* WS3 */}
@@ -352,7 +332,7 @@ export default function App() {
                 onPickSite={setSiteId}
                 onOpen3D={() => setView('3d')}
                 onOpenSite={() => setView('site')}
-                onOpenArtemis={() => setView('artemis')}
+                onOpenArtemis={() => setView('3d')}
                 onPickPoint={pickPoint}
               />
             </Suspense>
@@ -382,7 +362,6 @@ export default function App() {
                 onPickPoint={pickPoint}
                 onPickArtemisSite={pickArtemisSite}
                 onOpenSite={() => setView('site')}
-                onOpenArtemis={() => setView('artemis')}
                 onFindAlternatives={
                   site && inAnalysisYear(site)
                     ? () => {
@@ -415,7 +394,7 @@ export default function App() {
             pickError={pickError}
             onOpenSite={() => setView('site')}
             onCompare={addToCompare}
-            onOpenArtemis={() => setView('artemis')}
+            onOpenArtemis={() => setView('3d')}
           />
         </section>
       )}
@@ -467,9 +446,9 @@ export default function App() {
                     cursor: 'pointer',
                     fontWeight: 600,
                   }}
-                  onClick={() => setView('artemis')}
+                  onClick={() => setView('3d')}
                 >
-                  View All Minerals &amp; Resources Tab →
+                  View Minerals &amp; Resources in 3D Tab →
                 </button>
               </div>
             )
@@ -537,9 +516,9 @@ export default function App() {
                       cursor: 'pointer',
                       fontWeight: 600,
                     }}
-                    onClick={() => setView('artemis')}
+                    onClick={() => setView('3d')}
                   >
-                    Open Full 9-Site Comparison Matrix →
+                    View in 3D Tab (Terrain &amp; Resources Matrix) →
                   </button>
                 </div>
                 <p style={{ margin: '8px 0', fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5 }}>

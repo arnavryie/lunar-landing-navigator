@@ -526,7 +526,7 @@ export function MapView(p: Props) {
                     style={{ padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
                     onClick={p.onOpenArtemis}
                   >
-                    Open Artemis Resources Tab
+                    View in 3D Tab (Terrain &amp; Resources) →
                   </button>
                 )}
               </div>

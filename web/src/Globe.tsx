@@ -413,7 +413,7 @@ export function Globe({
                       style={{ flex: 1, padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
                       onClick={onOpenArtemis}
                     >
-                      Resources Tab
+                      3D Resources
                     </button>
                   )}
                 </div>
