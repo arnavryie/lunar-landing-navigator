@@ -247,3 +247,28 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .play { min-width: 72px; font-weight: 600; }
 .play[aria-pressed='true'] { background: var(--text); color: var(--night); border-color: var(--text); }
+
+/* F4 compare */
+.views button { min-width: 0; }
+.compare-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.compare-actions button:disabled { opacity: 0.45; cursor: default; }
+.cmp-grid { display: grid; gap: 0 20px; margin-top: 12px; align-items: stretch; }
+.cmp-head { display: grid; gap: 6px; padding-bottom: 12px; }
+.cmp-head select, .cmp-head input {
+  font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--radius-s); padding: 5px 8px; width: 100%; color-scheme: dark;
+}
+.cmp-title { display: flex; justify-content: space-between; align-items: baseline; }
+.cmp-letter { font-size: 1.4rem; font-weight: 700; }
+.cmp-utc { font-size: 0.8rem; }
+.cmp-label, .cmp-cell { padding: 7px 0; border-top: 1px solid var(--rule); }
+.cmp-label { color: var(--muted); }
+.cmp-cell.best { font-weight: 600; }
+.cmp-group-row { font-weight: 600; padding: 18px 0 4px; }
+.best-tag {
+  display: inline-block; margin-left: 8px; font-size: 0.72rem; font-weight: 500; padding: 0 6px;
+  border: 1px solid var(--text); border-radius: 999px; vertical-align: 1px;
+}
+.cmp-timelines { margin-top: 24px; }
+.cmp-tracks { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0 12px; margin-top: 14px; }
+.cmp-ticks { margin-left: 212px; }

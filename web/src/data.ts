@@ -58,7 +58,11 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const loadSites = () => getJson<SiteSummary[]>('sites.json')
-export const loadSite = (id: string) => getJson<Site>(`sites/${id}.json`)
+const siteCache = new Map<string, Promise<Site>>()
+export const loadSite = (id: string) => {
+  if (!siteCache.has(id)) siteCache.set(id, getJson<Site>(`sites/${id}.json`))
+  return siteCache.get(id)!
+}
 
 /** Terrain horizon elevation at an azimuth (linear between the 0.5 deg samples). */
 export function horizonAt(site: Site, az: number): number {
@@ -171,6 +175,7 @@ export interface WindowStats {
   sunPct: number
   earthPct: number
   longestDarkH: number
+  longestNoEarthH: number
 }
 
 /** Sunlit %, Earth-visible % and longest darkness over [start, start + hours); null if it runs past the data. */
@@ -180,14 +185,19 @@ export function windowStats(site: Site, start: number, hours: number): WindowSta
   let earth = 0
   let run = 0
   let longest = 0
+  let eRun = 0
+  let eLongest = 0
   for (let j = start; j < start + hours; j++) {
     if (site.sun.frac[j] > 0) {
       sun++
       run = 0
     } else longest = Math.max(longest, ++run)
-    if (site.earth.frac[j] > 0) earth++
+    if (site.earth.frac[j] > 0) {
+      earth++
+      eRun = 0
+    } else eLongest = Math.max(eLongest, ++eRun)
   }
-  return { sunPct: (100 * sun) / hours, earthPct: (100 * earth) / hours, longestDarkH: longest }
+  return { sunPct: (100 * sun) / hours, earthPct: (100 * earth) / hours, longestDarkH: longest, longestNoEarthH: eLongest }
 }
 
 export function viability(s: WindowStats | null, t: Thresholds): Viability {

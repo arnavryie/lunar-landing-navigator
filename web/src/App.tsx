@@ -5,6 +5,7 @@ import {
   type Site, type SiteSummary, type Thresholds, type Validation,
 } from './data'
 import { HorizonDial } from './HorizonDial'
+import { Compare, type Scenario } from './Compare'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
 import { Sources } from './Sources'
@@ -42,6 +43,23 @@ export default function App() {
   const [validation, setValidation] = useState<Validation | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
+  const [view, setView] = useState<'site' | 'compare'>(params.get('view') === 'compare' ? 'compare' : 'site')
+  const [scenarios, setScenarios] = useState<Scenario[]>(
+    (params.get('cmp') ?? '')
+      .split(',')
+      .map((x) => x.split('@'))
+      .filter(([id, t]) => id && Number.isFinite(Number(t)))
+      .map(([id, t]) => ({ siteId: id, t: Number(t) })),
+  )
+
+  // Entering Compare with nothing set up: current site and time vs the next site at the same time.
+  const openCompare = () => {
+    if (scenarios.length < 2 && site) {
+      const other = sites.find((x) => x.id !== site.id)?.id ?? site.id
+      setScenarios([{ siteId: site.id, t: i }, { siteId: other, t: i }])
+    }
+    setView('compare')
+  }
 
   useEffect(() => {
     loadValidation().then(setValidation, () => setValidation(null))
@@ -78,8 +96,10 @@ export default function App() {
       site: siteId, t: String(i), plan: String(planned),
       m: String(th.missionDays), sun: String(th.minSunPct), dark: String(th.maxDarkH), earth: String(th.minEarthPct),
     })
+    if (view === 'compare') q.set('view', 'compare')
+    if (scenarios.length) q.set('cmp', scenarios.map((x) => `${x.siteId}@${x.t}`).join(','))
     history.replaceState(null, '', `?${q}`)
-  }, [siteId, i, planned, th])
+  }, [siteId, i, planned, th, view, scenarios])
 
   useEffect(() => {
     if (!siteId) return
@@ -105,11 +125,20 @@ export default function App() {
     <div className="app">
       <header className="top">
         <h1>Lunar South Pole Mission Planner</h1>
+        <nav className="seg views" aria-label="Screens">
+          <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
+            Site and plan
+          </button>
+          <button aria-pressed={view === 'compare'} onClick={openCompare}>
+            Compare
+          </button>
+        </nav>
         {validation?.horizons.passed && (
           <a className="badge" href="#sources" title="How the numbers were checked">
             <span aria-hidden="true">✓</span> Validated against JPL Horizons, max error {validation.horizons.worst_deg.toFixed(5)}°
           </a>
         )}
+        {view === 'site' && (
         <label className="site-pick">
           <span>Site</span>
           <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
@@ -126,12 +155,20 @@ export default function App() {
             ))}
           </select>
         </label>
+        )}
       </header>
 
       {error && <p className="error">{error}</p>}
       {!site && !error && <p className="loading">Loading site data</p>}
 
-      {site && (
+      {site && view === 'compare' && scenarios.length >= 2 && (
+        <section className="panel" aria-label="Compare scenarios">
+          <Compare sites={sites} scenarios={scenarios} setScenarios={setScenarios} th={th} />
+          <footer className="foot">{site.provenance} Times are to the nearest hour.</footer>
+        </section>
+      )}
+
+      {site && view === 'site' && (
         <>
           <main className="layout">
             <section className="dial-wrap" aria-label="Horizon dial">
