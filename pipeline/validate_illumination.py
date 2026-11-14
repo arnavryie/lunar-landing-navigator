@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from ephemeris import me_vectors, ts
-from horizon import LOLA, polar_rowcol
+from horizon import DEM_FILE, LOLA, polar_rowcol
 from timeline import site_timeline
 
 # Pass criteria, fixed before the run: both maps must correlate >= 0.9 with ours and
@@ -81,7 +81,7 @@ def main():
 
     REPORT.write_text(json.dumps({
         "check": "Sunlit % and Earth-visible % (any part of disc) vs NASA LOLA AVGVISIB_85S_060M_201608 maps",
-        "ours": f"LDEM_75S_240M horizon, obs height {OBS_HEIGHT_M} m, {YEARS} yr hourly from {START_YEAR}",
+        "ours": f"{DEM_FILE.split('.')[0].upper()} horizon, obs height {OBS_HEIGHT_M} m, {YEARS} yr hourly from {START_YEAR}",
         "criteria": {"min_correlation": MIN_CORR, "max_median_abs_diff_pp": MAX_MEDIAN_DIFF_PP},
         "summary": summary, "passed": bool(passed), "points": rows,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),

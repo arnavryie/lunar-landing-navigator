@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
   DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, loadSite, loadSites,
-  stateAt,
-  type Site, type SiteSummary, type Thresholds,
+  loadValidation, stateAt,
+  type Site, type SiteSummary, type Thresholds, type Validation,
 } from './data'
 import { HorizonDial } from './HorizonDial'
 import { Planner } from './Planner'
 import { Seasons } from './Seasons'
+import { Sources } from './Sources'
 import { Survival } from './Survival'
 import { Timeline } from './Timeline'
 import { YearStrip } from './YearStrip'
@@ -38,6 +39,28 @@ export default function App() {
     minEarthPct: num('earth', DEFAULT_THRESHOLDS.minEarthPct),
   })
   const [error, setError] = useState('')
+  const [validation, setValidation] = useState<Validation | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [speed, setSpeed] = useState(6) // hours per frame
+
+  useEffect(() => {
+    loadValidation().then(setValidation, () => setValidation(null))
+  }, [])
+
+  // Play: advance time a few frames a second; stops at the end of the data.
+  useEffect(() => {
+    if (!playing || !site) return
+    const id = setInterval(() => {
+      setI((n) => {
+        if (n + speed >= site.samples - 1) {
+          setPlaying(false)
+          return site.samples - 1
+        }
+        return n + speed
+      })
+    }, 120)
+    return () => clearInterval(id)
+  }, [playing, speed, site])
 
   useEffect(() => {
     loadSites()
@@ -82,6 +105,11 @@ export default function App() {
     <div className="app">
       <header className="top">
         <h1>Lunar South Pole Mission Planner</h1>
+        {validation?.horizons.passed && (
+          <a className="badge" href="#sources" title="How the numbers were checked">
+            <span aria-hidden="true">✓</span> Validated against JPL Horizons, max error {validation.horizons.worst_deg.toFixed(5)}°
+          </a>
+        )}
         <label className="site-pick">
           <span>Site</span>
           <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
@@ -142,6 +170,10 @@ export default function App() {
             </section>
           </div>
 
+          <section className="panel" aria-label="Data sources and validation">
+            <Sources v={validation} />
+          </section>
+
           <footer className="foot">
             {site.provenance} Times are to the nearest hour.
           </footer>
@@ -158,6 +190,14 @@ export default function App() {
             />
             <div className="time-row">
               <div className="steps">
+                <button className="play" onClick={() => setPlaying(!playing)} aria-pressed={playing}>
+                  {playing ? 'Pause' : 'Play'}
+                </button>
+                <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed">
+                  <option value={1}>1 h per step</option>
+                  <option value={6}>6 h per step</option>
+                  <option value={24}>1 day per step</option>
+                </select>
                 {STEPS.map((s) => (
                   <button key={s.label} onClick={() => setI(clampI(i + s.h))}>
                     {s.label}
@@ -253,7 +293,7 @@ function SiteFacts({ site }: { site: Site }) {
         <dd>{formatDuration(m.longest_no_earth_h)}</dd>
         <dt>Location</dt>
         <dd>
-          {Math.abs(site.lat).toFixed(3)}° S, {Math.abs(lon).toFixed(2)}° {lon >= 0 ? 'E' : 'W'}
+          {Math.abs(site.lat).toFixed(3)}° {site.lat >= 0 ? 'N' : 'S'}, {Math.abs(lon).toFixed(2)}° {lon >= 0 ? 'E' : 'W'}
         </dd>
         <dt>Terrain height</dt>
         <dd>{site.site_height_m.toFixed(0)} m (+{site.obs_height_m} m mast)</dd>
@@ -262,7 +302,30 @@ function SiteFacts({ site }: { site: Site }) {
       <p className="note">
         Coordinates: <a href={site.source_url} target="_blank" rel="noreferrer">{site.source}</a>
       </p>
+      <ExternalTools site={site} />
     </div>
+  )
+}
+
+/** Open the site in NASA's specialist tools. Their links don't take coordinates reliably, so we copy them
+ *  for the tools' search boxes (QuickMap's search accepts "lat,lon"). */
+function ExternalTools({ site }: { site: Site }) {
+  const [copied, setCopied] = useState(false)
+  const coords = `${site.lat},${site.lon > 180 ? site.lon - 360 : site.lon}`
+  return (
+    <p className="note tools">
+      <button
+        onClick={() => navigator.clipboard.writeText(coords).then(() => setCopied(true), () => setCopied(false))}
+        onBlur={() => setCopied(false)}
+      >
+        {copied ? 'Copied' : 'Copy coordinates'}
+      </button>
+      <span>
+        then search in{' '}
+        <a href="https://quickmap.lroc.im-ldi.com/" target="_blank" rel="noreferrer">LROC QuickMap</a> or{' '}
+        <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noreferrer">NASA Moon Trek</a>
+      </span>
+    </p>
   )
 }
 

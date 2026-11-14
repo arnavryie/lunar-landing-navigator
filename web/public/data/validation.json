@@ -1,0 +1,33 @@
+{
+ "horizons": {
+  "worst_deg": 3.313294288966385e-05,
+  "tolerance_deg": 0.01,
+  "points": 3,
+  "samples": 4326,
+  "period_utc": [
+   "2027-01-01 00:00",
+   "2027-01-31 00:00"
+  ],
+  "passed": true
+ },
+ "illumination": {
+  "points": 80,
+  "sun": {
+   "correlation": 0.9913,
+   "median_abs_diff_pp": 0.31,
+   "mean_diff_pp": 0.62,
+   "p90_abs_diff_pp": 2.02,
+   "max_abs_diff_pp": 15.42,
+   "passed": true
+  },
+  "earth": {
+   "correlation": 0.9949,
+   "median_abs_diff_pp": 0.17,
+   "mean_diff_pp": 0.85,
+   "p90_abs_diff_pp": 3.77,
+   "max_abs_diff_pp": 13.06,
+   "passed": true
+  },
+  "passed": true
+ }
+}

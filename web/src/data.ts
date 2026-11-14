@@ -228,3 +228,19 @@ export function slipBudget(days: DayEval[], p: number): { canSlip: number | null
   while (n < days.length && !ok(n)) n++
   return { canSlip: ok(p) ? k - p : null, nextViable: n < days.length ? n : null }
 }
+
+// ---------- Validation summary (written by pipeline/export_sites.py from validation/*.json) ----------
+
+interface Agreement {
+  correlation: number
+  median_abs_diff_pp: number
+  p90_abs_diff_pp: number
+  max_abs_diff_pp: number
+}
+
+export interface Validation {
+  horizons: { worst_deg: number; tolerance_deg: number; points: number; samples: number; period_utc: [string, string]; passed: boolean }
+  illumination: { points: number; sun: Agreement; earth: Agreement; passed: boolean }
+}
+
+export const loadValidation = () => getJson<Validation>('validation.json')

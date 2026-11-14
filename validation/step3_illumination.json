@@ -1,6 +1,6 @@
 {
  "check": "Sunlit % and Earth-visible % (any part of disc) vs NASA LOLA AVGVISIB_85S_060M_201608 maps",
- "ours": "LDEM_75S_240M horizon, obs height 0.0 m, 18.6 yr hourly from 2009",
+ "ours": "LDEM_60S_240M horizon, obs height 0.0 m, 18.6 yr hourly from 2009",
  "criteria": {
   "min_correlation": 0.9,
   "max_median_abs_diff_pp": 5.0
@@ -666,5 +666,5 @@
    "earth_nasa_pct": 48.99
   }
  ],
- "generated_utc": "2026-11-14T06:45:05+00:00"
+ "generated_utc": "2026-11-14T08:40:46+00:00"
 }

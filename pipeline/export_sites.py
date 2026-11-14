@@ -58,7 +58,22 @@ def main():
         index.append({k: s[k] for k in INDEX_KEYS} | {"metrics": m})
         print(s["id"], m)
     (OUT / "sites.json").write_text(json.dumps(index, indent=1))
+    write_validation_summary()
     print("wrote", OUT)
+
+
+def write_validation_summary():
+    """Small summary of the validation reports for the app's badge and sources panel."""
+    v = HERE.parent / "validation"
+    h = json.loads((v / "step1_horizons.json").read_text(encoding="utf-8"))
+    il = json.loads((v / "step3_illumination.json").read_text(encoding="utf-8"))
+    (OUT / "validation.json").write_text(json.dumps({
+        "horizons": {"worst_deg": h["worst_separation_deg"], "tolerance_deg": h["tolerance_deg"],
+                     "points": len({r["point"] for r in h["results"]}), "samples": sum(r["samples"] for r in h["results"]),
+                     "period_utc": h["period_utc"], "passed": h["passed"]},
+        "illumination": {"points": len(il["points"]), "sun": il["summary"]["sun"], "earth": il["summary"]["earth"],
+                         "passed": il["passed"]},
+    }, indent=1))
 
 
 if __name__ == "__main__":

@@ -228,3 +228,22 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .before-after tbody th { color: var(--muted); font-weight: 400; width: 26%; }
 .before-after td.up { color: #6fcf9f; }
 .before-after td.down { color: #f08a7a; }
+
+/* Quick wins: validation badge, sources panel, external tools, play */
+.top h1 { margin-right: auto; }
+.badge {
+  display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; color: var(--text); text-decoration: none;
+  border: 1px solid var(--rule); border-radius: 999px; padding: 3px 12px;
+}
+.badge:hover { border-color: var(--muted); }
+.badge span { color: #6fcf9f; }
+.sources-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px 40px; }
+.val-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.val-table th, .val-table td { text-align: left; vertical-align: top; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); }
+.val-table th { color: var(--muted); font-weight: 400; width: 38%; }
+.limits, .source-list { margin: 6px 0 0; padding-left: 18px; color: var(--text); font-size: 0.9rem; }
+.limits li, .source-list li { margin-bottom: 6px; }
+.source-list li { display: flex; flex-direction: column; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.play { min-width: 72px; font-weight: 600; }
+.play[aria-pressed='true'] { background: var(--text); color: var(--night); border-color: var(--text); }
