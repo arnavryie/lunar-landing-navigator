@@ -604,6 +604,21 @@ Everything not yet built, as of commit `88bc64d` (Site and plan, Find sites, Glo
 - Add a change-log line here for every finished item (see section 17).
 - **All six start at the same time.** No workstream waits for another: each builds against stubs (marked `// TODO WS<n>`) where it needs someone else's piece. Helpful early merges: #1's first deployment, #5's `mode.ts`, #3's first replay, #6's decisions (name, thresholds, analysis period) on day one.
 
+### 12.2 Solo build order *(added 2026-11-14)*
+Decision: teammates build their own separate version; this branch is built by one person, assuming none of the `docs/tasks/` briefs get done here (they stay as detailed checklists). Their code isn't merged into this branch. Order = demo value per day of work:
+
+| Step | What | From | Size |
+|---|---|---|---|
+| 1 | Read the official 2026 rules: deadline (time zone), submission format, video/slide limits, AI-tool rules | 6.1 | S |
+| 2 | Deploy to GitHub Pages + README | 1.1–1.2 | M |
+| 3 | Finish the slip story: "Find alternatives" button in the planner, best landing date for a site | 4.2, 4.3 | S + M |
+| 4 | Mission replays (2–3, official sources) + validation page | 3.1–3.5 | M + M |
+| 5 | 2–3 "Why?" cards on the numbers judges look at first | 2.1 | M |
+| 6 | Demo script with real numbers, slides, video, submission text | 6.3–6.5 | L |
+| 7 | Only if time remains: Artemis III regions, science-vs-engineering in Compare, print report | 4.1, 5.1, 5.2 | M each |
+
+**Cut for solo:** landing-ellipse spread, Explore/Planner modes, contrast card, phone layout, water-ice, F9, F10.
+
 ---
 
 ## 13. Open decisions
@@ -679,6 +694,7 @@ Newest first. Every new feature, idea or decision gets a line here when it's add
 
 | Date | Change |
 |---|---|
+| 2026-11-14 | Section 12.2 added: solo build order. Teammates build a separate version; this branch is built by one person without relying on the `docs/tasks/` briefs. Order: rules check → deploy + README → finish slip story (find-alternatives button, best landing date) → mission replays + validation page → 2–3 "Why?" cards → pitch. Cut: ellipse, modes, contrast card, phone layout, water-ice, F9, F10. |
 | 2026-11-14 | Task briefs written for the six workstreams: `docs/tasks/00-START-HERE.md` (shared: 60-second project summary, setup incl. data downloads, file-ownership map, `App.tsx` edit spots, git/PR rules, pre-PR checklist) + `01-release-and-quality.md`, `02-explainers.md`, `03-evidence-replays-validation.md`, `04-finder-and-planner.md`, `05-analysis-views.md`, `06-pitch-and-decisions.md` (each: mission, P1/P2/stretch tasks with method hints, owned files, interfaces relied on / provided, done-when). Designed so all six work at once: one owner per file, append-only shared files (`data.ts`, Sources list, change log), per-workstream CSS files, short marked `App.tsx` edits. 12.1 updated to point to them. |
 | 2026-11-14 | Section 12.1 added: all remaining work split into six workstreams (1 release and quality, 2 explainers F8, 3 mission replays + validation page, 4 finder/planner extensions incl. Artemis III regions, 5 analysis views + assessment report, 6 pitch and team decisions), each with P1/P2/stretch tasks, sizes, owned files and a 'done when'; plus working rules (branch per workstream, one owner per file, run check:engine before merging). |
 | 2026-11-14 | F7 MVP done: **Find sites** tab (`web/src/Finder.tsx`, reuses the Map canvas). **Coarse stage:** `pipeline/export_candidates.py` cuts the 85–90°S 240 m grid into 2.9 km tiles and keeps one spot per tile: the pixel with slope ≤ 15° and the most NASA long-term light + Earth view, only where NASA sunlit ≥ 25%. 5,487 spots, each with a coarse horizon (1° azimuth, 240 m steps, int8 at 0.1°) → `data/finder/` (2.1 MB; ~11.5 min on 8 cores, run once). The browser computes Sun/Earth visibility for **the user's exact mission window** (landing date + length, same needs as the F3 planner and shared with it) for every spot in under a second, applies the F3 viability rule, a max-slope filter (default 8°, 240 m slopes) and an optional search radius (10/25/50 km around the selected polar site; the centre is frozen when chosen). **Ranking:** viable before marginal, then a 0–100 score shown as a stacked bar: power 40 (sunlit %), comms 25 (Earth %), darkness 20 (shorter longest night), slope 15 (flatter); weights are stated on screen as our choice. Shortlist of 8, spread ≥ 5 km apart so it offers real alternatives. **Fine stage:** the top 5 are recomputed with the exact engine (0.5° horizon, 120 m steps; Web Worker, now with message ids so several requests can run) and re-ranked; rows say 'exact' or 'estimate' and the panel reports how far the estimates were (e.g. within 0.3 points). Map: viable = filled dot, marginal = ring, not viable = faint speck, shortlist = numbered badges; clicking a row or badge analyses that spot exactly and makes it the selected site (then Open in Site and plan / Add to comparison). **Self-check** added to `npm run check:engine`: coarse vs exact yearly sunlit/Earth % worst 0.28 pp (limit 3), windowed tracks identical to the full-year run. Example: 14-day mission landing 15 Jan 2027 → 223 viable, 103 marginal of 3,887 spots with slope ≤ 8°; within 25 km of Shackleton → 26 viable, none closer than 10 km (the floor is permanently shadowed; the rim is ~10.5 km out). **Limits:** one candidate per 2.9 km tile picked by NASA's long-term averages, so a spot that is only good in a particular window can be missed; 240 m slopes understate lander-scale slopes; analysis year 2027 only. Not done: water-ice option, Artemis III overlay, auto-zoom to the radius, a 'best landing date' search. |
