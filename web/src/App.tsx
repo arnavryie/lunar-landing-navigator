@@ -17,6 +17,7 @@ import { YearStrip } from './YearStrip'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
+const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
 const STEPS = [
   { label: '−1 d', h: -24 },
@@ -48,8 +49,8 @@ export default function App() {
   const [validation, setValidation] = useState<Validation | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'compare' | 'map' | '3d'
-  const [view, setView] = useState<View>((['compare', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'compare' | 'globe' | 'map' | '3d'
+  const [view, setView] = useState<View>((['compare', 'globe', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -164,6 +165,9 @@ export default function App() {
           <button aria-pressed={view === 'site'} onClick={() => setView('site')}>
             Site and plan
           </button>
+          <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}>
+            Globe
+          </button>
           <button aria-pressed={view === 'map'} onClick={() => setView('map')}>
             Map
           </button>
@@ -201,6 +205,14 @@ export default function App() {
 
       {error && <p className="error">{error}</p>}
       {!site && !error && <p className="loading">Loading site data</p>}
+
+      {view === 'globe' && (
+        <section className="panel" aria-label="Whole-Moon globe">
+          <Suspense fallback={<p className="loading">Loading the globe</p>}>
+            <Globe site={site} sites={sites} i={i} onPickSite={setSiteId} onOpen3D={() => setView('3d')} />
+          </Suspense>
+        </section>
+      )}
 
       {view === '3d' && (
         <section className="panel" aria-label="3D south-pole terrain">
@@ -282,7 +294,7 @@ export default function App() {
         </>
       )}
 
-      {site && (view === 'site' || view === '3d') && (
+      {site && (view === 'site' || view === '3d' || view === 'globe') && (
         <section className="time" aria-label="Time">
           <YearStrip site={site} i={i} />
           <input

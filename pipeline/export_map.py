@@ -36,11 +36,11 @@ def crop_n(lat_edge):
 
 
 def png_gray(path, a):
-    """Minimal 8-bit greyscale PNG writer (stdlib only)."""
-    h, w = a.shape
+    """Minimal 8-bit PNG writer (stdlib only): (h, w) greyscale or (h, w, 3) RGB."""
+    h, w = a.shape[:2]
     raw = b"".join(b"\x00" + row.tobytes() for row in a.astype(np.uint8))
     chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
-    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0))
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2 if a.ndim == 3 else 0, 0, 0, 0))
                      + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 

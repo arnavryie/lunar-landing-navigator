@@ -1,11 +1,12 @@
 import type { Validation } from './data'
 
 const SOURCES = [
-  { name: 'NASA LRO LOLA gridded topography (PDS): LDEM_60S_240M, LDEM_16', use: 'Terrain horizons', url: 'https://pds-geosciences.wustl.edu/missions/lro/lola.htm' },
+  { name: 'NASA LRO LOLA gridded topography (PDS): LDEM_60S_240M, LDEM_16', use: 'Terrain horizons; globe relief shading', url: 'https://pds-geosciences.wustl.edu/missions/lro/lola.htm' },
   { name: 'JPL DE421 ephemeris and NAIF lunar frame kernels', use: 'Sun and Earth positions (computed with Skyfield)', url: 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/' },
   { name: 'Skyfield', use: 'Ephemeris library', url: 'https://rhodesmill.org/skyfield/' },
   { name: 'JPL Horizons', use: 'Reference for checking Sun and Earth positions', url: 'https://ssd.jpl.nasa.gov/horizons/' },
   { name: 'NASA PGDA Lunar Polar Illumination (Mazarico et al. 2011)', use: 'Reference for checking sunlight and Earth visibility', url: 'https://pgda.gsfc.nasa.gov/products/69' },
+  { name: 'NASA SVS CGI Moon Kit (LROC WAC colour, lroc_color_2k.jpg)', use: 'Globe surface colour', url: 'https://svs.gsfc.nasa.gov/4720/' },
   { name: 'LROC, NASA, IAU Gazetteer of Planetary Nomenclature', use: 'Site coordinates (cited per site)', url: 'https://planetarynames.wr.usgs.gov/' },
 ]
 

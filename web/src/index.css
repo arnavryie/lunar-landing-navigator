@@ -301,3 +301,12 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .three-legend > span { display: flex; align-items: center; gap: 6px; }
 .field.exag { grid-template-columns: 1fr 120px 34px; }
 .field.exag input { padding: 0; accent-color: var(--text); }
+
+/* F6c globe */
+.globe-labels { position: absolute; inset: 0; pointer-events: none; }
+.globe-label { font-size: 0.8rem; color: var(--text); background: rgb(17 20 24 / 0.75); padding: 1px 6px; border-radius: var(--radius-s); white-space: nowrap; }
+.globe-label.is-sun, .globe-label.is-earth { margin-top: -2.4em; } /* sits above the model */
+.globe-label.is-sun { color: var(--sun); }
+.globe-label.is-earth { color: var(--earth); }
+.globe-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-variant-numeric: tabular-nums; }
+.globe-facts span { color: var(--muted); }
