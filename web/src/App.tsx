@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
-  KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, loadSite, loadSites,
+  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, loadSite, loadSites,
   stateAt,
-  type Site, type SiteSummary,
+  type Site, type SiteSummary, type Thresholds,
 } from './data'
 import { HorizonDial } from './HorizonDial'
+import { Planner } from './Planner'
 import { Seasons } from './Seasons'
 import { Survival } from './Survival'
 import { Timeline } from './Timeline'
@@ -17,21 +18,45 @@ const STEPS = [
   { label: '+1 d', h: 24 },
 ]
 
+// Permalink: the whole scenario lives in the URL query (?site=&t=&plan=&m=&sun=&dark=&earth=).
+const params = new URLSearchParams(location.search)
+const num = (k: string, d: number) => {
+  const v = Number(params.get(k))
+  return params.has(k) && Number.isFinite(v) ? v : d
+}
+
 export default function App() {
   const [sites, setSites] = useState<SiteSummary[]>([])
   const [siteId, setSiteId] = useState('')
   const [site, setSite] = useState<Site | null>(null)
-  const [i, setI] = useState(0)
+  const [i, setI] = useState(num('t', 0))
+  const [planned, setPlanned] = useState(num('plan', 0))
+  const [th, setTh] = useState<Thresholds>({
+    missionDays: num('m', DEFAULT_THRESHOLDS.missionDays),
+    minSunPct: num('sun', DEFAULT_THRESHOLDS.minSunPct),
+    maxDarkH: num('dark', DEFAULT_THRESHOLDS.maxDarkH),
+    minEarthPct: num('earth', DEFAULT_THRESHOLDS.minEarthPct),
+  })
   const [error, setError] = useState('')
 
   useEffect(() => {
     loadSites()
       .then((s) => {
         setSites(s)
-        setSiteId(s[0]?.id ?? '')
+        const wanted = params.get('site')
+        setSiteId(s.some((x) => x.id === wanted) ? wanted! : (s[0]?.id ?? ''))
       })
       .catch((e) => setError(String(e.message ?? e)))
   }, [])
+
+  useEffect(() => {
+    if (!siteId) return
+    const q = new URLSearchParams({
+      site: siteId, t: String(i), plan: String(planned),
+      m: String(th.missionDays), sun: String(th.minSunPct), dark: String(th.maxDarkH), earth: String(th.minEarthPct),
+    })
+    history.replaceState(null, '', `?${q}`)
+  }, [siteId, i, planned, th])
 
   useEffect(() => {
     if (!siteId) return
@@ -99,6 +124,10 @@ export default function App() {
               <SiteFacts site={site} />
             </section>
           </main>
+
+          <section className="panel" aria-label="Landing date planner">
+            <Planner site={site} i={i} setI={setI} planned={planned} setPlanned={setPlanned} th={th} setTh={setTh} />
+          </section>
 
           <section className="panel" aria-label="Availability timeline">
             <Timeline site={site} i={i} onPick={setI} />

@@ -142,3 +142,89 @@ export const formatDate = (d: Date) => d.toISOString().slice(0, 10)
 export function tipStyle(f: number) {
   return { left: `${f * 100}%`, transform: `translateX(${f < 0.15 ? '0' : f > 0.85 ? '-100%' : '-50%'})` }
 }
+
+// ---------- F3: viability of a landing date (pure counting over the precomputed hourly data) ----------
+
+export interface Thresholds {
+  missionDays: number
+  minSunPct: number
+  maxDarkH: number
+  minEarthPct: number
+}
+
+// Example defaults, always shown and editable; the team still has to agree real ones (open decision in the plan).
+export const DEFAULT_THRESHOLDS: Thresholds = { missionDays: 14, minSunPct: 60, maxDarkH: 48, minEarthPct: 50 }
+
+/** How far a marginal date may miss a threshold. */
+export const MARGIN = { sunPct: 10, earthPct: 10, darkFactor: 1.5 }
+
+export type Viability = 'viable' | 'marginal' | 'not' | 'nodata'
+
+export const VIABILITY_LABEL: Record<Viability, string> = {
+  viable: 'Viable',
+  marginal: 'Marginal',
+  not: 'Not viable',
+  nodata: 'Mission runs past the data',
+}
+
+export interface WindowStats {
+  sunPct: number
+  earthPct: number
+  longestDarkH: number
+}
+
+/** Sunlit %, Earth-visible % and longest darkness over [start, start + hours); null if it runs past the data. */
+export function windowStats(site: Site, start: number, hours: number): WindowStats | null {
+  if (start < 0 || start + hours > site.samples) return null
+  let sun = 0
+  let earth = 0
+  let run = 0
+  let longest = 0
+  for (let j = start; j < start + hours; j++) {
+    if (site.sun.frac[j] > 0) {
+      sun++
+      run = 0
+    } else longest = Math.max(longest, ++run)
+    if (site.earth.frac[j] > 0) earth++
+  }
+  return { sunPct: (100 * sun) / hours, earthPct: (100 * earth) / hours, longestDarkH: longest }
+}
+
+export function viability(s: WindowStats | null, t: Thresholds): Viability {
+  if (!s) return 'nodata'
+  if (s.sunPct >= t.minSunPct && s.longestDarkH <= t.maxDarkH && s.earthPct >= t.minEarthPct) return 'viable'
+  if (
+    s.sunPct >= t.minSunPct - MARGIN.sunPct &&
+    s.longestDarkH <= t.maxDarkH * MARGIN.darkFactor &&
+    s.earthPct >= t.minEarthPct - MARGIN.earthPct
+  )
+    return 'marginal'
+  return 'not'
+}
+
+export interface DayEval {
+  status: Viability
+  stats: WindowStats | null
+}
+
+/** One evaluation per candidate landing date (landing at 00:00 UTC). */
+export function dailyViability(site: Site, t: Thresholds): DayEval[] {
+  const hours = t.missionDays * 24
+  const out: DayEval[] = []
+  for (let d = 0; d * 24 < site.samples; d++) {
+    const stats = windowStats(site, d * 24, hours)
+    out.push({ status: viability(stats, t), stats })
+  }
+  return out
+}
+
+/** Slip budget from planned day p: how many days it can slip and stay viable (null if p itself isn't viable),
+ *  and the first viable day after that viable run (or after p). */
+export function slipBudget(days: DayEval[], p: number): { canSlip: number | null; nextViable: number | null } {
+  const ok = (d: number) => days[d]?.status === 'viable'
+  let k = p
+  if (ok(p)) while (ok(k + 1)) k++
+  let n = k + 1
+  while (n < days.length && !ok(n)) n++
+  return { canSlip: ok(p) ? k - p : null, nextViable: n < days.length ? n : null }
+}
