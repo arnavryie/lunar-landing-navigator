@@ -22,7 +22,12 @@ const SHORTLIST = 8
 const EXACT = 5
 const SPREAD_KM = 5 // shortlisted spots at least this far apart, so the list offers real alternatives
 /** Score weights, shown on screen. Only spots that are viable or marginal are scored. */
-const W = { power: 0.4, comms: 0.25, dark: 0.2, slope: 0.15 }
+const W_BASE = { power: 0.4, comms: 0.25, dark: 0.2, slope: 0.15, landing: 0 }
+/** With the landing ellipse on (the default), a quarter of the score is the landing area. */
+const W_LAND = { power: 0.3, comms: 0.2, dark: 0.15, slope: 0.1, landing: 0.25 }
+type Part = keyof typeof W_BASE
+const PARTS = Object.keys(W_BASE) as Part[]
+const VRANK = { ok: 3, caution: 2, fail: 1 } as const
 const RANK: Record<Viability, number> = { viable: 3, marginal: 2, not: 1, nodata: 0 }
 const ELLIPSE_POINTS = 12 // grid points per landing ellipse (+ the target and 12 on the edge): ~25 exact points per spot
 
@@ -36,6 +41,7 @@ interface EllCheck {
   worstDark: number
   steep: number
   chance: number // chance of landing on viable ground (points weighted by the landing bell curve)
+  target?: WindowStats | null // the spot itself, computed exactly as the ellipse's first point
 }
 
 interface Cands {
@@ -66,7 +72,7 @@ interface Hit {
   stats: WindowStats | null
   v: Viability
   score: number
-  parts: Record<keyof typeof W, number>
+  parts: Record<Part, number>
   exact?: boolean
   ell?: { good: number; flat: number } // quick landing-area screen (see ellipseScreen)
 }
@@ -94,14 +100,17 @@ function ellipseScreen(m: MapData, slope: Float32Array, lat: number, lon: number
   return n ? { good: good / n, flat: flat / n } : { good: 0, flat: 0 }
 }
 
-function score(s: WindowStats, slope: number, th: Thresholds, maxSlope: number) {
+/** landing = chance of landing on suitable ground (or the flat-ground share as an estimate); null = not used. */
+function score(s: WindowStats, slope: number, th: Thresholds, maxSlope: number, landing: number | null = null) {
+  const W = landing === null ? W_BASE : W_LAND
   const parts = {
     power: s.sunPct / 100,
     comms: s.earthPct / 100,
     dark: 1 - Math.min(1, s.longestDarkH / Math.max(1, th.maxDarkH * MARGIN.darkFactor)),
     slope: 1 - Math.min(1, slope / Math.max(0.1, maxSlope)),
+    landing: landing ?? 0,
   }
-  const total = 100 * (Object.keys(W) as (keyof typeof W)[]).reduce((a, k) => a + W[k] * parts[k], 0)
+  const total = 100 * PARTS.reduce((a, k) => a + W[k] * parts[k], 0)
   return { parts, total }
 }
 
@@ -145,7 +154,7 @@ export function Finder(p: Props) {
   const [exact, setExact] = useState<{ key: string; hits: Map<number, WindowStats | null>; done: number } | null>(null)
   const [nearRegions, setNearRegions] = useState(false) // radius is around NASA's candidate regions, not the site
   const [regions, setRegions] = useState<Region[]>([])
-  const [ellOn, setEllOn] = useState(false)
+  const [ellOn, setEllOn] = useState(true) // landing-area suitability is part of the ranking by default
   const [ellKm, setEllKm] = useState(ellipseSaved.spec.lengthKm) // same size as the Map's ellipse to start with
   const [ell, setEll] = useState<{ key: string; res: Map<number, EllCheck> } | null>(null)
   const [map, setMap] = useState<MapData | null>(null)
@@ -191,13 +200,18 @@ export function Finder(p: Props) {
       }
       const v = viability(stats, th)
       const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, slope, th, maxSlope) : null
-      out.push({ k, lat, lon, slope, km, near, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? { power: 0, comms: 0, dark: 0, slope: 0 } })
+      out.push({ k, lat, lon, slope, km, near, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? { power: 0, comms: 0, dark: 0, slope: 0, landing: 0 } })
     }
     // Landing-ellipse mode: among spots whose centre works, prefer those with the most flat, long-term-lit ground
     // around them, so the shortlist is chosen for the whole landing area, not just its centre.
     if (ellOn && map && ellKm > 0) {
       const slope = slopeGrid(map)
-      for (const h of out) if (h.v === 'viable' || h.v === 'marginal') h.ell = ellipseScreen(map, slope, h.lat, h.lon, ellKm, maxSlope)
+      for (const h of out)
+        if (h.stats && (h.v === 'viable' || h.v === 'marginal')) {
+          h.ell = ellipseScreen(map, slope, h.lat, h.lon, ellKm, maxSlope)
+          const sc = score(h.stats, h.slope, th, maxSlope, h.ell.flat) // landing part: flat-ground share until checked
+          ;[h.score, h.parts] = [sc.total, sc.parts]
+        }
       out.sort((a, b) => RANK[b.v] - RANK[a.v] || (b.ell?.good ?? 0) - (a.ell?.good ?? 0) || b.score - a.score)
     } else out.sort(rankSort)
     const picks: Hit[] = []
@@ -230,6 +244,7 @@ export function Finder(p: Props) {
 
   // Landing ellipse: check a circle as wide as the ellipse's long side around every shortlisted spot
   // (the approach direction isn't known while choosing a site, so a circle covers every direction).
+  const W = ellOn ? W_LAND : W_BASE
   const ellKey = `${key}|${ellKm}`
   useEffect(() => {
     if (!coarse || !ellOn || ellKm <= 0) return setEll(null)
@@ -245,6 +260,7 @@ export function Finder(p: Props) {
           c.done++
           if (pt) {
             const { stats, v, steep } = judge(pt, i, hours, th, maxSlope)
+            if (j === 0) c.target = stats
             if (steep) c.steep++
             if (v === 'viable') [c.viable, c.chance] = [c.viable + 1, c.chance + weights[j]]
             if (v === 'marginal') c.marginal++
@@ -266,18 +282,23 @@ export function Finder(p: Props) {
   const ranked = useMemo(() => {
     if (!coarse) return []
     const list = coarse.picks.map((h) => {
-      if (exact?.key !== key || !exact.hits.has(h.k)) return h
-      const stats = exact.hits.get(h.k) ?? null
-      const v = viability(stats, th)
-      const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, h.slope, th, maxSlope) : null
-      return { ...h, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? h.parts, exact: true }
+      const c = ellRes?.get(h.k)
+      const checked = !!c && c.done === c.total
+      // Exact numbers for the spot itself: from the exact stage, or from the landing check's first point.
+      const fromEll = checked && c!.target !== undefined
+      const isExact = (exact?.key === key && exact.hits.has(h.k)) || fromEll
+      const stats = fromEll ? (c!.target ?? null) : isExact ? (exact!.hits.get(h.k) ?? null) : h.stats
+      const v = isExact ? viability(stats, th) : h.v
+      // Landing part of the score: the checked chance, else the flat-ground estimate (ellipse mode only).
+      const landing = ellOn ? (checked ? c!.chance : (h.ell?.flat ?? 0)) : null
+      const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, h.slope, th, maxSlope, landing) : null
+      return { ...h, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? h.parts, exact: isExact || h.exact, landingChecked: checked }
     })
     const out = list.sort(rankSort).filter((h) => h.v === 'viable' || h.v === 'marginal')
-    // Once every ellipse is checked, the best chance of landing on ground that meets the needs comes first
-    // (stable sort keeps the score order for ties).
-    if (ellDone && ellRes) out.sort((a, b) => ellRes.get(b.k)!.chance - ellRes.get(a.k)!.chance)
+    // Once every landing area is checked: suitability first (meets needs, some risk, too risky), then the score.
+    if (ellDone && ellRes) out.sort((a, b) => VRANK[verdictOf(ellRes.get(b.k)!.chance)] - VRANK[verdictOf(ellRes.get(a.k)!.chance)] || b.score - a.score)
     return out
-  }, [coarse, exact, key, th, maxSlope, ellDone, ellRes])
+  }, [coarse, exact, key, th, maxSlope, ellDone, ellRes, ellOn])
 
   const counts = useMemo(() => {
     const c = { viable: 0, marginal: 0, not: 0, nodata: 0 }
@@ -334,7 +355,7 @@ export function Finder(p: Props) {
                   </span>
                   {ellRes?.get(h.k) && <EllipseLine c={ellRes.get(h.k)!} km={ellKm} maxSlope={maxSlope} />}
                   <span className="score-bar" aria-label={`Score ${h.score.toFixed(0)} of 100`}>
-                    {(Object.keys(W) as (keyof typeof W)[]).map((c) => (
+                    {PARTS.filter((c) => W[c]).map((c) => (
                       <span key={c} className={`sb-${c}`} style={{ width: `${W[c] * h.parts[c] * 100}%` }} title={`${c}: ${(W[c] * h.parts[c] * 100).toFixed(0)} of ${W[c] * 100}`} />
                     ))}
                   </span>
@@ -342,6 +363,7 @@ export function Finder(p: Props) {
                 <span className="short-score">
                   {h.score.toFixed(0)}
                   <span className="muted">{h.exact ? 'exact' : 'estimate'}</span>
+                  {ellOn && <LandingBadge c={ellRes?.get(h.k)} />}
                 </span>
               </button>
             </li>
@@ -366,10 +388,13 @@ export function Finder(p: Props) {
       {coarse && ranked.length > 0 && (
         <p className="chart-note">
           Score out of 100: power {W.power * 100} (sunlit %), comms {W.comms * 100} (Earth in view %), darkness {W.dark * 100} (shorter
-          longest night), slope {W.slope * 100} (flatter). Weights are our choice, shown so you can disagree.{' '}
+          longest night), slope {W.slope * 100} (flatter at the target)
+          {W.landing ? `, landing ${W.landing * 100} (chance of landing on suitable ground across the ${ellKm} km ellipse; until checked, the share of flat ground)` : ''}
+          . Weights are our choice, shown so you can disagree.
+          {ellOn && ' The list puts landing areas that meet your needs first, then some risk, then too risky; the score orders each group.'}{' '}
           {checking > 0 && exact && exact.done < checking ? `Checking the top ${checking} exactly… ${exact.done}/${checking}.` : ''}
           {drift !== null && exact && exact.done >= checking ? ` Top ${exact.hits.size} recomputed exactly; quick estimates were within ${drift.toFixed(1)} points.` : ''}
-          {ellRes && (ellDone ? ' Sorted by how much of each landing ellipse is viable, then by score.' : ' Checking landing ellipses; the list re-sorts when all are done.')}
+          {ellRes && !ellDone && ' Checking landing areas; the list re-sorts by suitability when all are done.'}
         </p>
       )}
 
@@ -377,7 +402,7 @@ export function Finder(p: Props) {
         <legend>Landing ellipse</legend>
         <label className="radio">
           <input type="checkbox" checked={ellOn} onChange={(e) => setEllOn(e.target.checked)} />
-          Choose spots for their whole landing area
+          Include the landing ellipse (where the lander may actually touch down)
         </label>
         {ellOn && (
           <>
@@ -505,6 +530,17 @@ function EllipseLine({ c, km, maxSlope }: { c: EllCheck; km: number; maxSlope: n
       ({km} km; {c.viable} of {c.total} points viable{c.marginal ? `, ${c.marginal} marginal` : ''}) · worst sunlit{' '}
       {c.worstSun.toFixed(0)}%, worst dark {c.worstDark ? formatDuration(c.worstDark) : '0 h'} ·{' '}
       {c.steep ? `${c.steep} steeper than ${maxSlope}°` : `slope ≤ ${maxSlope}° everywhere`}
+    </span>
+  )
+}
+
+/** Landing suitability next to the score: verdict colour and chance once checked. */
+function LandingBadge({ c }: { c?: EllCheck }) {
+  if (!c || c.done < c.total) return <span className="land-badge muted">landing: checking</span>
+  const v = verdictOf(c.chance)
+  return (
+    <span className={`land-badge lb-${v}`} title={`${VERDICT_LABEL[v]}: ${(100 * c.chance).toFixed(0)}% chance of landing on suitable ground`}>
+      {v === 'ok' ? '●' : v === 'caution' ? '○' : '×'} landing {(100 * c.chance).toFixed(0)}%
     </span>
   )
 }

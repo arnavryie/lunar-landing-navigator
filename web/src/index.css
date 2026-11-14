@@ -357,3 +357,8 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .ell-line.ell-ok strong { color: #3fb27f; }
 .ell-line.ell-caution strong { color: #e6c15a; }
 .ell-line.ell-fail strong { color: #e8776f; }
+.sb-landing { background: #3fb27f; }
+.land-badge { font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+.land-badge.lb-ok { color: #3fb27f; }
+.land-badge.lb-caution { color: #e6c15a; }
+.land-badge.lb-fail { color: #e8776f; }
