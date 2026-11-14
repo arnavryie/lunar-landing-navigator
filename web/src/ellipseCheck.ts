@@ -15,7 +15,10 @@ export const DEFAULT_ELLIPSE: EllipseSpec = { lengthKm: 4, widthKm: 2, headingDe
 
 export type Run = { key: string; points: (Sample | null)[]; total: number; spacingM: number }
 // Inputs and results outlive the panel, so switching to the 3D tab and back keeps them.
-export const saved: { spec: EllipseSpec; circle: boolean; maxSlope: number; run: Run | null } = { spec: DEFAULT_ELLIPSE, circle: false, maxSlope: 8, run: null }
+// Find sites and the Map share the slope limit and ellipse size through it too; autoRun = analyse as soon as the Map opens.
+export const saved: { spec: EllipseSpec; circle: boolean; maxSlope: number; run: Run | null; autoRun: boolean } = {
+  spec: DEFAULT_ELLIPSE, circle: false, maxSlope: 8, run: null, autoRun: false,
+}
 
 /** Compute sample points exactly, 8 at a time so a cancelled run (alive() = false) stops queuing work. */
 export async function computeSamples(points: LatLon[], alive: () => boolean, onPoint: (j: number, p: Sample | null) => void) {

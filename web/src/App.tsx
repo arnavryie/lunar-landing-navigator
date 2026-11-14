@@ -250,6 +250,7 @@ export default function App() {
               pickError={pickError}
               onOpenSite={() => setView('site')}
               onCompare={addToCompare}
+              onOpenMap={() => setView('map')}
               initialRadius={findRadius}
             />
           )}

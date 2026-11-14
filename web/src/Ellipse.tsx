@@ -50,6 +50,14 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
     })
   }
 
+  // Opened from Find sites ("See its landing area on the Map"): analyse right away.
+  useEffect(() => {
+    if (saved.autoRun && usable) {
+      saved.autoRun = false
+      analyse()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Judge every finished point for the current landing time and mission needs (no recompute needed when those change).
   const judged = useMemo(() => {
     if (!current) return []

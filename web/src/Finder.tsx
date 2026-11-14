@@ -67,30 +67,30 @@ interface Hit {
   score: number
   parts: Record<keyof typeof W, number>
   exact?: boolean
-  ell?: { lit: number; flat: number } // quick landing-area screen (see ellipseScreen)
+  ell?: { good: number; flat: number } // quick landing-area screen (see ellipseScreen)
 }
 
 /** Quick landing-area screen from the 240 m map layers: over a circle `km` wide around the spot,
- *  `flat` = share of ground no steeper than maxSlope, `lit` = average NASA long-term sunlit % counting too-steep
- *  ground as 0. Pixels off the map or without NASA data are skipped. Used only to choose which spots to check exactly. */
+ *  `flat` = share of ground no steeper than maxSlope, `good` = average of 0.6 x NASA long-term sunlit % + 0.4 x Earth
+ *  in view % (the finder's power : comms weights), counting too-steep ground as 0. Pixels off the map or without NASA data are skipped. Used only to choose which spots to check exactly. */
 function ellipseScreen(m: MapData, slope: Float32Array, lat: number, lon: number, km: number, maxSlope: number) {
   const [r0, c0] = polarRowCol(lat, lon, m.n, m.scale)
   const R = (km * 500) / m.scale
   let n = 0
   let flat = 0
-  let lit = 0
+  let good = 0
   for (let r = Math.ceil(r0 - R); r <= r0 + R; r++)
     for (let c = Math.ceil(c0 - R); c <= c0 + R; c++) {
       if ((r - r0) ** 2 + (c - c0) ** 2 > R * R || r < 1 || c < 1 || r >= m.n - 1 || c >= m.n - 1) continue
       const k = r * m.n + c
-      if (m.sun[k] === 255) continue
+      if (m.sun[k] === 255 || m.earth[k] === 255) continue
       n++
       if (slope[k] <= maxSlope) {
         flat++
-        lit += m.sun[k]
+        good += 0.6 * m.sun[k] + 0.4 * m.earth[k]
       }
     }
-  return n ? { lit: lit / n, flat: flat / n } : { lit: 0, flat: 0 }
+  return n ? { good: good / n, flat: flat / n } : { good: 0, flat: 0 }
 }
 
 function score(s: WindowStats, slope: number, th: Thresholds, maxSlope: number) {
@@ -125,6 +125,8 @@ interface Props {
   pickError: string
   onOpenSite: () => void
   onCompare: () => void
+  /** Show the selected spot's landing ellipse on the Map tab. */
+  onOpenMap?: () => void
   /** Open with a radius search (km) around the selected site, e.g. from the planner's "Find other spots". */
   initialRadius?: number
 }
@@ -133,7 +135,7 @@ export function Finder(p: Props) {
   const { site, i, th } = p
   const [data, setData] = useState<Cands | null>(null)
   const [err, setErr] = useState('')
-  const [maxSlope, setMaxSlope] = useState(8)
+  const [maxSlope, setMaxSlope] = useState(Math.min(15, ellipseSaved.maxSlope)) // shared with the Map's landing ellipse
   const polar = site && site.lat <= -84 ? site : null // radius search needs a polar site
   const [radius, setRadius] = useState(polar ? (p.initialRadius ?? 0) : 0) // 0 = whole 85-90 S region
   const [anchor, setAnchor] = useState<{ name: string; lat: number; lon: number } | null>(
@@ -146,6 +148,10 @@ export function Finder(p: Props) {
   const [ellKm, setEllKm] = useState(ellipseSaved.spec.lengthKm) // same size as the Map's ellipse to start with
   const [ell, setEll] = useState<{ key: string; res: Map<number, EllCheck> } | null>(null)
   const [map, setMap] = useState<MapData | null>(null)
+  useEffect(() => {
+    ellipseSaved.maxSlope = maxSlope
+    ellipseSaved.spec = { ...ellipseSaved.spec, lengthKm: ellKm }
+  }, [maxSlope, ellKm])
 
   useEffect(() => {
     ;(cached ??= load()).then(setData, (e) => setErr(String(e.message ?? e)))
@@ -191,7 +197,7 @@ export function Finder(p: Props) {
     if (ellOn && map && ellKm > 0) {
       const slope = slopeGrid(map)
       for (const h of out) if (h.v === 'viable' || h.v === 'marginal') h.ell = ellipseScreen(map, slope, h.lat, h.lon, ellKm, maxSlope)
-      out.sort((a, b) => RANK[b.v] - RANK[a.v] || (b.ell?.lit ?? 0) - (a.ell?.lit ?? 0) || b.score - a.score)
+      out.sort((a, b) => RANK[b.v] - RANK[a.v] || (b.ell?.good ?? 0) - (a.ell?.good ?? 0) || b.score - a.score)
     } else out.sort(rankSort)
     const picks: Hit[] = []
     for (const h of out) {
@@ -380,7 +386,7 @@ export function Finder(p: Props) {
             <p className="chart-note">
               The approach direction isn't fixed while choosing a site, so each spot's landing area is a circle this wide
               (covers the ellipse in any direction). Step 1, every spot: the shortlist favours spots with the most flat
-              (≤ slope limit), long-term-sunlit ground around them (NASA 240 m layers). Step 2, the shortlist: ~21 points per
+              (≤ slope limit) ground with long-term sunlight and Earth view around them (NASA 240 m layers). Step 2, the shortlist: ~21 points per
               spot computed exactly for your dates, about 4 s per spot; the list then sorts by how much of each area is
               viable. For a set direction and full detail, pick a spot and use the Map tab.
             </p>
@@ -446,6 +452,16 @@ export function Finder(p: Props) {
             <div className="pick-actions">
               <button onClick={p.onOpenSite}>Open in Site and plan</button>
               <button onClick={p.onCompare}>Add to comparison</button>
+              {ellOn && p.onOpenMap && (
+                <button
+                  onClick={() => {
+                    Object.assign(ellipseSaved, { circle: true, autoRun: true })
+                    p.onOpenMap!()
+                  }}
+                >
+                  See its landing area on the Map
+                </button>
+              )}
             </div>
           </>
         )}
