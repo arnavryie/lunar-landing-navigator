@@ -217,7 +217,7 @@ export default function App() {
               }
             }}
           >
-            <optgroup label="🚀 Artemis III Candidate Landing Sites">
+            <optgroup label="Artemis III Candidate Landing Sites">
               {ARTEMIS_3_SITES.map((a) => (
                 <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
                   {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})

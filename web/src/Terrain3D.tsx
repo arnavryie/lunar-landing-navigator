@@ -489,7 +489,7 @@ export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; 
           ))}
         </div>
                 <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>🚀 Artemis III Candidate Landing Sites</legend>
+          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites</legend>
           <p className="chart-note" style={{ margin: '0 0 8px' }}>
             NASA downselected 9 landing zones (Oct 2024). Click any site to view minerals, water-ice potential, and ISRU resources:
           </p>
@@ -539,7 +539,7 @@ export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; 
               <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
 
               <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#e2e8f0' }}>💎 Mineral Composition:</strong>
+                <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
                   {selectedArtemis.minerals.primary.map((m) => (
                     <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 5px', borderRadius: '3px', fontSize: '0.7rem' }}>
@@ -551,7 +551,7 @@ export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; 
               </div>
 
               <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#38bdf8' }}>🧊 Water-Ice & Volatiles:</strong>
+                <strong style={{ color: '#38bdf8' }}>Water-Ice & Volatiles:</strong>
                 <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
                 <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                   Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
@@ -559,7 +559,7 @@ export function Terrain3D({ site, sites, i, onPickPoint }: { site: Site | null; 
               </div>
 
               <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                <strong style={{ color: '#f59e0b' }}>⚡ ISRU Resources:</strong>
+                <strong style={{ color: '#f59e0b' }}>ISRU Resources:</strong>
                 <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
                 <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                   Elements: {selectedArtemis.resources.isru_elements.join(' · ')}

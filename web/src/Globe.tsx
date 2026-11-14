@@ -323,7 +323,7 @@ export function Globe({ site, sites, i, onPickSite, onOpen3D }: { site: Site | n
           zoom, click a marker to pick a site. Dashed ring: 80° S, the 3D terrain area.
         </p>
                 <fieldset className="thresholds" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>🚀 Artemis III Candidate Landing Sites</legend>
+          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites</legend>
           <div className="slips" style={{ gap: '6px' }}>
             {ARTEMIS_3_SITES.map((a) => (
               <button

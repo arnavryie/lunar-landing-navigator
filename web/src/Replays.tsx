@@ -76,11 +76,11 @@ export function Replays({ currentSite, currentHourIndex, onLoadReplay }: Replays
                   </div>
                   <div className="live-chips">
                     <span className={`eval-chip ${s.sun.frac[i] > 0 ? 'sunlit' : 'dark'}`}>
-                      {s.sun.frac[i] > 0 ? `☀️ Sunlit (${formatDeg(s.sun.el[i])})` : '🌑 Sun blocked'}
+                      {s.sun.frac[i] > 0 ? `Sunlit (${formatDeg(s.sun.el[i])})` : 'Sun blocked'}
                       {hToSunset !== null && ` · ${s.sun.frac[i] > 0 ? 'sunset' : 'sunrise'} in ${formatDuration(hToSunset)}`}
                     </span>
                     <span className={`eval-chip ${s.earth.frac[i] > 0 ? 'earth' : 'no-earth'}`}>
-                      {s.earth.frac[i] > 0 ? `🌍 Earth in view (${formatDeg(s.earth.el[i])})` : '🚫 Earth hidden'}
+                      {s.earth.frac[i] > 0 ? `Earth in view (${formatDeg(s.earth.el[i])})` : 'Earth hidden'}
                       {hToEarthset !== null && ` · ${s.earth.frac[i] > 0 ? 'Earthset' : 'Earthrise'} in ${formatDuration(hToEarthset)}`}
                     </span>
                   </div>
