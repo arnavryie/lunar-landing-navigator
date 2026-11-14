@@ -335,20 +335,39 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
   pointer-events: auto;
   cursor: pointer;
   user-select: none;
-  transition: all 0.15s ease-in-out;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease;
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+  visibility: hidden;
 }
-.globe-label.is-artemis:hover {
-  background: rgba(14, 116, 144, 0.88);
+.globe-label.is-artemis.is-hovered {
+  opacity: 0.95;
+  visibility: visible;
+  background: rgba(14, 116, 144, 0.92);
   border-color: #38bdf8;
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.45);
+  transform: translateY(0) scale(1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.45);
+  z-index: 15;
 }
 .globe-label.is-artemis.is-selected {
+  opacity: 1;
+  visibility: visible;
   color: #ffffff;
-  background: rgba(180, 83, 9, 0.88);
+  background: rgba(180, 83, 9, 0.92);
   border: 1.5px solid #fbbf24;
   box-shadow: 0 0 16px rgba(251, 191, 36, 0.6), 0 2px 8px rgba(0, 0, 0, 0.7);
-  z-index: 10;
+  transform: translateY(0) scale(1);
+  z-index: 20;
+  animation: badgePop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.globe-label.is-artemis.show-always {
+  opacity: 0.88;
+  visibility: visible;
+  transform: translateY(0) scale(0.95);
+}
+@keyframes badgePop {
+  0% { transform: translateY(10px) scale(0.8); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 .globe-label.is-artemis .artemis-badge-dot {
   color: #38bdf8;

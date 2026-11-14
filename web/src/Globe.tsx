@@ -69,6 +69,48 @@ function label(text: string, cls = '') {
   return new CSS2DObject(el)
 }
 
+function createArtemisLabel(a: ArtemisSiteData, isSel: boolean, onSelect: () => void, showAlways: boolean) {
+  const el = document.createElement('div')
+  el.className = `globe-label is-artemis ${isSel ? 'is-selected' : ''} ${showAlways ? 'show-always' : ''}`
+  el.setAttribute('role', 'button')
+  el.setAttribute('tabindex', '0')
+  el.setAttribute('aria-label', `${a.name} Artemis III candidate landing site`)
+
+  const dot = document.createElement('span')
+  dot.className = 'artemis-badge-dot'
+  dot.textContent = isSel ? '◆' : '◇'
+  el.appendChild(dot)
+
+  const nameSpan = document.createElement('span')
+  nameSpan.className = 'artemis-badge-name'
+  nameSpan.textContent = a.name
+  el.appendChild(nameSpan)
+
+  const tagSpan = document.createElement('span')
+  tagSpan.className = 'artemis-badge-tag'
+  tagSpan.textContent =
+    a.resources.water_ice_potential === 'Exceptional'
+      ? 'EXCEPTIONAL ICE'
+      : a.resources.water_ice_potential === 'Strategic'
+      ? 'STRATEGIC ISRU'
+      : `${a.resources.water_ice_potential.toUpperCase()} ICE`
+  el.appendChild(tagSpan)
+
+  el.onclick = (e) => {
+    e.stopPropagation()
+    onSelect()
+  }
+  el.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      onSelect()
+    }
+  }
+
+  return el
+}
+
 /** Sub-point (lat, lon in deg) of a Moon-centred ME vector: where that body is straight overhead. */
 function subPoint(v: Float32Array, o: number) {
   const [x, y, z] = [v[o], v[o + 1], v[o + 2]]
@@ -128,10 +170,12 @@ export function Globe({
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState('')
   const [relief, setRelief] = useState(1)
-  const [labelMode, setLabelMode] = useState<'all' | 'selected' | 'none'>('all')
+  const [labelMode, setLabelMode] = useState<'selected' | 'all' | 'none'>('selected')
   const [vectors, setVectors] = useState<Float32Array | null>(null)
   const labelModeRef = useRef(labelMode)
 
+  const selectedReticleRef = useRef<THREE.Group | null>(null)
+  const selectAnimRef = useRef<{ startTime: number; duration: number } | null>(null)
   const pulseMeshRef = useRef<THREE.Line | null>(null)
   const flyAnimRef = useRef<{
     startPos: THREE.Vector3
@@ -169,6 +213,7 @@ export function Globe({
   const flyArtemis = (a: ArtemisSiteData, shouldFly = true) => {
     setSelectedArtemis(a)
     onPickArtemisSite?.(a)
+    selectAnimRef.current = { startTime: performance.now(), duration: 600 }
     if (shouldFly) {
       const target = unitAt(a.lat, a.lon)
       const camPos = unitAt(Math.min(-68, a.lat + 10), a.lon).multiplyScalar(1.9)
@@ -275,10 +320,11 @@ export function Globe({
                 child.visible = false
               } else if (labelModeRef.current === 'none') {
                 child.visible = false
-              } else if (labelModeRef.current === 'selected') {
-                child.visible = isSel
-              } else {
+              } else if (labelModeRef.current === 'all') {
                 child.visible = true
+              } else {
+                // 'selected' mode: only active selected site badge shows (or hovered via CSS)
+                child.visible = isSel
               }
             }
           }
@@ -299,7 +345,7 @@ export function Globe({
         const ro = new ResizeObserver(resize)
         ro.observe(host.current)
 
-        // Animation loop for smooth camera transitions, orbit controls damping, and pulse beacon
+        // Animation loop for smooth camera transitions, orbit controls damping, and landing reticle expansion
         let animId: number
         const animate = () => {
           animId = requestAnimationFrame(animate)
@@ -318,12 +364,28 @@ export function Globe({
             controls.update()
           }
 
-          // Dynamic radar pulse animation for the selected Artemis landing site
+          // Smooth landing reticle expansion animation on site click/selection
+          const selAnim = selectAnimRef.current
+          const reticle = selectedReticleRef.current
+          if (reticle) {
+            if (selAnim) {
+              const elapsed = performance.now() - selAnim.startTime
+              const progress = Math.min(1, elapsed / selAnim.duration)
+              // Smooth cubic ease out
+              const ease = 1 - Math.pow(1 - progress, 3)
+              reticle.scale.set(ease, ease, ease)
+              if (progress >= 1) selectAnimRef.current = null
+            } else {
+              reticle.scale.set(1, 1, 1)
+            }
+          }
+
+          // Dynamic radar pulse animation for the active landing reticle
           const pulse = pulseMeshRef.current
           if (pulse) {
             const time = performance.now() * 0.0035
-            const s = 1.0 + 0.28 * (0.5 + 0.5 * Math.sin(time))
-            pulse.scale.set(s, s, s)
+            const s = 1.0 + 0.35 * (0.5 + 0.5 * Math.sin(time))
+            pulse.scale.set(s, 1, s)
             if (pulse.material instanceof THREE.LineBasicMaterial) {
               pulse.material.opacity = 0.4 + 0.55 * (0.5 + 0.5 * Math.cos(time))
             }
@@ -343,16 +405,38 @@ export function Globe({
           // Check Artemis landing sites first with generous click target (28px)
           let bestArtemis = 28
           let foundArtemis: ArtemisSiteData | null = null
+
           for (const child of artemisGroup.children) {
-            if (!child.userData.artemis) continue
-            if (child.position.dot(camera.position.clone().sub(child.position)) <= 0) continue
-            const q = child.position.clone().project(camera)
-            const sx = rect.left + ((q.x + 1) / 2) * rect.width
-            const sy = rect.top + ((1 - q.y) / 2) * rect.height
-            const d = Math.hypot(sx - e.clientX, sy - e.clientY)
-            if (d < bestArtemis) {
-              bestArtemis = d
-              foundArtemis = child.userData.artemis
+            if (child.userData.artemis) {
+              const worldPos = new THREE.Vector3()
+              child.getWorldPosition(worldPos)
+              if (worldPos.dot(camera.position.clone().sub(worldPos)) > 0) {
+                const q = worldPos.clone().project(camera)
+                const sx = rect.left + ((q.x + 1) / 2) * rect.width
+                const sy = rect.top + ((1 - q.y) / 2) * rect.height
+                const d = Math.hypot(sx - e.clientX, sy - e.clientY)
+                if (d < bestArtemis) {
+                  bestArtemis = d
+                  foundArtemis = child.userData.artemis
+                }
+              }
+            } else if (child instanceof THREE.Group) {
+              for (const sub of child.children) {
+                if (sub.userData.artemis) {
+                  const worldPos = new THREE.Vector3()
+                  sub.getWorldPosition(worldPos)
+                  if (worldPos.dot(camera.position.clone().sub(worldPos)) > 0) {
+                    const q = worldPos.clone().project(camera)
+                    const sx = rect.left + ((q.x + 1) / 2) * rect.width
+                    const sy = rect.top + ((1 - q.y) / 2) * rect.height
+                    const d = Math.hypot(sx - e.clientX, sy - e.clientY)
+                    if (d < bestArtemis) {
+                      bestArtemis = d
+                      foundArtemis = sub.userData.artemis
+                    }
+                  }
+                }
+              }
             }
           }
 
@@ -378,26 +462,40 @@ export function Globe({
 
         const onMove = (e: PointerEvent) => {
           const rect = renderer.domElement.getBoundingClientRect()
-          let isHover = false
+          let hoveredSiteId: string | null = null
+
           for (const child of artemisGroup.children) {
-            if (!child.userData.artemis) continue
-            if (child.position.dot(camera.position.clone().sub(child.position)) <= 0) continue
-            const q = child.position.clone().project(camera)
-            const sx = rect.left + ((q.x + 1) / 2) * rect.width
-            const sy = rect.top + ((1 - q.y) / 2) * rect.height
-            if (Math.hypot(sx - e.clientX, sy - e.clientY) < 28) {
-              isHover = true
-              break
+            if (child.userData.artemis) {
+              const worldPos = new THREE.Vector3()
+              child.getWorldPosition(worldPos)
+              if (worldPos.dot(camera.position.clone().sub(worldPos)) > 0) {
+                const q = worldPos.clone().project(camera)
+                const sx = rect.left + ((q.x + 1) / 2) * rect.width
+                const sy = rect.top + ((1 - q.y) / 2) * rect.height
+                if (Math.hypot(sx - e.clientX, sy - e.clientY) < 28) {
+                  hoveredSiteId = child.userData.artemis.id
+                  break
+                }
+              }
             }
           }
-          renderer.domElement.style.cursor = isHover ? 'pointer' : 'default'
+
+          renderer.domElement.style.cursor = hoveredSiteId ? 'pointer' : 'default'
+
+          // Toggle hover class on CSS2D label badges
+          for (const child of artemisGroup.children) {
+            if (child instanceof CSS2DObject && child.userData.domEl) {
+              const isHov = child.userData.artemisId === hoveredSiteId && !child.userData.isSel
+              child.userData.domEl.classList.toggle('is-hovered', isHov)
+            }
+          }
         }
 
         renderer.domElement.addEventListener('pointerdown', onDown)
         renderer.domElement.addEventListener('pointerup', onUp)
         renderer.domElement.addEventListener('pointermove', onMove)
 
-        // Initial view: frame lunar South Pole with all 9 Artemis landing sites clearly visible
+        // Initial view: frame lunar South Pole with all 9 Artemis landing sites visible
         camera.position.copy(unitAt(-74, 0).multiplyScalar(2.7))
         controls.target.copy(unitAt(-86, 0))
         controls.update()
@@ -474,203 +572,177 @@ export function Globe({
       g.clear()
     }
     pulseMeshRef.current = null
+    selectedReticleRef.current = null
 
-    // Render Artemis III 9 Candidate Landing Regions with high-visibility 3D beacons,
-    // landing candidate boundary rings, and interactive mission badges
+    // Render Artemis III 9 Candidate Landing Regions
+    // Unselected: Clean, minimal, uncluttered pinpoints
+    // Selected: Animated expanding landing reticle, cardinal crosshairs, rising beacon, and radar wave
     for (const a of ARTEMIS_3_SITES) {
       const isSel = selectedArtemis?.id === a.id
       const norm = unitAt(a.lat, a.lon)
 
-      const up = Math.abs(norm.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
-      const t1 = new THREE.Vector3().crossVectors(norm, up).normalize()
-      const t2 = new THREE.Vector3().crossVectors(norm, t1).normalize()
+      if (!isSel) {
+        // UNSELECTED SITE: Subtle, uncluttered coordinate marker
+        const surfPos = norm.clone().multiplyScalar(1.0025)
 
-      // 1. Landing candidate search zone boundary ring (angular radius theta ~ 0.024 rad, ~42 km radius)
-      const theta = 0.024
-      const segments = 36
-      const ringPts: THREE.Vector3[] = []
-      for (let s = 0; s <= segments; s++) {
-        const phi = (s / segments) * Math.PI * 2
-        const pt = norm
-          .clone()
-          .multiplyScalar(Math.cos(theta))
-          .add(t1.clone().multiplyScalar(Math.sin(theta) * Math.cos(phi)))
-          .add(t2.clone().multiplyScalar(Math.sin(theta) * Math.sin(phi)))
-        ringPts.push(pt.multiplyScalar(1.0025))
-      }
-      const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts)
-      const ringMat = new THREE.LineBasicMaterial({
-        color: isSel ? '#fbbf24' : '#38bdf8',
-        transparent: true,
-        opacity: isSel ? 0.95 : 0.65,
-      })
-      const ring = new THREE.Line(ringGeo, ringMat)
-      ring.userData = { artemis: a, id: a.id }
-      w.artemisGroup.add(ring)
+        // 1. Sleek cyan pinpoint dot
+        const dot = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.005),
+          new THREE.MeshBasicMaterial({ color: '#38bdf8' }),
+        )
+        dot.position.copy(surfPos)
+        dot.userData = { artemis: a, id: a.id }
+        w.artemisGroup.add(dot)
 
-      // Inner reticle circle for active site
-      if (isSel) {
-        const innerPts: THREE.Vector3[] = []
-        const innerTheta = 0.012
-        for (let s = 0; s <= segments; s++) {
-          const phi = (s / segments) * Math.PI * 2
+        // 2. Mini landing target ring (compact, radius 0.008, ~14 km)
+        const up = Math.abs(norm.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
+        const t1 = new THREE.Vector3().crossVectors(norm, up).normalize()
+        const t2 = new THREE.Vector3().crossVectors(norm, t1).normalize()
+
+        const ringPts: THREE.Vector3[] = []
+        for (let s = 0; s <= 24; s++) {
+          const phi = (s / 24) * Math.PI * 2
           const pt = norm
             .clone()
-            .multiplyScalar(Math.cos(innerTheta))
-            .add(t1.clone().multiplyScalar(Math.sin(innerTheta) * Math.cos(phi)))
-            .add(t2.clone().multiplyScalar(Math.sin(innerTheta) * Math.sin(phi)))
-          innerPts.push(pt.multiplyScalar(1.0028))
+            .multiplyScalar(Math.cos(0.008))
+            .add(t1.clone().multiplyScalar(Math.sin(0.008) * Math.cos(phi)))
+            .add(t2.clone().multiplyScalar(Math.sin(0.008) * Math.sin(phi)))
+          ringPts.push(pt.multiplyScalar(1.0025))
         }
-        const innerGeo = new THREE.BufferGeometry().setFromPoints(innerPts)
-        const innerMat = new THREE.LineBasicMaterial({
-          color: '#fbbf24',
-          transparent: true,
-          opacity: 0.85,
-        })
-        const innerRing = new THREE.Line(innerGeo, innerMat)
-        innerRing.userData = { artemis: a, id: a.id }
-        w.artemisGroup.add(innerRing)
-      }
-
-      // 2. Cardinal tick marks around the landing zone boundary
-      for (const phi of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
-        const p1 = norm
-          .clone()
-          .multiplyScalar(Math.cos(theta * 0.8))
-          .add(t1.clone().multiplyScalar(Math.sin(theta * 0.8) * Math.cos(phi)))
-          .add(t2.clone().multiplyScalar(Math.sin(theta * 0.8) * Math.sin(phi)))
-          .multiplyScalar(1.0025)
-        const p2 = norm
-          .clone()
-          .multiplyScalar(Math.cos(theta * 1.25))
-          .add(t1.clone().multiplyScalar(Math.sin(theta * 1.25) * Math.cos(phi)))
-          .add(t2.clone().multiplyScalar(Math.sin(theta * 1.25) * Math.sin(phi)))
-          .multiplyScalar(1.0025)
-        const tickGeo = new THREE.BufferGeometry().setFromPoints([p1, p2])
-        const tickLine = new THREE.Line(
-          tickGeo,
-          new THREE.LineBasicMaterial({
-            color: isSel ? '#fbbf24' : '#38bdf8',
-            transparent: true,
-            opacity: isSel ? 0.9 : 0.55,
-          }),
+        const miniRing = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(ringPts),
+          new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.45 }),
         )
-        tickLine.userData = { artemis: a, id: a.id }
-        w.artemisGroup.add(tickLine)
-      }
+        miniRing.userData = { artemis: a, id: a.id }
+        w.artemisGroup.add(miniRing)
 
-      // 3. Touchdown point ground marker
-      const centerDot = new THREE.Mesh(
-        new THREE.SphereGeometry(isSel ? 0.005 : 0.0035, 12, 6),
-        new THREE.MeshBasicMaterial({ color: isSel ? '#ffffff' : '#7dd3fc' }),
-      )
-      centerDot.position.copy(norm.clone().multiplyScalar(1.0028))
-      centerDot.userData = { artemis: a, id: a.id }
-      w.artemisGroup.add(centerDot)
+        // 3. Mini pin stem (height 0.012)
+        const miniHeadPos = norm.clone().multiplyScalar(1.014)
+        const miniStem = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([surfPos, miniHeadPos]),
+          new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.5 }),
+        )
+        miniStem.userData = { artemis: a, id: a.id }
+        w.artemisGroup.add(miniStem)
 
-      // 4. Vertical 3D Navigational Beacon Pin (Stem)
-      const stemH = isSel ? 0.055 : 0.038
-      const surfPos = norm.clone().multiplyScalar(1.0025)
-      const headPos = norm.clone().multiplyScalar(1.0025 + stemH)
+        // 4. CSS2D label (hidden by default, reveals on hover to eliminate clutter)
+        const el = createArtemisLabel(a, false, () => flyArtemisRef.current(a), labelMode === 'all')
+        const l = new CSS2DObject(el)
+        l.position.copy(miniHeadPos.clone().multiplyScalar(1.008))
+        l.userData = { artemisId: a.id, isSel: false, domEl: el }
+        w.artemisGroup.add(l)
+      } else {
+        // SELECTED SITE: Full prominent landing reticle, beacon stem, and radar pulse
+        // Seated in a local group oriented along surface normal for smooth outward expansion animation
+        const reticleGroup = new THREE.Group()
+        reticleGroup.position.copy(norm.clone().multiplyScalar(1.0025))
+        reticleGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), norm)
+        selectedReticleRef.current = reticleGroup
+        w.artemisGroup.add(reticleGroup)
 
-      const stemGeo = new THREE.BufferGeometry().setFromPoints([surfPos, headPos])
-      const stemLine = new THREE.Line(
-        stemGeo,
-        new THREE.LineBasicMaterial({
-          color: isSel ? '#fbbf24' : '#38bdf8',
-          transparent: true,
-          opacity: isSel ? 1.0 : 0.8,
-        }),
-      )
-      stemLine.userData = { artemis: a, id: a.id }
-      w.artemisGroup.add(stemLine)
+        // 1. Touchdown center anchor dot
+        const centerDot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.005, 12, 6),
+          new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+        )
+        centerDot.userData = { artemis: a, id: a.id }
+        reticleGroup.add(centerDot)
 
-      // 5. Luminous Beacon Head (Diamond Octahedron)
-      const headMesh = new THREE.Mesh(
-        new THREE.OctahedronGeometry(isSel ? 0.016 : 0.009),
-        new THREE.MeshBasicMaterial({ color: isSel ? '#fbbf24' : '#38bdf8' }),
-      )
-      headMesh.position.copy(headPos)
-      headMesh.userData = { artemis: a, id: a.id }
-      w.artemisGroup.add(headMesh)
+        // 2. Landing candidate zone boundary circle (~42 km radius, 0.024 rad)
+        const boundaryRadius = 0.024
+        const segs = 36
+        const bndPts: THREE.Vector3[] = []
+        for (let s = 0; s <= segs; s++) {
+          const phi = (s / segs) * Math.PI * 2
+          bndPts.push(new THREE.Vector3(boundaryRadius * Math.cos(phi), 0.0003, boundaryRadius * Math.sin(phi)))
+        }
+        const bndLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(bndPts),
+          new THREE.LineBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 0.95 }),
+        )
+        bndLine.userData = { artemis: a, id: a.id }
+        reticleGroup.add(bndLine)
 
-      if (isSel) {
-        // Inner white jewel core for glowing look
-        const coreMesh = new THREE.Mesh(
+        // 3. Inner reticle circle (radius 0.012)
+        const inPts: THREE.Vector3[] = []
+        for (let s = 0; s <= segs; s++) {
+          const phi = (s / segs) * Math.PI * 2
+          inPts.push(new THREE.Vector3(0.012 * Math.cos(phi), 0.0003, 0.012 * Math.sin(phi)))
+        }
+        const inLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(inPts),
+          new THREE.LineBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 0.85 }),
+        )
+        inLine.userData = { artemis: a, id: a.id }
+        reticleGroup.add(inLine)
+
+        // 4. Cardinal crosshair tick marks
+        for (const phi of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+          const p1 = new THREE.Vector3(
+            boundaryRadius * 0.8 * Math.cos(phi),
+            0.0003,
+            boundaryRadius * 0.8 * Math.sin(phi),
+          )
+          const p2 = new THREE.Vector3(
+            boundaryRadius * 1.25 * Math.cos(phi),
+            0.0003,
+            boundaryRadius * 1.25 * Math.sin(phi),
+          )
+          const tick = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([p1, p2]),
+            new THREE.LineBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 0.9 }),
+          )
+          tick.userData = { artemis: a, id: a.id }
+          reticleGroup.add(tick)
+        }
+
+        // 5. Vertical navigational beacon stem rising to height 0.055
+        const stemH = 0.055
+        const stemLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, stemH, 0)]),
+          new THREE.LineBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 1.0 }),
+        )
+        stemLine.userData = { artemis: a, id: a.id }
+        reticleGroup.add(stemLine)
+
+        // 6. Radiant Gold diamond head + inner jewel
+        const headMesh = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.016),
+          new THREE.MeshBasicMaterial({ color: '#fbbf24' }),
+        )
+        headMesh.position.set(0, stemH, 0)
+        headMesh.userData = { artemis: a, id: a.id }
+        reticleGroup.add(headMesh)
+
+        const jewelMesh = new THREE.Mesh(
           new THREE.OctahedronGeometry(0.008),
           new THREE.MeshBasicMaterial({ color: '#ffffff' }),
         )
-        coreMesh.position.copy(headPos)
-        coreMesh.userData = { artemis: a, id: a.id }
-        w.artemisGroup.add(coreMesh)
+        jewelMesh.position.set(0, stemH, 0)
+        jewelMesh.userData = { artemis: a, id: a.id }
+        reticleGroup.add(jewelMesh)
 
-        // Pulsing radar ring
+        // 7. Pulsing radar wave ring
         const pulsePts: THREE.Vector3[] = []
-        const pulseTheta = 0.028
-        for (let s = 0; s <= segments; s++) {
-          const phi = (s / segments) * Math.PI * 2
-          const pt = norm
-            .clone()
-            .multiplyScalar(Math.cos(pulseTheta))
-            .add(t1.clone().multiplyScalar(Math.sin(pulseTheta) * Math.cos(phi)))
-            .add(t2.clone().multiplyScalar(Math.sin(pulseTheta) * Math.sin(phi)))
-          pulsePts.push(pt.multiplyScalar(1.003))
+        for (let s = 0; s <= segs; s++) {
+          const phi = (s / segs) * Math.PI * 2
+          pulsePts.push(new THREE.Vector3(boundaryRadius * Math.cos(phi), 0.0005, boundaryRadius * Math.sin(phi)))
         }
-        const pulseGeo = new THREE.BufferGeometry().setFromPoints(pulsePts)
-        const pulseMat = new THREE.LineBasicMaterial({
-          color: '#fbbf24',
-          transparent: true,
-          opacity: 0.75,
-        })
-        const pulseMesh = new THREE.Line(pulseGeo, pulseMat)
-        pulseMesh.position.copy(norm.clone().multiplyScalar(0.001))
+        const pulseMesh = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(pulsePts),
+          new THREE.LineBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 0.8 }),
+        )
+        pulseMesh.userData = { artemis: a, id: a.id }
         pulseMeshRef.current = pulseMesh
-        w.artemisGroup.add(pulseMesh)
+        reticleGroup.add(pulseMesh)
+
+        // 8. Selected mission badge
+        const el = createArtemisLabel(a, true, () => flyArtemisRef.current(a), true)
+        const l = new CSS2DObject(el)
+        l.position.copy(norm.clone().multiplyScalar(1.0025 + stemH + 0.018))
+        l.userData = { artemisId: a.id, isSel: true, domEl: el }
+        w.artemisGroup.add(l)
       }
-
-      // 6. Interactive CSS2D Label Badge
-      const el = document.createElement('div')
-      el.className = `globe-label is-artemis ${isSel ? 'is-selected' : ''}`
-      el.setAttribute('role', 'button')
-      el.setAttribute('tabindex', '0')
-      el.setAttribute('aria-label', `${a.name} Artemis III candidate landing site`)
-
-      const dot = document.createElement('span')
-      dot.className = 'artemis-badge-dot'
-      dot.textContent = isSel ? '◆' : '◇'
-      el.appendChild(dot)
-
-      const nameSpan = document.createElement('span')
-      nameSpan.className = 'artemis-badge-name'
-      nameSpan.textContent = a.name
-      el.appendChild(nameSpan)
-
-      const tagSpan = document.createElement('span')
-      tagSpan.className = 'artemis-badge-tag'
-      tagSpan.textContent =
-        a.resources.water_ice_potential === 'Exceptional'
-          ? 'EXCEPTIONAL ICE'
-          : a.resources.water_ice_potential === 'Strategic'
-          ? 'STRATEGIC ISRU'
-          : `${a.resources.water_ice_potential.toUpperCase()} ICE`
-      el.appendChild(tagSpan)
-
-      el.onclick = (e) => {
-        e.stopPropagation()
-        flyArtemisRef.current(a)
-      }
-      el.onkeydown = (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          e.stopPropagation()
-          flyArtemisRef.current(a)
-        }
-      }
-
-      const l = new CSS2DObject(el)
-      l.position.copy(norm.clone().multiplyScalar(1.0025 + stemH + 0.016))
-      l.userData = { artemisId: a.id, isSel }
-      w.artemisGroup.add(l)
     }
 
     // Survey sites
@@ -758,7 +830,7 @@ export function Globe({
       </div>
       <aside className="map-side">
         <p className="chart-note">
-          Lit from the true Sun direction at the selected time. Drag to spin, scroll to zoom, click any landing zone or badge to focus on that site.
+          Lit from the true Sun direction at the selected time. Drag to spin, scroll to zoom, click any candidate site to focus camera and reveal its full landing zone.
         </p>
 
         {/* Primary Camera & Perspectives */}
@@ -1102,9 +1174,9 @@ export function Globe({
               marginBottom: '8px',
             }}
           >
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Artemis Site Labels:</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Artemis Labels:</span>
             <div className="slips" style={{ gap: '4px' }}>
-              {(['all', 'selected', 'none'] as const).map((mode) => (
+              {(['selected', 'all', 'none'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -1119,7 +1191,7 @@ export function Globe({
                   }}
                   onClick={() => setLabelMode(mode)}
                 >
-                  {mode === 'all' ? 'All 9 Sites' : mode === 'selected' ? 'Selected Only' : 'Off'}
+                  {mode === 'selected' ? 'Active Site Only' : mode === 'all' ? 'All 9 Sites' : 'Off'}
                 </button>
               ))}
             </div>
@@ -1167,8 +1239,7 @@ export function Globe({
           south pole.
         </p>
         <p className="chart-note">
-          NASA candidate landing regions: shown with elevated 3D beacon pins, ground touchdown circles, and interactive
-          resource badges. {ARTEMIS_NOTE}
+          NASA candidate landing regions: shown with pinpoint coordinate targets. Clicking any site triggers camera focus, landing reticle expansion, and radar pulse. {ARTEMIS_NOTE}
         </p>
         <p className="chart-note">
           Colour: NASA CGI Moon Kit (LROC). Relief: slopes from our LOLA LDEM_16 terrain.
