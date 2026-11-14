@@ -7,3 +7,6 @@ web/dist/
 .cache/
 apps/
 .vercel
+
+
+graphify-out/

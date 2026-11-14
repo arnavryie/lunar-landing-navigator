@@ -1,0 +1,739 @@
+/* Aerospace styling for Lunar Solar Recharge Planner (Lander Systems) */
+
+.planner-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 48px;
+}
+
+/* Header & Mission Banner */
+.planner-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planner-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planner-title-row h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.planner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.disclaimer-banner {
+  background: color-mix(in srgb, var(--surface) 92%, var(--earth));
+  border: 1px solid color-mix(in srgb, var(--rule) 70%, var(--earth));
+  border-left: 4px solid var(--earth);
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.disclaimer-banner .icon {
+  color: var(--earth);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+/* Mission Status HUD */
+.mission-hud {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 1px solid var(--rule);
+  padding-right: 12px;
+}
+
+.hud-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.hud-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.hud-value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.hud-unit {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.hud-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-s);
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hud-badge.nominal {
+  background: color-mix(in srgb, var(--both) 20%, transparent);
+  color: #6fcf9f;
+  border: 1px solid var(--both);
+}
+
+.hud-badge.caution {
+  background: color-mix(in srgb, #e5a83b 20%, transparent);
+  color: #e5a83b;
+  border: 1px solid #e5a83b;
+}
+
+.hud-badge.infeasible {
+  background: color-mix(in srgb, #e0705c 20%, transparent);
+  color: #f08a7a;
+  border: 1px solid #e0705c;
+}
+
+/* Rover Configuration Box */
+.config-box {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 10px;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.config-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-col-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.cfg-field {
+  display: grid;
+  grid-template-columns: 1fr 80px 28px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.cfg-field input,
+.cfg-field select {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--night);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 4px 6px;
+  text-align: right;
+  width: 100%;
+}
+
+.cfg-field select {
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.cfg-unit {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.config-advanced {
+  border-top: 1px dashed var(--rule);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Interactive Map Panel */
+.map-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.map-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 640px;
+  background: var(--night);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.map-hover-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(26, 31, 38, 0.9);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  color: var(--text);
+  display: flex;
+  gap: 12px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.map-overlay-legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(26, 31, 38, 0.85);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Simulation Controls Bar */
+.sim-controls-bar {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-time-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sim-clock-utc {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.sim-t-offset {
+  font-size: 0.95rem;
+  color: var(--earth);
+  font-weight: 600;
+}
+
+.sim-phase-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sim-phase-badge.standby {
+  background: color-mix(in srgb, var(--none) 25%, transparent);
+  color: var(--muted);
+  border: 1px solid var(--none);
+}
+
+.sim-phase-badge.transit {
+  background: color-mix(in srgb, var(--earth) 20%, transparent);
+  color: #5590d8;
+  border: 1px solid var(--earth);
+}
+
+.sim-phase-badge.recharge {
+  background: color-mix(in srgb, var(--sun) 20%, transparent);
+  color: #f2be5c;
+  border: 1px solid var(--sun);
+}
+
+.sim-phase-badge.post_recharge {
+  background: color-mix(in srgb, var(--both) 20%, transparent);
+  color: #6fcf9f;
+  border: 1px solid var(--both);
+}
+
+.sim-scrubber-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sim-scrubber {
+  width: 100%;
+  accent-color: var(--sun);
+  cursor: pointer;
+  margin: 0;
+}
+
+.sim-time-markers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sim-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.btn-playback {
+  background: var(--ground);
+  border: 1px solid var(--rule);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  min-width: 90px;
+}
+
+.btn-playback:hover {
+  border-color: var(--sun);
+}
+
+.sim-step-group {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-step {
+  font-size: 0.82rem;
+  padding: 4px 8px;
+  min-width: 44px;
+}
+
+.sim-speed-select {
+  font-size: 0.82rem;
+  padding: 4px 8px;
+}
+
+/* Recommended Destination Card */
+.recommendation-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recommendation-card.feasible {
+  border-left: 4px solid var(--both);
+}
+
+.recommendation-card.caution {
+  border-left: 4px solid #e5a83b;
+}
+
+.recommendation-card.infeasible {
+  border-left: 4px solid #e0705c;
+}
+
+.rec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 10px;
+}
+
+.rec-pretitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.rec-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 2px 0 0;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-badge {
+  padding: 3px 10px;
+  border-radius: var(--radius-s);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rec-badge.feasible {
+  background: color-mix(in srgb, var(--both) 20%, transparent);
+  color: #6fcf9f;
+  border: 1px solid var(--both);
+}
+
+.rec-badge.caution {
+  background: color-mix(in srgb, #e5a83b 20%, transparent);
+  color: #e5a83b;
+  border: 1px solid #e5a83b;
+}
+
+.rec-badge.infeasible {
+  background: color-mix(in srgb, #e0705c 20%, transparent);
+  color: #f08a7a;
+  border: 1px solid #e0705c;
+}
+
+.rec-summary {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.rec-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  background: var(--night);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 12px 16px;
+}
+
+.rec-hero-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rec-hero-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.rec-hero-val {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.rec-hero-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.rec-breakdown-table {
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+}
+
+/* Candidate Locations Table */
+.candidates-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.candidates-table-wrap {
+  overflow-x: auto;
+}
+
+.candidates-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.candidates-table th,
+.candidates-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+
+.candidates-table th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.candidates-table tr.selected-row {
+  background: color-mix(in srgb, var(--earth) 12%, transparent);
+}
+
+.candidates-table tr.recommended-row {
+  border-left: 3px solid var(--sun);
+  background: color-mix(in srgb, var(--sun) 6%, transparent);
+}
+
+.cand-status-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.cand-status-pill.feasible {
+  color: #6fcf9f;
+  background: color-mix(in srgb, var(--both) 20%, transparent);
+}
+
+.cand-status-pill.caution {
+  color: #e5a83b;
+  background: color-mix(in srgb, #e5a83b 20%, transparent);
+}
+
+.cand-status-pill.infeasible {
+  color: #f08a7a;
+  background: color-mix(in srgb, #e0705c 20%, transparent);
+}
+
+.btn-table-pick {
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  min-width: 50px;
+  background: var(--ground);
+}
+
+.btn-table-pick.active {
+  background: var(--both);
+  color: var(--night);
+  font-weight: 600;
+  border-color: var(--both);
+}
+
+/* Mission Timeline Panel */
+.timeline-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background: var(--night);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+
+.timeline-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.timeline-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.timeline-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.timeline-legend-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Methodology Panel */
+.methodology-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+}
+
+.methodology-header {
+  color: var(--text);
+}
+
+.methodology-content {
+  border-top: 1px solid var(--rule);
+  margin-top: 10px;
+  padding-top: 12px;
+}
+
+.methodology-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.meth-col h5 {
+  margin: 0 0 6px 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.meth-col p {
+  margin: 0 0 8px 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Two-column layout on wide screens */
+.planner-two-col {
+  display: grid;
+  grid-template-columns: minmax(380px, 1.25fr) minmax(360px, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 980px) {
+  .planner-two-col {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-<<<<<<< HEAD
 import {
   DEFAULT_THRESHOLDS,
   formatUtc,
+  getSiteScienceStats,
   loadSite,
   timeAt,
   type Site,
@@ -14,10 +14,7 @@ import {
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
 import { Planner } from './Planner'
 import { Timeline } from './Timeline'
-=======
-import { formatUtc, getSiteScienceStats, loadSite, timeAt, type Site, type SiteSummary } from './data'
 import './styles/analysis.css'
->>>>>>> origin/lunar-mission-planner
 
 // F6b: 3D south-pole terrain (80-90 S) with shadows from our own horizon physics, run on the GPU.
 // Every terrain point steps across the real heightmap toward the Sun and toward Earth (3D rays,
@@ -278,7 +275,6 @@ export function Terrain3D({
   const [err, setErr] = useState('')
   const [exag, setExag] = useState(1)
   const [check, setCheck] = useState('')
-<<<<<<< HEAD
   type SideTab = 'artemis' | 'planner' | 'controls'
   const [sideTab, setSideTab] = useState<SideTab>('artemis')
 
@@ -292,9 +288,7 @@ export function Terrain3D({
     return ARTEMIS_3_SITES[0]
   })
 
-=======
   const [showScience, setShowScience] = useState(false)
->>>>>>> origin/lunar-mission-planner
   const currentExagRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
 
@@ -477,7 +471,6 @@ export function Terrain3D({
       }
     }
 
-<<<<<<< HEAD
     // Render Artemis III candidate landing site zones & markers
     w.artemisGroup.clear()
     for (const a of ARTEMIS_3_SITES) {
@@ -505,7 +498,8 @@ export function Terrain3D({
       const diamond = new THREE.Mesh(diamondGeo, diamondMat)
       diamond.position.set(p.x, p.y + 1.0, p.z)
       w.artemisGroup.add(diamond)
-=======
+    }
+
     // 2. WS5 Science vs Engineering Lens (Mountains vs Ice)
     if (showScience) {
       // Draw all major cold trap PSR crater bowls (<110 K)
@@ -617,7 +611,6 @@ export function Terrain3D({
           w.marks.add(travBadge)
         }
       }
->>>>>>> origin/lunar-mission-planner
     }
 
     w.renderer.render(w.scene, w.camera)
@@ -640,9 +633,6 @@ export function Terrain3D({
     drawMarksAndRender(w, currentExagRef.current)
   }, [i, site, ready])
 
-<<<<<<< HEAD
-  // Smoothly animate vertical exaggeration transitions using cubic ease-out.
-=======
   // Instant update when science lens toggles without triggering expensive GPU shadow raymarches
   useEffect(() => {
     const w = world.current
@@ -651,7 +641,6 @@ export function Terrain3D({
   }, [showScience])
 
   // Smoothly animate vertical exaggeration transitions using a frame-rate-independent cubic ease-out.
->>>>>>> origin/lunar-mission-planner
   useEffect(() => {
     const w = world.current
     if (!w || !ready) return
@@ -699,7 +688,6 @@ export function Terrain3D({
     }
   }, [exag, ready, site, i])
 
-<<<<<<< HEAD
   const inspectArtemis = (siteData: ArtemisSiteData) => {
     setSelectedArtemis(siteData)
     const w = world.current
@@ -725,10 +713,7 @@ export function Terrain3D({
     setSideTab('planner')
   }
 
-  const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton') => {
-=======
   const preset = (k: 'overview' | 'overhead' | 'sun' | 'earth' | 'shackleton' | 'descent' | 'psr_bowl') => {
->>>>>>> origin/lunar-mission-planner
     const w = world.current
     if (!w) return
     const { camera, controls } = w
@@ -813,77 +798,63 @@ export function Terrain3D({
           </span>
         </div>
 
-<<<<<<< HEAD
         <aside className="map-side">
-          {/* Sub-tab navigation inside the 3D sidebar */}
-          <div className="seg views" style={{ width: '100%', marginBottom: '8px', display: 'flex' }}>
-=======
-        {/* WS5: Science vs Engineering 3D Lens Toggle & Telemetry */}
-        <div className="science-3d-card">
-          <div className="science-3d-header">
-            <div>
-              <span className="science-3d-title">🏔️ vs 🧊 Science Lens</span>
-              <span className="science-3d-subtitle">Mountains vs. Cold Traps</span>
+          {/* WS5: Science vs Engineering 3D Lens Toggle & Telemetry */}
+          <div className="science-3d-card" style={{ marginBottom: '10px' }}>
+            <div className="science-3d-header">
+              <div>
+                <span className="science-3d-title">🏔️ vs 🧊 Science Lens</span>
+                <span className="science-3d-subtitle">Mountains vs. Cold Traps</span>
+              </div>
+              <button
+                type="button"
+                className={`science-toggle-pill ${showScience ? 'active' : ''}`}
+                onClick={() => setShowScience((v) => !v)}
+                aria-pressed={showScience}
+                title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
+              >
+                {showScience ? '🧊 ON' : '🏔️ OFF'}
+              </button>
             </div>
-            <button
-              type="button"
-              className={`science-toggle-pill ${showScience ? 'active' : ''}`}
-              onClick={() => setShowScience((v) => !v)}
-              aria-pressed={showScience}
-              title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
-            >
-              {showScience ? '🧊 ON' : '🏔️ OFF'}
-            </button>
+
+            <p className="science-3d-desc">
+              {showScience
+                ? 'Visualizing cold trap water ice (<110 K PSRs), illuminated ridges, and rim-to-floor descent trajectories.'
+                : 'Toggle ON to visualize crater cold traps, volatile ice reservoirs, and landing-to-ice traverse vectors.'}
+            </p>
+
+            {showScience && site && site.lat <= -80.5 && (() => {
+              const scienceStats = getSiteScienceStats(site)
+              const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
+              return (
+                <div className="science-3d-telemetry">
+                  <div className="telemetry-item">
+                    <span className="telemetry-lbl">Target PSR:</span>
+                    <span className="telemetry-val highlight">{psr.name.replace(' Crater PSR', '')}</span>
+                  </div>
+                  <div className="telemetry-item">
+                    <span className="telemetry-lbl">Traverse Dist:</span>
+                    <span className="telemetry-val">{distanceKm.toFixed(1)} km</span>
+                  </div>
+                  <div className="telemetry-item">
+                    <span className="telemetry-lbl">Crater Depth:</span>
+                    <span className="telemetry-val depth">-{psr.depthM.toLocaleString()} m</span>
+                  </div>
+                  <div className="telemetry-item">
+                    <span className="telemetry-lbl">Cryo Temp:</span>
+                    <span className="telemetry-val cryo">{psr.tempK} K (-{273 - psr.tempK}°C)</span>
+                  </div>
+                  <div className="telemetry-item full">
+                    <span className="telemetry-lbl">Zone Verdict:</span>
+                    <span className={`tradeoff-chip chip-${scienceStats.zone}`}>{scienceStats.zoneLabel}</span>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 
-          <p className="science-3d-desc">
-            {showScience
-              ? 'Visualizing cold trap water ice (<110 K PSRs), illuminated ridges, and rim-to-floor descent trajectories.'
-              : 'Toggle ON to visualize crater cold traps, volatile ice reservoirs, and landing-to-ice traverse vectors.'}
-          </p>
-
-          {showScience && site && site.lat <= -80.5 && (() => {
-            const scienceStats = getSiteScienceStats(site)
-            const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
-            return (
-              <div className="science-3d-telemetry">
-                <div className="telemetry-item">
-                  <span className="telemetry-lbl">Target PSR:</span>
-                  <span className="telemetry-val highlight">{psr.name.replace(' Crater PSR', '')}</span>
-                </div>
-                <div className="telemetry-item">
-                  <span className="telemetry-lbl">Traverse Dist:</span>
-                  <span className="telemetry-val">{distanceKm.toFixed(1)} km</span>
-                </div>
-                <div className="telemetry-item">
-                  <span className="telemetry-lbl">Crater Depth:</span>
-                  <span className="telemetry-val depth">-{psr.depthM.toLocaleString()} m</span>
-                </div>
-                <div className="telemetry-item">
-                  <span className="telemetry-lbl">Cryo Temp:</span>
-                  <span className="telemetry-val cryo">{psr.tempK} K (-{273 - psr.tempK}°C)</span>
-                </div>
-                <div className="telemetry-item full">
-                  <span className="telemetry-lbl">Zone Verdict:</span>
-                  <span className={`tradeoff-chip chip-${scienceStats.zone}`}>{scienceStats.zoneLabel}</span>
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-
-        <p className="chart-note">
-          Colours are computed, not drawn: each point steps across the real terrain toward the Sun and Earth at the selected
-          time, with the Moon's curvature. Grey relief shading is only for readability.
-        </p>
-        <label className="field exag">
-          <span>Vertical exaggeration</span>
-          <input type="range" min={1} max={5} step={0.1} value={exag} aria-label="Vertical exaggeration" onChange={(e) => setExag(Number(e.target.value))} />
-          <span className="unit">{exag.toFixed(1).replace(/\.0$/, '')}×</span>
-        </label>
-        <div className="seg" style={{ marginTop: '6px', marginBottom: '14px' }}>
-          {[1, 1.5, 2, 3, 5].map((val) => (
->>>>>>> origin/lunar-mission-planner
+          {/* Sub-tab navigation inside the 3D sidebar */}
+          <div className="seg views" style={{ width: '100%', marginBottom: '8px', display: 'flex' }}>
             <button
               type="button"
               aria-pressed={sideTab === 'artemis'}
@@ -908,25 +879,6 @@ export function Terrain3D({
             >
               3D &amp; Lighting
             </button>
-<<<<<<< HEAD
-=======
-          ))}
-        </div>
-        <fieldset className="thresholds">
-          <legend>Camera</legend>
-          <div className="slips">
-            <button onClick={() => preset('overview')}>Overview</button>
-            <button onClick={() => preset('overhead')}>Overhead</button>
-            <button onClick={() => preset('shackleton')}>Over Shackleton</button>
-            <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>From the site, look at the Sun</button>
-            <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>Look at Earth</button>
-            {showScience && site && site.lat <= -80.5 && (
-              <>
-                <button type="button" onClick={() => preset('descent')}>Descent View ⚡</button>
-                <button type="button" onClick={() => preset('psr_bowl')}>Inside Crater Bowl 🧊</button>
-              </>
-            )}
->>>>>>> origin/lunar-mission-planner
           </div>
 
           {/* TAB 1: ARTEMIS III RESOURCES */}
@@ -1202,6 +1154,12 @@ export function Terrain3D({
                   <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>
                     Look at Earth
                   </button>
+                  {showScience && site && site.lat <= -80.5 && (
+                    <>
+                      <button type="button" onClick={() => preset('descent')}>Descent View ⚡</button>
+                      <button type="button" onClick={() => preset('psr_bowl')}>Inside Crater Bowl 🧊</button>
+                    </>
+                  )}
                 </div>
                 <p className="chart-note">Drag to rotate, right-drag to pan, scroll to zoom.</p>
               </fieldset>
