@@ -277,6 +277,7 @@ export function Terrain3D({
   const [check, setCheck] = useState('')
   type SideTab = 'artemis' | 'planner' | 'controls'
   const [sideTab, setSideTab] = useState<SideTab>('artemis')
+  const [showScience, setShowScience] = useState(false)
 
   const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(() => {
     if (site) {
@@ -287,8 +288,6 @@ export function Terrain3D({
     }
     return ARTEMIS_3_SITES[0]
   })
-
-  const [showScience, setShowScience] = useState(false)
   const currentExagRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
 
@@ -500,7 +499,7 @@ export function Terrain3D({
       w.artemisGroup.add(diamond)
     }
 
-    // 2. WS5 Science vs Engineering Lens (Mountains vs Ice)
+    // 2. Science vs Engineering Lens (Mountains vs Ice)
     if (showScience) {
       // Draw all major cold trap PSR crater bowls (<110 K)
       for (const p of MAJOR_PSRS) {
@@ -544,8 +543,8 @@ export function Terrain3D({
           beacon.position.y += 2 * curExag
           w.marks.add(beacon)
 
-          // 3D Billboard label for crater cold trap
-          const psrLabel = createTextSprite(`🧊 ${p.name.replace(' Crater PSR', '')} (${p.tempK} K)`, '#00e5ff')
+          // 3D Billboard label for crater cold trap (no emojis)
+          const psrLabel = createTextSprite(`ICE PSR: ${p.name.replace(' Crater PSR', '')} (${p.tempK} K)`, '#00e5ff')
           if (psrLabel) {
             psrLabel.position.copy(pPos)
             psrLabel.position.y += 5.5 * curExag
@@ -573,8 +572,8 @@ export function Terrain3D({
         solarHalo.position.y += 0.25 * curExag
         w.marks.add(solarHalo)
 
-        // Landing Ridge 3D Billboard
-        const siteSprite = createTextSprite(`☀️ ${site.name} (Ridge)`, '#ffb74d', 'rgba(30, 20, 10, 0.9)')
+        // Landing Ridge 3D Billboard (no emojis)
+        const siteSprite = createTextSprite(`RIDGE: ${site.name}`, '#ffb74d', 'rgba(30, 20, 10, 0.9)')
         if (siteSprite) {
           siteSprite.position.copy(posSite)
           siteSprite.position.y += 4.5 * curExag
@@ -601,10 +600,10 @@ export function Terrain3D({
         const travLine = new THREE.Line(travGeo, travMat)
         w.marks.add(travLine)
 
-        // Midpoint Traverse Telemetry Badge
+        // Midpoint Traverse Telemetry Badge (no emojis)
         const midIdx = Math.floor(STEPS / 2)
         const midPoint = linePoints[midIdx].clone()
-        const travBadge = createTextSprite(`⚡ Traverse: ${distanceKm.toFixed(1)} km (-${psr.depthM} m)`, '#00f5d4', 'rgba(5, 25, 20, 0.9)')
+        const travBadge = createTextSprite(`TRAVERSE: ${distanceKm.toFixed(1)} km (-${psr.depthM} m)`, '#00f5d4', 'rgba(5, 25, 20, 0.9)')
         if (travBadge) {
           travBadge.position.copy(midPoint)
           travBadge.position.y += 3.5 * curExag
@@ -799,60 +798,6 @@ export function Terrain3D({
         </div>
 
         <aside className="map-side">
-          {/* WS5: Science vs Engineering 3D Lens Toggle & Telemetry */}
-          <div className="science-3d-card" style={{ marginBottom: '10px' }}>
-            <div className="science-3d-header">
-              <div>
-                <span className="science-3d-title">🏔️ vs 🧊 Science Lens</span>
-                <span className="science-3d-subtitle">Mountains vs. Cold Traps</span>
-              </div>
-              <button
-                type="button"
-                className={`science-toggle-pill ${showScience ? 'active' : ''}`}
-                onClick={() => setShowScience((v) => !v)}
-                aria-pressed={showScience}
-                title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
-              >
-                {showScience ? '🧊 ON' : '🏔️ OFF'}
-              </button>
-            </div>
-
-            <p className="science-3d-desc">
-              {showScience
-                ? 'Visualizing cold trap water ice (<110 K PSRs), illuminated ridges, and rim-to-floor descent trajectories.'
-                : 'Toggle ON to visualize crater cold traps, volatile ice reservoirs, and landing-to-ice traverse vectors.'}
-            </p>
-
-            {showScience && site && site.lat <= -80.5 && (() => {
-              const scienceStats = getSiteScienceStats(site)
-              const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
-              return (
-                <div className="science-3d-telemetry">
-                  <div className="telemetry-item">
-                    <span className="telemetry-lbl">Target PSR:</span>
-                    <span className="telemetry-val highlight">{psr.name.replace(' Crater PSR', '')}</span>
-                  </div>
-                  <div className="telemetry-item">
-                    <span className="telemetry-lbl">Traverse Dist:</span>
-                    <span className="telemetry-val">{distanceKm.toFixed(1)} km</span>
-                  </div>
-                  <div className="telemetry-item">
-                    <span className="telemetry-lbl">Crater Depth:</span>
-                    <span className="telemetry-val depth">-{psr.depthM.toLocaleString()} m</span>
-                  </div>
-                  <div className="telemetry-item">
-                    <span className="telemetry-lbl">Cryo Temp:</span>
-                    <span className="telemetry-val cryo">{psr.tempK} K (-{273 - psr.tempK}°C)</span>
-                  </div>
-                  <div className="telemetry-item full">
-                    <span className="telemetry-lbl">Zone Verdict:</span>
-                    <span className={`tradeoff-chip chip-${scienceStats.zone}`}>{scienceStats.zoneLabel}</span>
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-
           {/* Sub-tab navigation inside the 3D sidebar */}
           <div className="seg views" style={{ width: '100%', marginBottom: '8px', display: 'flex' }}>
             <button
@@ -1105,6 +1050,60 @@ export function Terrain3D({
           {/* TAB 3: 3D CONTROLS & LIGHTING */}
           {sideTab === 'controls' && (
             <>
+              {/* Science vs Engineering 3D Lens Toggle & Telemetry */}
+              <div className="science-3d-card" style={{ marginBottom: '14px' }}>
+                <div className="science-3d-header">
+                  <div>
+                    <span className="science-3d-title">Science Lens: Ridge vs. Cold Trap</span>
+                    <span className="science-3d-subtitle">Mountains vs. Volatile Ice Traps</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`science-toggle-pill ${showScience ? 'active' : ''}`}
+                    onClick={() => setShowScience((v) => !v)}
+                    aria-pressed={showScience}
+                    title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
+                  >
+                    {showScience ? 'SCIENCE ON' : 'SCIENCE OFF'}
+                  </button>
+                </div>
+
+                <p className="science-3d-desc">
+                  {showScience
+                    ? 'Visualizing cold trap water ice (<110 K PSRs), illuminated ridges, and rim-to-floor descent trajectories.'
+                    : 'Toggle ON to visualize crater cold traps, volatile ice reservoirs, and landing-to-ice traverse vectors.'}
+                </p>
+
+                {showScience && site && site.lat <= -80.5 && (() => {
+                  const scienceStats = getSiteScienceStats(site)
+                  const { psr, distanceKm } = findNearestPsr(site.lat, site.lon)
+                  return (
+                    <div className="science-3d-telemetry">
+                      <div className="telemetry-item">
+                        <span className="telemetry-lbl">Target PSR:</span>
+                        <span className="telemetry-val highlight">{psr.name.replace(' Crater PSR', '')}</span>
+                      </div>
+                      <div className="telemetry-item">
+                        <span className="telemetry-lbl">Traverse Dist:</span>
+                        <span className="telemetry-val">{distanceKm.toFixed(1)} km</span>
+                      </div>
+                      <div className="telemetry-item">
+                        <span className="telemetry-lbl">Crater Depth:</span>
+                        <span className="telemetry-val depth">-{psr.depthM.toLocaleString()} m</span>
+                      </div>
+                      <div className="telemetry-item">
+                        <span className="telemetry-lbl">Cryo Temp:</span>
+                        <span className="telemetry-val cryo">{psr.tempK} K (-{273 - psr.tempK}°C)</span>
+                      </div>
+                      <div className="telemetry-item full">
+                        <span className="telemetry-lbl">Zone Verdict:</span>
+                        <span className={`tradeoff-chip chip-${scienceStats.zone}`}>{scienceStats.zoneLabel}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
               <div className="legend three-legend">
                 {(['sun', 'earth', 'both', 'none'] as const).map((k) => (
                   <span key={k}>
@@ -1154,12 +1153,6 @@ export function Terrain3D({
                   <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>
                     Look at Earth
                   </button>
-                  {showScience && site && site.lat <= -80.5 && (
-                    <>
-                      <button type="button" onClick={() => preset('descent')}>Descent View ⚡</button>
-                      <button type="button" onClick={() => preset('psr_bowl')}>Inside Crater Bowl 🧊</button>
-                    </>
-                  )}
                 </div>
                 <p className="chart-note">Drag to rotate, right-drag to pan, scroll to zoom.</p>
               </fieldset>
