@@ -4,3 +4,5 @@ pipeline/kernels/
 pipeline/data/lola/
 node_modules/
 web/dist/
+.cache/
+apps/

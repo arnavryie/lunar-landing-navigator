@@ -1,8 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import {
-  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, loadSite, loadSites,
+  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
   loadValidation, stateAt,
-  type Site, type SiteSummary, type Thresholds, type Validation,
+  type Site, type SiteSummary, type Thresholds, type Validation as ValidationData,
 } from './data'
 import { HorizonDial } from './HorizonDial'
 import { Compare, type Scenario } from './Compare'
@@ -15,6 +15,12 @@ import { Sources } from './Sources'
 import { Survival } from './Survival'
 import { Timeline } from './Timeline'
 import { YearStrip } from './YearStrip'
+// WS2
+import { Why } from './explain/Why'
+import { Contrast } from './explain/Contrast'
+// WS3
+import { Replays } from './Replays'
+import { Validation } from './Validation'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -47,11 +53,11 @@ export default function App() {
     minEarthPct: num('earth', DEFAULT_THRESHOLDS.minEarthPct),
   })
   const [error, setError] = useState('')
-  const [validation, setValidation] = useState<Validation | null>(null)
+  const [validation, setValidation] = useState<ValidationData | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d'
-  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
+  const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -182,11 +188,15 @@ export default function App() {
             Compare
           </button>
         </nav>
-        {validation?.horizons.passed && (
-          <a className="badge" href="#sources" title="How the numbers were checked">
-            <span aria-hidden="true">✓</span> Validated against JPL Horizons, max error {validation.horizons.worst_deg.toFixed(5)}°
-          </a>
-        )}
+        {/* WS3 */}
+        <button
+          type="button"
+          className="badge"
+          onClick={() => setView('validation')}
+          title="How the numbers were checked — open scientific validation proofs"
+        >
+          <span aria-hidden="true">✓</span> Validated against JPL Horizons{validation ? `, max error ${validation.horizons.worst_deg.toFixed(5)}°` : ''} • See proofs →
+        </button>
         {view !== 'compare' && (
         <label className="site-pick">
           <span>Site</span>
@@ -212,36 +222,67 @@ export default function App() {
 
       {view === 'find' && (
         <section className="panel" aria-label="Alternatives finder">
-          <Finder
-            sites={sites}
-            site={site}
-            i={i}
-            setI={setI}
-            th={th}
-            setTh={setTh}
-            onPickSite={setSiteId}
-            onPickPoint={pickPoint}
-            busy={busy}
-            pickError={pickError}
-            onOpenSite={() => setView('site')}
-            onCompare={addToCompare}
-          />
+          {/* WS3 */}
+          {site && !inAnalysisYear(site) ? (
+            <div className="replay-notice-card">
+              <p>The site finder is calibrated for the 2027 analysis year. Historical mission replays are shown on the Site and plan tab.</p>
+              <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
+            </div>
+          ) : (
+            <Finder
+              sites={sites}
+              site={site}
+              i={i}
+              setI={setI}
+              th={th}
+              setTh={setTh}
+              onPickSite={setSiteId}
+              onPickPoint={pickPoint}
+              busy={busy}
+              pickError={pickError}
+              onOpenSite={() => setView('site')}
+              onCompare={addToCompare}
+            />
+          )}
         </section>
       )}
 
       {view === 'globe' && (
         <section className="panel" aria-label="Whole-Moon globe">
-          <Suspense fallback={<p className="loading">Loading the globe</p>}>
-            <Globe site={site} sites={sites} i={i} onPickSite={setSiteId} onOpen3D={() => setView('3d')} />
-          </Suspense>
+          {/* WS3 */}
+          {site && !inAnalysisYear(site) ? (
+            <div className="replay-notice-card">
+              <p>The whole-Moon globe covers the 2027 orbital model. Historical mission replays are shown on the Site and plan tab.</p>
+              <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
+            </div>
+          ) : (
+            <Suspense fallback={<p className="loading">Loading the globe</p>}>
+              <Globe site={site} sites={sites} i={i} onPickSite={setSiteId} onOpen3D={() => setView('3d')} />
+            </Suspense>
+          )}
         </section>
       )}
 
       {view === '3d' && (
         <section className="panel" aria-label="3D south-pole terrain">
-          <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
-            <Terrain3D site={site} sites={sites} i={i} />
-          </Suspense>
+          {/* WS3 */}
+          {site && !inAnalysisYear(site) ? (
+            <div className="replay-notice-card">
+              <p>3D GPU shadow maps cover the 2027 analysis year. Historical mission replays are shown on the Site and plan tab.</p>
+              <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
+            </div>
+          ) : (
+            <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
+              <Terrain3D site={site} sites={sites} i={i} />
+            </Suspense>
+          )}
+        </section>
+      )}
+
+      {/* WS3 */}
+      {view === 'validation' && (
+        <section className="panel" aria-label="Validation proofs and scientific checks">
+          <Validation onReturnToSite={() => setView('site')} />
         </section>
       )}
 
@@ -286,6 +327,17 @@ export default function App() {
                 <Body site={site} i={i} b="earth" />
               </div>
               <SiteFacts site={site} />
+              {/* WS2 */}
+              <Contrast site={site} i={i} />
+              {/* WS3 */}
+              <Replays
+                currentSite={site}
+                currentHourIndex={i}
+                onLoadReplay={(id, hour) => {
+                  setSiteId(id)
+                  setI(hour)
+                }}
+              />
             </section>
           </main>
 
@@ -360,7 +412,9 @@ function Status({ site, i }: { site: Site; i: number }) {
   return (
     <div className={`status st-${s}-border`}>
       <span className={`swatch st-${s}`} aria-hidden="true" />
-      {STATE_LABEL[s]}
+      <span style={{ flex: 1 }}>{STATE_LABEL[s]}</span>
+      {/* WS2 */}
+      <Why topic="ridge-blocks" site={site} i={i} />
     </div>
   )
 }
@@ -381,7 +435,11 @@ function Body({ site, i, b }: { site: Site; i: number; b: 'sun' | 'earth' }) {
         {name}
         <span className={visible ? 'pill on' : 'pill off'}>{visible ? 'In view' : 'Hidden'}</span>
       </h2>
-      <p className="hero">{formatDeg(t.el[i])}</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
+        <p className="hero">{formatDeg(t.el[i])}</p>
+        {/* WS2 */}
+        <Why topic={b === 'sun' ? 'sun-skims' : 'earth-wobbles'} site={site} i={i} />
+      </div>
       <p className="hero-label">elevation above flat horizon</p>
       <dl>
         <dt>Terrain horizon there</dt>

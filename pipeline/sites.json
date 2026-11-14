@@ -30,5 +30,19 @@
   {"id": "apollo-11", "group": "Contrast", "name": "Apollo 11 Tranquility Base",
    "lat": 0.67409, "lon": 23.47298, "kind": "landing",
    "note": "Near the equator: the Sun climbs high and Earth stays high in the sky. Terrain from the 1.9 km global map.",
-   "source": "NASA Apollo Lunar Surface Journal, Apollo 11", "source_url": "https://nasa.gov/wp-content/uploads/static/history/alsj/a11/a11ov.html"}
+   "source": "NASA Apollo Lunar Surface Journal, Apollo 11", "source_url": "https://nasa.gov/wp-content/uploads/static/history/alsj/a11/a11ov.html"},
+  {"id": "replay-chandrayaan-3", "group": "Mission replays", "name": "Replay: Chandrayaan-3 Vikram (Aug 2023)",
+   "lat": -69.3741, "lon": 32.32, "kind": "landing",
+   "replay": {"landing_utc": "2023-08-23T12:32:00Z", "days_before": 2, "days_after": 18,
+              "outcome": "Successfully touched down at Statio Shiv Shakti (69.37°S, 32.32°E). Solar panels achieved full nominal power generation, deploying Pragyan rover and operating until sunset on Sep 2-4, 2023.",
+              "outcome_source": "ISRO Chandrayaan-3 Official Mission Summary", "outcome_url": "https://www.isro.gov.in/Chandrayaan3_Details.html"},
+   "note": "Chandrayaan-3 Vikram lander touchdown at Shiv Shakti Point, evaluated against authentic 2023 solar/Earth positions.",
+   "source": "ISRO & LROC Coordinates", "source_url": "https://www.isro.gov.in/Chandrayaan3_Details.html"},
+  {"id": "replay-im1-odysseus", "group": "Mission replays", "name": "Replay: IM-1 Odysseus (Feb 2024)",
+   "lat": -80.13, "lon": 1.44, "kind": "landing",
+   "replay": {"landing_utc": "2024-02-22T23:23:00Z", "days_before": 2, "days_after": 16,
+              "outcome": "Touched down on a ~12° slope near Malapert A and rested at a ~30° tilt. Solar arrays generated sufficient power to maintain continuous telemetry and downlink payloads until lunar nightfall on Feb 29, 2024.",
+              "outcome_source": "NASA & Intuitive Machines IM-1 Odysseus Mission Summary", "outcome_url": "https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/"},
+   "note": "IM-1 Odysseus lander touchdown near Malapert A, evaluated against authentic February 2024 solar/Earth positions.",
+   "source": "NASA CLPS & LROC Image 1409", "source_url": "https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/"}
 ]
