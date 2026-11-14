@@ -58,6 +58,10 @@ export default function App() {
   const [speed, setSpeed] = useState(6) // hours per frame
   type View = 'site' | 'find' | 'compare' | 'globe' | 'map' | '3d' | 'validation'
   const [view, setView] = useState<View>((['find', 'compare', 'globe', 'map', '3d', 'validation'] as const).find((v) => v === params.get('view')) ?? 'site')
+  const [findRadius, setFindRadius] = useState(0) // radius for Find sites when opened from the planner
+  useEffect(() => {
+    if (view !== 'find') setFindRadius(0)
+  }, [view])
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -242,6 +246,7 @@ export default function App() {
               pickError={pickError}
               onOpenSite={() => setView('site')}
               onCompare={addToCompare}
+              initialRadius={findRadius}
             />
           )}
         </section>
@@ -342,7 +347,23 @@ export default function App() {
           </main>
 
           <section className="panel" aria-label="Landing date planner">
-            <Planner site={site} i={i} setI={setI} planned={planned} setPlanned={setPlanned} th={th} setTh={setTh} />
+            <Planner
+              site={site}
+              i={i}
+              setI={setI}
+              planned={planned}
+              setPlanned={setPlanned}
+              th={th}
+              setTh={setTh}
+              onFindAlternatives={
+                inAnalysisYear(site)
+                  ? () => {
+                      setFindRadius(site.lat <= -84 ? 25 : 0)
+                      setView('find')
+                    }
+                  : undefined
+              }
+            />
           </section>
 
           <section className="panel" aria-label="Availability timeline">

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   DEFAULT_THRESHOLDS, MARGIN, VIABILITY_LABEL, dailyViability, formatDate, formatDuration, hoursToChange,
   slipBudget, timeAt, viability, windowStats,
-  type Site, type Thresholds, type Viability, type WindowStats,
+  type DayEval, type Site, type Thresholds, type Viability, type WindowStats,
 } from './data'
 
 const LUNAR_MONTH_H = 709 // 29.53 days
@@ -22,10 +22,12 @@ interface Props {
   setPlanned: (d: number) => void
   th: Thresholds
   setTh: (t: Thresholds) => void
+  /** Opens Find sites for the selected date; no button when absent. */
+  onFindAlternatives?: () => void
 }
 
 /** F3: viability thresholds, landing-date calendar, slip buttons, before/after card and slip budget. */
-export function Planner({ site, i, setI, planned, setPlanned, th, setTh }: Props) {
+export function Planner({ site, i, setI, planned, setPlanned, th, setTh, onFindAlternatives }: Props) {
   const days = useMemo(() => dailyViability(site, th), [site, th])
   const [hover, setHover] = useState<number | null>(null)
   const [custom, setCustom] = useState(3)
@@ -34,6 +36,8 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh }: Props
   const last = site.samples - 1
   const slipH = i - planned * 24
   const budget = slipBudget(days, planned)
+  const best = useMemo(() => bestWindows(days, planned), [days, planned])
+  const today = days[Math.floor(i / 24)]
 
   const plan = (d: number) => {
     const day = Math.min(Math.max(d, 0), days.length - 1)
@@ -142,6 +146,38 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh }: Props
               'No later viable date in the data.'
             )}
           </p>
+
+          {onFindAlternatives && (
+            <button className={today && today.status !== 'viable' ? 'find-alt is-needed' : 'find-alt'} onClick={onFindAlternatives}>
+              Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))} →
+            </button>
+          )}
+
+          <div className="best-dates">
+            <h3>Best 3 landing windows after the planned date</h3>
+            {best.length ? (
+              <ol>
+                {best.map((w) => (
+                  <li key={w.day}>
+                    <button className="link" onClick={() => setI(w.day * 24)}>
+                      {formatDate(timeAt(site, w.day * 24))}
+                    </button>{' '}
+                    <span className={`v-tag v-${w.status}`}>{VIABILITY_LABEL[w.status]}</span>{' '}
+                    <span className="muted">
+                      sunlit {w.stats.sunPct.toFixed(0)}%, longest darkness {formatDuration(w.stats.longestDarkH)}, Earth{' '}
+                      {w.stats.earthPct.toFixed(0)}%
+                      {w.len > 1 && ` (best day of a ${w.len}-day window from ${formatDate(timeAt(site, w.from * 24))})`}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="muted">No viable or marginal landing date after the planned date in the data.</p>
+            )}
+            <p className="chart-note">
+              One date per run of good days, picked by verdict, then shortest longest-darkness, then most sunlight and Earth view; listed by date. Click a date to compare it with the plan.
+            </p>
+          </div>
         </div>
 
         <div className="planner-cal">
@@ -198,6 +234,29 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh }: Props
       <BeforeAfter site={site} plannedI={planned * 24} newI={i} hours={hours} th={th} />
     </div>
   )
+}
+
+type Window = { day: number; from: number; len: number; status: Viability; stats: WindowStats }
+
+/** Up to 3 landing windows from day p on: each run of consecutive viable (or, if none, marginal) days gives its best day. */
+function bestWindows(days: DayEval[], p: number, n = 3): Window[] {
+  const better = (a: WindowStats, b: WindowStats) =>
+    a.longestDarkH - b.longestDarkH || b.sunPct - a.sunPct || b.earthPct - a.earthPct
+  const runs = (status: Viability) => {
+    const out: Window[] = []
+    for (let d = Math.max(p, 0); d < days.length; d++) {
+      const e = days[d]
+      if (e.status !== status || !e.stats) continue
+      const last = out[out.length - 1]
+      if (last && last.from + last.len === d) {
+        last.len++
+        if (better(e.stats, last.stats) < 0) Object.assign(last, { day: d, stats: e.stats })
+      } else out.push({ day: d, from: d, len: 1, status, stats: e.stats })
+    }
+    return out.sort((a, b) => better(a.stats, b.stats))
+  }
+  const viable = runs('viable')
+  return (viable.length ? viable : runs('marginal')).slice(0, n).sort((a, b) => a.day - b.day)
 }
 
 export function Field(p: { label: string; unit: string; value: number; step: number; onChange: (v: string) => void }) {

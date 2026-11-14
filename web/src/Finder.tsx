@@ -85,6 +85,8 @@ interface Props {
   pickError: string
   onOpenSite: () => void
   onCompare: () => void
+  /** Open with a radius search (km) around the selected site, e.g. from the planner's "Find other spots". */
+  initialRadius?: number
 }
 
 export function Finder(p: Props) {
@@ -92,8 +94,11 @@ export function Finder(p: Props) {
   const [data, setData] = useState<Cands | null>(null)
   const [err, setErr] = useState('')
   const [maxSlope, setMaxSlope] = useState(8)
-  const [radius, setRadius] = useState(0) // 0 = whole 85-90 S region
-  const [anchor, setAnchor] = useState<{ name: string; lat: number; lon: number } | null>(null) // radius centre, frozen when chosen
+  const polar = site && site.lat <= -84 ? site : null // radius search needs a polar site
+  const [radius, setRadius] = useState(polar ? (p.initialRadius ?? 0) : 0) // 0 = whole 85-90 S region
+  const [anchor, setAnchor] = useState<{ name: string; lat: number; lon: number } | null>(
+    polar && p.initialRadius ? { name: polar.name, lat: polar.lat, lon: polar.lon } : null,
+  ) // radius centre, frozen when chosen
   const [exact, setExact] = useState<{ key: string; hits: Map<number, WindowStats | null>; done: number } | null>(null)
 
   useEffect(() => {
@@ -101,7 +106,7 @@ export function Finder(p: Props) {
   }, [])
 
   const hours = th.missionDays * 24
-  const origin = site && site.lat <= -84 ? site : null // radius search needs a polar site
+  const origin = polar
   const centre = radius ? anchor : null
   const key = `${i}|${hours}|${th.minSunPct}|${th.maxDarkH}|${th.minEarthPct}|${maxSlope}|${radius}|${centre?.lat},${centre?.lon}`
 
@@ -235,7 +240,20 @@ export function Finder(p: Props) {
           ))}
         </ol>
       )}
-      {coarse && !ranked.length && <p className="muted">No spot meets these needs for this window. Try another landing date, a longer darkness limit or a steeper slope.</p>}
+      {coarse && !ranked.length && (
+        <p className="muted">
+          No spot meets these needs for this window. Try another landing date, a longer darkness limit or a steeper slope
+          {radius ? (
+            <>
+              , or{' '}
+              <button className="link" onClick={() => setRadius(0)}>
+                search the whole region
+              </button>
+            </>
+          ) : null}
+          .
+        </p>
+      )}
 
       {coarse && ranked.length > 0 && (
         <p className="chart-note">
