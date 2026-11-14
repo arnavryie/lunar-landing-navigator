@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { computeCustomPoint } from './customPoint'
+import { computeSamples, judge, saved as ellipseSaved } from './ellipseCheck'
+import { ellipseSamples } from './ellipseGeometry'
 import {
   MARGIN, VIABILITY_LABEL, formatDate, formatDuration, loadArtemis, viability, windowStats,
   type Region, type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
@@ -21,6 +23,17 @@ const SPREAD_KM = 5 // shortlisted spots at least this far apart, so the list of
 /** Score weights, shown on screen. Only spots that are viable or marginal are scored. */
 const W = { power: 0.4, comms: 0.25, dark: 0.2, slope: 0.15 }
 const RANK: Record<Viability, number> = { viable: 3, marginal: 2, not: 1, nodata: 0 }
+const ELLIPSE_POINTS = 12 // grid points per landing ellipse (+ the target and 12 on the edge): ~25 exact points per spot
+
+/** Landing-ellipse check of one shortlisted spot. */
+interface EllCheck {
+  total: number
+  done: number
+  viable: number
+  marginal: number
+  worstSun: number
+  worstDark: number
+}
 
 interface Cands {
   n: number
@@ -103,6 +116,9 @@ export function Finder(p: Props) {
   const [exact, setExact] = useState<{ key: string; hits: Map<number, WindowStats | null>; done: number } | null>(null)
   const [nearRegions, setNearRegions] = useState(false) // radius is around NASA's candidate regions, not the site
   const [regions, setRegions] = useState<Region[]>([])
+  const [ellOn, setEllOn] = useState(false)
+  const [ellKm, setEllKm] = useState(ellipseSaved.spec.lengthKm) // same size as the Map's ellipse to start with
+  const [ell, setEll] = useState<{ key: string; res: Map<number, EllCheck> } | null>(null)
 
   useEffect(() => {
     ;(cached ??= load()).then(setData, (e) => setErr(String(e.message ?? e)))
@@ -171,6 +187,39 @@ export function Finder(p: Props) {
     }
   }, [coarse]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Landing ellipse: check a circle as wide as the ellipse's long side around every shortlisted spot
+  // (the approach direction isn't known while choosing a site, so a circle covers every direction).
+  const ellKey = `${key}|${ellKm}`
+  useEffect(() => {
+    if (!coarse || !ellOn || ellKm <= 0) return setEll(null)
+    let alive = true
+    const res = new Map<number, EllCheck>()
+    setEll({ key: ellKey, res })
+    ;(async () => {
+      for (const h of coarse.picks) {
+        const { points } = ellipseSamples({ lat: h.lat, lon: h.lon }, { lengthKm: ellKm, widthKm: ellKm, headingDeg: 0 }, ELLIPSE_POINTS)
+        const c: EllCheck = { total: points.length, done: 0, viable: 0, marginal: 0, worstSun: 100, worstDark: 0 }
+        res.set(h.k, c)
+        await computeSamples(points, () => alive, (_, pt) => {
+          c.done++
+          if (pt) {
+            const { stats, v } = judge(pt, i, hours, th, maxSlope)
+            if (v === 'viable') c.viable++
+            if (v === 'marginal') c.marginal++
+            if (stats) [c.worstSun, c.worstDark] = [Math.min(c.worstSun, stats.sunPct), Math.max(c.worstDark, stats.longestDarkH)]
+          }
+          setEll({ key: ellKey, res: new Map(res) })
+        })
+        if (!alive) return
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [coarse, ellOn, ellKm]) // eslint-disable-line react-hooks/exhaustive-deps
+  const ellRes = ell?.key === ellKey ? ell.res : null
+  const ellDone = !!coarse && !!ellRes && coarse.picks.every((h) => { const c = ellRes.get(h.k); return c && c.done === c.total })
+
   // Merge exact results into the ranking.
   const ranked = useMemo(() => {
     if (!coarse) return []
@@ -181,8 +230,14 @@ export function Finder(p: Props) {
       const sc = stats && (v === 'viable' || v === 'marginal') ? score(stats, h.slope, th, maxSlope) : null
       return { ...h, stats, v, score: sc?.total ?? 0, parts: sc?.parts ?? h.parts, exact: true }
     })
-    return list.sort(rankSort).filter((h) => h.v === 'viable' || h.v === 'marginal')
-  }, [coarse, exact, key, th, maxSlope])
+    const out = list.sort(rankSort).filter((h) => h.v === 'viable' || h.v === 'marginal')
+    // Once every ellipse is checked, spots whose whole ellipse works come first (stable sort keeps the score order).
+    if (ellDone && ellRes) {
+      const share = (k: number) => { const c = ellRes.get(k)!; return c.viable / c.total }
+      out.sort((a, b) => share(b.k) - share(a.k))
+    }
+    return out
+  }, [coarse, exact, key, th, maxSlope, ellDone, ellRes])
 
   const counts = useMemo(() => {
     const c = { viable: 0, marginal: 0, not: 0, nodata: 0 }
@@ -237,6 +292,7 @@ export function Finder(p: Props) {
                     {VIABILITY_LABEL[h.v]} · sunlit {h.stats!.sunPct.toFixed(0)}% · {h.stats!.longestDarkH ? `longest dark ${formatDuration(h.stats!.longestDarkH)}` : 'no darkness'} · Earth {h.stats!.earthPct.toFixed(0)}% ·
                     slope {h.slope.toFixed(1)}°
                   </span>
+                  {ellRes?.get(h.k) && <EllipseLine c={ellRes.get(h.k)!} km={ellKm} />}
                   <span className="score-bar" aria-label={`Score ${h.score.toFixed(0)} of 100`}>
                     {(Object.keys(W) as (keyof typeof W)[]).map((c) => (
                       <span key={c} className={`sb-${c}`} style={{ width: `${W[c] * h.parts[c] * 100}%` }} title={`${c}: ${(W[c] * h.parts[c] * 100).toFixed(0)} of ${W[c] * 100}`} />
@@ -273,8 +329,27 @@ export function Finder(p: Props) {
           longest night), slope {W.slope * 100} (flatter). Weights are our choice, shown so you can disagree.{' '}
           {checking > 0 && exact && exact.done < checking ? `Checking the top ${checking} exactly… ${exact.done}/${checking}.` : ''}
           {drift !== null && exact && exact.done >= checking ? ` Top ${exact.hits.size} recomputed exactly; quick estimates were within ${drift.toFixed(1)} points.` : ''}
+          {ellRes && (ellDone ? ' Sorted by how much of each landing ellipse is viable, then by score.' : ' Checking landing ellipses; the list re-sorts when all are done.')}
         </p>
       )}
+
+      <fieldset className="thresholds">
+        <legend>Landing ellipse</legend>
+        <label className="radio">
+          <input type="checkbox" checked={ellOn} onChange={(e) => setEllOn(e.target.checked)} />
+          Check the whole landing area of each shortlisted spot
+        </label>
+        {ellOn && (
+          <>
+            <Field label="Ellipse length (long side)" unit="km" value={ellKm} step={0.5} onChange={(v) => setEllKm(Math.min(20, Math.max(0, Number(v) || 0)))} />
+            <p className="chart-note">
+              The approach direction isn't fixed while choosing a site, so each spot is checked over a circle this wide (covers
+              the ellipse in any direction): ~25 points per spot, each computed exactly; about 2–3 s per spot. For a set
+              direction and full detail, pick a spot and use the Map tab.
+            </p>
+          </>
+        )}
+      </fieldset>
 
       <fieldset className="thresholds">
         <legend>Mission</legend>
@@ -360,5 +435,17 @@ export function Finder(p: Props) {
       dots={dots}
       side={side}
     />
+  )
+}
+
+function EllipseLine({ c, km }: { c: EllCheck; km: number }) {
+  if (c.done < c.total)
+    return <span className="short-nums muted">Landing ellipse {km} km: checking {c.done}/{c.total}…</span>
+  const all = c.viable === c.total
+  return (
+    <span className={`short-nums ell-line${all ? ' ell-ok' : ''}`}>
+      Landing ellipse {km} km: {all ? `all ${c.total} points viable` : `${c.viable} of ${c.total} viable${c.marginal ? `, ${c.marginal} marginal` : ''}`} · worst sunlit{' '}
+      {c.worstSun.toFixed(0)}%, worst dark {c.worstDark ? formatDuration(c.worstDark) : '0 h'}
+    </span>
   )
 }

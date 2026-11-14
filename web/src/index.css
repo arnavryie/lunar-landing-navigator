@@ -345,3 +345,5 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .ellipse-table th, .ellipse-table td { padding: 3px 4px; text-align: right; border-bottom: 1px solid var(--rule); }
 .ellipse-table th[scope='row'] { text-align: left; font-weight: 500; color: var(--muted); }
 .map-side .seg button { flex: 1 1 0; padding-inline: 6px; }
+.ell-line { display: block; }
+.ell-line.ell-ok { color: var(--both); }

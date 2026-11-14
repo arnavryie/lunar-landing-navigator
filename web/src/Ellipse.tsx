@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeCustomPoint } from './customPoint'
+import { computeSamples, judge, saved, type Run, type Sample } from './ellipseCheck'
 import { ellipseOutline, ellipseSamples, type EllipseSpec, type LatLon } from './ellipseGeometry'
 import type { Dot } from './MapView'
 import { Field } from './Planner'
-import {
-  VIABILITY_LABEL, formatDuration, formatUtc, inAnalysisYear, timeAt, viability, windowStats,
-  type Site, type Thresholds, type Viability, type WindowStats,
-} from './data'
+import { VIABILITY_LABEL, formatDuration, formatUtc, inAnalysisYear, timeAt, type Site, type Thresholds, type WindowStats } from './data'
 
 // F1 landing-ellipse dispersion: the lander comes down somewhere inside the ellipse, not exactly on the target.
 // Every sample point is computed exactly (same engine as a map click) and judged with the planner's mission needs.
@@ -17,25 +14,12 @@ export interface EllipseOverlay {
   focus: LatLon & { km: number }
 }
 
-interface Sample extends LatLon {
-  slope: number
-  samples: number
-  sun: { frac: Float32Array }
-  earth: { frac: Float32Array }
-}
-
 interface Props {
   site: Site
   th: Thresholds
   i: number // landing time (hour index), shared with Site and plan
   onOverlay: (o: EllipseOverlay | null) => void
 }
-
-const DEFAULT: EllipseSpec = { lengthKm: 4, widthKm: 2, headingDeg: 0 } // example only, not a specific lander
-
-type Run = { key: string; points: (Sample | null)[]; total: number; spacingM: number }
-// Inputs and results outlive the panel, so switching to the 3D tab and back keeps them.
-const saved: { spec: EllipseSpec; circle: boolean; maxSlope: number; run: Run | null } = { spec: DEFAULT, circle: false, maxSlope: 8, run: null }
 
 export function Ellipse({ site, th, i, onOverlay }: Props) {
   const [spec, setSpec] = useState(saved.spec)
@@ -60,32 +44,16 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
     const { points, spacingM } = ellipseSamples(centre, e)
     const out: (Sample | null)[] = []
     setRun({ key, points: out, total: points.length, spacingM })
-    await Promise.all(
-      points.map(async (p, j) => {
-        const s = await computeCustomPoint(p.lat, p.lon, false).catch(() => null)
-        if (id !== runId.current) return
-        out[j] = s && {
-          ...p,
-          slope: s.slope_deg ?? NaN,
-          samples: s.samples,
-          sun: { frac: Float32Array.from(s.sun.frac) },
-          earth: { frac: Float32Array.from(s.earth.frac) },
-        }
-        setRun({ key, points: out.slice(), total: points.length, spacingM })
-      }),
-    )
+    await computeSamples(points, () => id === runId.current, (j, p) => {
+      out[j] = p
+      setRun({ key, points: out.slice(), total: points.length, spacingM })
+    })
   }
 
   // Judge every finished point for the current landing time and mission needs (no recompute needed when those change).
   const judged = useMemo(() => {
     if (!current) return []
-    return current.points.flatMap((p, j) => {
-      if (!p) return []
-      const stats = windowStats(p, i, hours)
-      const steep = p.slope > maxSlope
-      const v: Viability = stats && steep ? 'not' : viability(stats, th)
-      return [{ ...p, j, stats, steep, v }]
-    })
+    return current.points.flatMap((p, j) => (p ? [{ ...p, j, ...judge(p, i, hours, th, maxSlope) }] : []))
   }, [current, i, hours, th, maxSlope])
 
   const done = current ? current.points.filter((p) => p !== undefined).length : 0
