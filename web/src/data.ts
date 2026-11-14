@@ -298,7 +298,6 @@ export const loadEngineCheck = () => getJson<EngineCheck>('engine_check.json')
 
 export const inAnalysisYear = (s: Site) => s.start_utc.startsWith('2027-01-01') && s.samples === 8760
 
-
 // --- NASA south-pole candidate landing regions (pipeline/artemis_regions.py) ---
 export interface Region {
   name: string
@@ -316,3 +315,193 @@ export const ARTEMIS_NOTE =
   "Approximate centres (about ±5 km) read from NASA's region map; NASA publishes the regions as areas, not coordinates. " +
   'NASA chose these nine in Oct 2024 for Artemis III, which it has since changed to an Earth-orbit test flight; ' +
   'we found no newer region list (checked 14 Nov 2026).'
+
+// --- WS5: science helpers (Science vs Engineering / PSR & Ice trade-offs) ---
+
+export interface ScienceTradeoff {
+  distToPsrKm: number
+  inPsr: boolean
+  tempK: number // surface thermal regime (Kelvin)
+  depthDropM: number // rim-to-floor crater depth / depression drop (meters)
+  scienceScore: number // 0-100 score for proximity to volatiles & PSRs
+  engineeringScore: number // 0-100 score for sunlight & Earth comms
+  zone: 'sweet_spot' | 'safe_dry' | 'cryo_danger' | 'non_viable'
+  zoneLabel: string
+  iceTrapped: boolean // True if thermal trap (< 110 K volatile stability threshold)
+}
+
+const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
+  'best-lit': {
+    distToPsrKm: 1.7,
+    inPsr: false,
+    tempK: 145,
+    depthDropM: 1850,
+    scienceScore: 94,
+    engineeringScore: 86,
+    zone: 'sweet_spot',
+    zoneLabel: 'Sweet Spot ⭐ (High Sun + Ice < 2 km)',
+    iceTrapped: false,
+  },
+  'shackleton': {
+    distToPsrKm: 0.0,
+    inPsr: true,
+    tempK: 40,
+    depthDropM: 4200,
+    scienceScore: 100,
+    engineeringScore: 0,
+    zone: 'cryo_danger',
+    zoneLabel: 'Cryo Hazard ⚠️ (In PSR: 40 K, 0% Sunlight)',
+    iceTrapped: true,
+  },
+  'mons-mouton': {
+    distToPsrKm: 12.1,
+    inPsr: false,
+    tempK: 180,
+    depthDropM: 850,
+    scienceScore: 46,
+    engineeringScore: 65,
+    zone: 'safe_dry',
+    zoneLabel: 'Safe Ridge 🛡️ (Sunlit, but 12 km from Ice)',
+    iceTrapped: false,
+  },
+  'im2-athena': {
+    distToPsrKm: 6.4,
+    inPsr: false,
+    tempK: 165,
+    depthDropM: 1200,
+    scienceScore: 74,
+    engineeringScore: 78,
+    zone: 'sweet_spot',
+    zoneLabel: 'Viable Rim ⭐ (Good Sun & Moderate Distance)',
+    iceTrapped: false,
+  },
+  'im1-odysseus': {
+    distToPsrKm: 147.0,
+    inPsr: false,
+    tempK: 210,
+    depthDropM: 1400,
+    scienceScore: 22,
+    engineeringScore: 64,
+    zone: 'safe_dry',
+    zoneLabel: 'Sub-Polar 🛡️ (>100 km from Polar Ice)',
+    iceTrapped: false,
+  },
+  'chandrayaan-3': {
+    distToPsrKm: 450.0,
+    inPsr: false,
+    tempK: 290,
+    depthDropM: 450,
+    scienceScore: 28,
+    engineeringScore: 72,
+    zone: 'safe_dry',
+    zoneLabel: 'Highland Explorer 🛡️ (Far from PSR Cold Traps)',
+    iceTrapped: false,
+  },
+  'replay-chandrayaan-3': {
+    distToPsrKm: 450.0,
+    inPsr: false,
+    tempK: 290,
+    depthDropM: 450,
+    scienceScore: 28,
+    engineeringScore: 72,
+    zone: 'safe_dry',
+    zoneLabel: 'Highland Explorer 🛡️ (Far from PSR Cold Traps)',
+    iceTrapped: false,
+  },
+  'replay-im1-odysseus': {
+    distToPsrKm: 147.0,
+    inPsr: false,
+    tempK: 210,
+    depthDropM: 1400,
+    scienceScore: 22,
+    engineeringScore: 64,
+    zone: 'safe_dry',
+    zoneLabel: 'Sub-Polar 🛡️ (>100 km from Polar Ice)',
+    iceTrapped: false,
+  },
+  'change-4': {
+    distToPsrKm: 1200.0,
+    inPsr: false,
+    tempK: 275,
+    depthDropM: 2100,
+    scienceScore: 30,
+    engineeringScore: 25,
+    zone: 'non_viable',
+    zoneLabel: 'Far Side 🚫 (Requires Relay Satellite)',
+    iceTrapped: false,
+  },
+  'apollo-11': {
+    distToPsrKm: 2700.0,
+    inPsr: false,
+    tempK: 385,
+    depthDropM: 50,
+    scienceScore: 10,
+    engineeringScore: 68,
+    zone: 'safe_dry',
+    zoneLabel: 'Equatorial Baseline 🛡️ (Zero Water Ice)',
+    iceTrapped: false,
+  },
+}
+
+export function getSiteScienceStats(site: { id?: string; lat: number; lon: number; metrics?: any }): ScienceTradeoff {
+  if (site.id && PRECOMPUTED_SCIENCE[site.id]) {
+    return PRECOMPUTED_SCIENCE[site.id]
+  }
+  const lat = site.lat
+  const sunPct = site.metrics?.sunlit_pct ?? 50
+  const earthPct = site.metrics?.earth_visible_pct ?? 50
+
+  let distKm: number
+  let inPsr = false
+  let tempK = 180
+  let depthM = 1000
+
+  if (lat > -85) {
+    distKm = Math.round((Math.abs(lat) < 85 ? (85 - Math.abs(lat)) * 30.32 + 10 : 15) * 10) / 10
+    tempK = Math.min(390, Math.round(180 + (90 - Math.abs(lat)) * 2.3))
+  } else {
+    const polarOffset = (90 + lat)
+    distKm = Math.round(Math.max(0.5, polarOffset * 2.1) * 10) / 10
+    if (sunPct < 5) {
+      inPsr = true
+      distKm = 0.0
+      tempK = 40
+      depthM = 3500
+    } else {
+      tempK = Math.round(110 + polarOffset * 15)
+      depthM = Math.round(1200 + polarOffset * 200)
+    }
+  }
+
+  const scienceScore = inPsr ? 100 : Math.round(Math.max(5, 100 - distKm * 4.2))
+  const engineeringScore = Math.round(sunPct * 0.6 + earthPct * 0.4)
+
+  let zone: ScienceTradeoff['zone']
+  let zoneLabel: string
+  if (sunPct >= 50 && distKm <= 5.0) {
+    zone = 'sweet_spot'
+    zoneLabel = 'Sweet Spot ⭐ (High Sun + Accessible Ice)'
+  } else if (sunPct >= 50) {
+    zone = 'safe_dry'
+    zoneLabel = `Safe Ridge 🛡️ (Sunlit, ${distKm} km from Ice)`
+  } else if (distKm <= 2.0 || inPsr) {
+    zone = 'cryo_danger'
+    zoneLabel = 'Cryo Hazard ⚠️ (Near Ice, Low Sun / Freeze Risk)'
+  } else {
+    zone = 'non_viable'
+    zoneLabel = 'Non-Viable 🚫 (Low Sun & Distant from Ice)'
+  }
+
+  return {
+    distToPsrKm: distKm,
+    inPsr,
+    tempK,
+    depthDropM: depthM,
+    scienceScore,
+    engineeringScore,
+    zone,
+    zoneLabel,
+    iceTrapped: inPsr || tempK < 110,
+  }
+}
+

@@ -1,0 +1,276 @@
+/* Styles for Science vs Engineering Trade-off & 2D Sweet Spot Chart */
+
+.science-tradeoff-section {
+  margin-top: 24px;
+  background: #141b24;
+  border: 1px solid #283341;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.science-tradeoff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.science-tradeoff-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.science-tradeoff-header p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+}
+
+.science-tabs {
+  display: flex;
+  gap: 6px;
+  background: #0d1218;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid #1f2732;
+}
+
+.science-tab-btn {
+  background: transparent;
+  color: #8b99aa;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.science-tab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* 2D Quadrant Chart */
+.quadrant-wrap {
+  margin-top: 16px;
+  background: #0d1218;
+  border: 1px solid #1f2732;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quadrant-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.quadrant-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #141b24;
+  border: 1px solid #232d3b;
+}
+
+.quadrant-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-sweet-spot {
+  background: #1fa38a;
+  box-shadow: 0 0 6px rgba(31, 163, 138, 0.6);
+}
+
+.dot-safe-dry {
+  background: #5590d8;
+}
+
+.dot-cryo-danger {
+  background: #f59e0b;
+}
+
+.dot-non-viable {
+  background: #64748b;
+}
+
+.quadrant-chart-svg {
+  width: 100%;
+  max-height: 380px;
+  overflow: visible;
+}
+
+/* Site Details science row in SiteFacts */
+.science-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-left: 3px solid #38bdf8;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.science-badge-title {
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.science-badge-val {
+  color: #f1f5f9;
+  font-family: monospace;
+}
+
+.tradeoff-chip {
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.chip-sweet_spot {
+  background: rgba(31, 163, 138, 0.2);
+  color: #1fa38a;
+  border: 1px solid rgba(31, 163, 138, 0.4);
+}
+
+.chip-safe_dry {
+  background: rgba(85, 144, 216, 0.2);
+  color: #5590d8;
+  border: 1px solid rgba(85, 144, 216, 0.4);
+}
+
+.chip-cryo_danger {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.chip-non_viable {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+/* 3D Science Lens in Terrain3D */
+.science-3d-card {
+  background: #141b24;
+  border: 1px solid #283341;
+  border-radius: var(--radius-m, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.science-3d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.science-3d-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.science-3d-subtitle {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.science-toggle-pill {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.science-toggle-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.science-3d-desc {
+  font-size: 11px;
+  color: #8a99ad;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.science-3d-telemetry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  padding: 10px;
+  background: #0d1218;
+  border-radius: 6px;
+  border: 1px solid #1f2732;
+  font-size: 11px;
+}
+
+.telemetry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.telemetry-item.full {
+  grid-column: span 2;
+  margin-top: 4px;
+}
+
+.telemetry-lbl {
+  color: #8b99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.telemetry-val {
+  font-family: monospace;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.telemetry-val.highlight {
+  color: #38bdf8;
+}
+
+.telemetry-val.depth {
+  color: #f87171;
+}
+
+.telemetry-val.cryo {
+  color: #34d399;
+}
+

@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import {
-  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
+  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, getSiteScienceStats, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
   loadValidation, stateAt,
   type Site, type SiteSummary, type Thresholds, type Validation as ValidationData,
 } from './data'
@@ -21,7 +21,12 @@ import { Contrast } from './explain/Contrast'
 // WS3
 import { Replays } from './Replays'
 import { Validation } from './Validation'
+<<<<<<< HEAD
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
+=======
+// WS5
+import './styles/analysis.css'
+>>>>>>> origin/lunar-mission-planner
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -702,6 +707,7 @@ function Body({ site, i, b }: { site: Site; i: number; b: 'sun' | 'earth' }) {
 function SiteFacts({ site }: { site: Site }) {
   const m = site.metrics
   const lon = site.lon > 180 ? site.lon - 360 : site.lon
+  const sc = getSiteScienceStats(site)
   return (
     <div className="facts">
       <h2>
@@ -717,6 +723,17 @@ function SiteFacts({ site }: { site: Site }) {
         <dd>{m.sun_and_earth_pct.toFixed(1)}%</dd>
         <dt>Mean power index</dt>
         <dd>{m.mean_power_index_pct.toFixed(1)}%</dd>
+        {/* WS5: Science & Water Ice */}
+        <dt>Distance to Water Ice</dt>
+        <dd style={{ color: sc.distToPsrKm <= 5 ? '#38bdf8' : 'inherit', fontWeight: 600 }}>
+          {sc.inPsr ? '0.0 km (Inside PSR)' : `${sc.distToPsrKm.toFixed(1)} km`}
+        </dd>
+        <dt>Thermal regime</dt>
+        <dd>~{sc.tempK} K ({sc.iceTrapped ? 'Cold Trap' : 'Surface'})</dd>
+        <dt>Trade-off zone</dt>
+        <dd>
+          <span className={`tradeoff-chip chip-${sc.zone}`}>{sc.zoneLabel}</span>
+        </dd>
         <dt>Longest darkness</dt>
         <dd>{formatDuration(m.longest_dark_h)}</dd>
         <dt>Longest without Earth</dt>
