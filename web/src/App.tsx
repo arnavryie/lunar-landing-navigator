@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import {
   DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, horizonAt, hoursSinceChange, hoursToChange, loadSite, loadSites,
   loadValidation, stateAt,
@@ -14,6 +14,9 @@ import { Sources } from './Sources'
 import { Survival } from './Survival'
 import { Timeline } from './Timeline'
 import { YearStrip } from './YearStrip'
+
+// three.js is large: load the 3D view only when it's opened.
+const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
 
 const STEPS = [
   { label: '−1 d', h: -24 },
@@ -45,8 +48,8 @@ export default function App() {
   const [validation, setValidation] = useState<Validation | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(6) // hours per frame
-  type View = 'site' | 'compare' | 'map'
-  const [view, setView] = useState<View>((['compare', 'map'] as const).find((v) => v === params.get('view')) ?? 'site')
+  type View = 'site' | 'compare' | 'map' | '3d'
+  const [view, setView] = useState<View>((['compare', 'map', '3d'] as const).find((v) => v === params.get('view')) ?? 'site')
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -164,6 +167,9 @@ export default function App() {
           <button aria-pressed={view === 'map'} onClick={() => setView('map')}>
             Map
           </button>
+          <button aria-pressed={view === '3d'} onClick={() => setView('3d')}>
+            3D
+          </button>
           <button aria-pressed={view === 'compare'} onClick={openCompare}>
             Compare
           </button>
@@ -195,6 +201,14 @@ export default function App() {
 
       {error && <p className="error">{error}</p>}
       {!site && !error && <p className="loading">Loading site data</p>}
+
+      {view === '3d' && (
+        <section className="panel" aria-label="3D south-pole terrain">
+          <Suspense fallback={<p className="loading">Loading the 3D view</p>}>
+            <Terrain3D site={site} sites={sites} i={i} />
+          </Suspense>
+        </section>
+      )}
 
       {view === 'map' && (
         <section className="panel" aria-label="South-pole map">
@@ -265,39 +279,42 @@ export default function App() {
             {site.provenance} Times are to the nearest hour.
           </footer>
 
-          <section className="time" aria-label="Time">
-            <YearStrip site={site} i={i} />
-            <input
-              type="range"
-              min={0}
-              max={site.samples - 1}
-              value={i}
-              onChange={(e) => setI(Number(e.target.value))}
-              aria-label="Time, hourly through the data period"
-            />
-            <div className="time-row">
-              <div className="steps">
-                <button className="play" onClick={() => setPlaying(!playing)} aria-pressed={playing}>
-                  {playing ? 'Pause' : 'Play'}
-                </button>
-                <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed">
-                  <option value={1}>1 h per step</option>
-                  <option value={6}>6 h per step</option>
-                  <option value={24}>1 day per step</option>
-                </select>
-                {STEPS.map((s) => (
-                  <button key={s.label} onClick={() => setI(clampI(i + s.h))}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <p className="keys">
-                <kbd>←</kbd> <kbd>→</kbd> 1 hour, with <kbd>Shift</kbd> 1 day
-              </p>
-              <Legend />
-            </div>
-          </section>
         </>
+      )}
+
+      {site && (view === 'site' || view === '3d') && (
+        <section className="time" aria-label="Time">
+          <YearStrip site={site} i={i} />
+          <input
+            type="range"
+            min={0}
+            max={site.samples - 1}
+            value={i}
+            onChange={(e) => setI(Number(e.target.value))}
+            aria-label="Time, hourly through the data period"
+          />
+          <div className="time-row">
+            <div className="steps">
+              <button className="play" onClick={() => setPlaying(!playing)} aria-pressed={playing}>
+                {playing ? 'Pause' : 'Play'}
+              </button>
+              <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed">
+                <option value={1}>1 h per step</option>
+                <option value={6}>6 h per step</option>
+                <option value={24}>1 day per step</option>
+              </select>
+              {STEPS.map((s) => (
+                <button key={s.label} onClick={() => setI(clampI(i + s.h))}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="keys">
+              <kbd>←</kbd> <kbd>→</kbd> 1 hour, with <kbd>Shift</kbd> 1 day
+            </p>
+            <Legend />
+          </div>
+        </section>
       )}
     </div>
   )

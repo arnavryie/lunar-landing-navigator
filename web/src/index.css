@@ -290,3 +290,14 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .hover-box dl, .pick-box dl { margin-top: 0; font-size: 0.9rem; }
 .pick-box h3 { font-size: 0.95rem; margin-bottom: 6px; }
 .pick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* F6b 3D */
+.three-screen { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px 32px; align-items: start; }
+.three-wrap { position: relative; height: calc(100vh - 290px); min-height: 380px; border-radius: var(--radius-m); overflow: hidden; background: #111418; }
+.three-wrap canvas { display: block; }
+.three-msg { position: absolute; inset: 16px auto auto 16px; }
+.three-label { position: absolute; left: 12px; bottom: 10px; font-size: 0.8rem; color: var(--muted); background: rgb(17 20 24 / 0.7); padding: 2px 8px; border-radius: var(--radius-s); }
+.three-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.three-legend > span { display: flex; align-items: center; gap: 6px; }
+.field.exag { grid-template-columns: 1fr 120px 34px; }
+.field.exag input { padding: 0; accent-color: var(--text); }
