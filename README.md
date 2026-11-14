@@ -132,7 +132,13 @@ python export_replays.py  # mission replays; run after export_sites.py
 
 ---
 
-## 9. Team Stranded
+## 9. Use of AI tools
+
+Much of the code (Python pipeline and web app) and the documentation was written with an AI coding assistant, Claude (Anthropic) via Claude Code, under the team's direction. It also ran the validation checks and helped find and verify the sources cited in the app. Every number the app shows comes from the pipeline and the checks in this repository, not from the AI. No AI-generated images, video or audio are used.
+
+---
+
+## 10. Team Stranded
 
 - **Arnav Ryie** (`@arnavryie`)
 - **Mohit Aher** (`@mohitbaher`)
