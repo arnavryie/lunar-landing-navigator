@@ -77,17 +77,20 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
         const scene = new THREE.Scene()
         const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 50)
 
-        // Initial camera position: tilted south-polar view highlighting the 80°-90° S Artemis exploration zone
-        const initCamPos = unitAt(-72, 0).multiplyScalar(2.65)
+        // Center the 3D Moon sphere exactly in the middle of the viewport with South Pole tilted toward viewer
+        const initCamPos = unitAt(-34, 0).multiplyScalar(3.55)
         camera.position.copy(initCamPos)
 
         const controls = new OrbitControls(camera, renderer.domElement)
         controls.enablePan = false
         controls.enableDamping = true
         controls.dampingFactor = 0.08
-        controls.minDistance = 1.18
-        controls.maxDistance = 6.0
-        controls.target.copy(unitAt(-86, 0))
+        controls.minDistance = 1.3
+        controls.maxDistance = 7.0
+        controls.target.set(0, 0, 0)
+        controls.autoRotate = autoRotate
+        controls.autoRotateSpeed = 0.35
+        controls.update()
         controls.autoRotate = autoRotate
         controls.autoRotateSpeed = 0.35
         controls.update()
@@ -312,7 +315,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     w.controls.autoRotate = autoRotate
   }, [autoRotate])
 
-  // Camera Presets
+  // Camera Presets (all targeted at sphere center 0, 0, 0)
   const setCameraPreset = (preset: 'pole' | 'equator' | 'sun') => {
     const w = worldRef.current
     if (!w) return
@@ -320,15 +323,15 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     setAutoRotate(false)
 
     if (preset === 'pole') {
-      w.camera.position.copy(unitAt(-74, 0).multiplyScalar(2.65))
-      w.controls.target.copy(unitAt(-86, 0))
+      w.camera.position.copy(unitAt(-34, 0).multiplyScalar(3.55))
+      w.controls.target.set(0, 0, 0)
     } else if (preset === 'equator') {
-      w.camera.position.set(0, 0, 2.7)
+      w.camera.position.set(0, 0, 3.55)
       w.controls.target.set(0, 0, 0)
     } else if (preset === 'sun' && vec) {
       const k = 6 * Math.min(Math.floor(hour), Math.floor(vec.length / 6 - 1))
       const sunDir = meToScene(vec[k], vec[k + 1], vec[k + 2]).normalize()
-      w.camera.position.copy(sunDir).multiplyScalar(2.7)
+      w.camera.position.copy(sunDir).multiplyScalar(3.55)
       w.controls.target.set(0, 0, 0)
     }
     w.controls.update()
@@ -415,11 +418,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
             Rotate: {autoRotate ? 'ON' : 'OFF'}
           </button>
         </div>
-      </div>
-
-      {/* Informational Tooltip / Guide */}
-      <div className="moon-3d-foot-hint">
-        <span>Drag to rotate · Scroll to zoom · Scrub timeline below to simulate hourly Sun terminator motion</span>
       </div>
     </div>
   )
