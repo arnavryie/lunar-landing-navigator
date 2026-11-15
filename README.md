@@ -371,14 +371,13 @@ Every result below is produced by a script in this repository and shown on the i
 
 ## 13. Run it yourself
 
-The app code lives on the **`lunar-mission-planner`** branch.
 
 **Prerequisites:** Node.js 24+ (the check scripts run `.ts` directly), a WebGL 2 browser. Python 3.11+ only if you regenerate data.
 
 ### Web app
 
 ```bash
-git clone -b lunar-mission-planner https://github.com/arnavryie/lunar-landing-navigator.git
+git clone https://github.com/arnavryie/lunar-landing-navigator.git
 ```
 
 ```bash
