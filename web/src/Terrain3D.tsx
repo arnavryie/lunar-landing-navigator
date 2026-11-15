@@ -1314,9 +1314,10 @@ export function Terrain3D({
                     type="button"
                     className="exag-btn"
                     aria-pressed={exag === val}
+                    title={val === 1 ? 'True vertical scale' : undefined}
                     onClick={() => setExag(val)}
                   >
-                    {val === 1 ? '1× (True)' : `${val}×`}
+                    {val === 1 ? '1× true' : `${val}×`}
                   </button>
                 ))}
               </div>

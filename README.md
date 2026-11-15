@@ -1,4 +1,4 @@
-# Lunar South Pole Mission Planner
+# Lunar Statio — Lunar South Pole Mission Planner
 
 > **NASA Space Apps Challenge 2026** · Team Stranded · Dr. D.Y. Patil Institute of Technology, Pune  
 > Challenge: **Lunar Landing Site Navigator**
@@ -10,7 +10,9 @@
 
 ## 1. What It Is
 
-The **Lunar South Pole Mission Planner** is a scientific web application that computes and visualizes hour-by-hour solar illumination, direct-to-Earth communication line-of-sight, and terrain horizon occultations across the Moon's rugged south pole for every hour of 2027. Built with React, TypeScript, and Three.js, it translates complex celestial ephemerides and high-resolution NASA Lunar Reconnaissance Orbiter (LRO) elevation grids into intuitive, interactive tools—featuring an azimuth-elevation horizon dial, landing date slippage planner, whole-Moon 3D globe, GPU-accelerated terrain shadow engine, candidate landing site finder, multi-scenario comparisons, and historical mission replays for Chandrayaan-3 and IM-1 Odysseus.
+**Lunar Statio** (the Lunar South Pole Mission Planner) is a scientific web application that computes and visualizes hour-by-hour solar illumination, direct-to-Earth communication line-of-sight, and terrain horizon occultations across the Moon's rugged south pole for every hour of 2027. Built with React, TypeScript, and Three.js, it translates complex celestial ephemerides and high-resolution NASA Lunar Reconnaissance Orbiter (LRO) elevation grids into intuitive, interactive tools—featuring an azimuth-elevation horizon dial, landing date slippage planner, whole-Moon 3D globe, GPU-accelerated terrain shadow engine, candidate landing site finder, multi-scenario comparisons, and historical mission replays for Chandrayaan-3 and IM-1 Odysseus.
+
+*Why "Statio"?* In IAU lunar nomenclature, *Statio* is the Latin term used to name landing sites (Statio Tranquillitatis for Apollo 11, Statio Shiv Shakti for Chandrayaan-3). Lunar Statio is a tool for choosing the next one.
 
 | Screen | Description |
 |---|---|

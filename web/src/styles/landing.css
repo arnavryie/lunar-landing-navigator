@@ -76,13 +76,69 @@
 .pp-lon { fill: var(--ink-2); font-size: 21px; }
 .pp-lat { fill: var(--ink); fill-opacity: 0.55; font-size: 17px; }
 .pp-ray { stroke-width: 1.2; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
-.pp-sun .pp-ray { stroke: var(--sun); }
+
+@keyframes pp-beam-flow {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+
+.pp-sun .pp-ray {
+  stroke: var(--sun);
+  stroke-width: 1.6;
+  stroke-dasharray: 6 6;
+  animation: pp-beam-flow 0.85s linear infinite;
+}
+
 .pp-earth .pp-ray { stroke: var(--earth); stroke-opacity: 0.8; }
 .pp-sun circle { fill: var(--sun); }
+
+@keyframes pp-corona-pulse {
+  0%, 100% { r: 16px; opacity: 0.22; }
+  50% { r: 24px; opacity: 0.58; }
+}
+
+.pp-sun-corona {
+  fill: var(--sun);
+  pointer-events: none;
+  animation: pp-corona-pulse 2.2s ease-in-out infinite;
+}
+
 .pp-earth circle { fill: var(--earth); }
 .pp-sun text, .pp-earth text { font-size: 19px; font-weight: 600; }
 .pp-sun text { fill: var(--sun); }
 .pp-earth text { fill: var(--earth); }
+
+/* Dynamic Lunar Night & Terminator Shadow */
+.pp-shadow-layer {
+  pointer-events: none;
+}
+.pp-terminator-line {
+  stroke: var(--sun);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 4;
+  stroke-opacity: 0.45;
+  vector-effect: non-scaling-stroke;
+}
+.pp-shadow-ray {
+  stroke: var(--line-2);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  stroke-opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+.pp-shadow-dot {
+  fill: var(--line-2);
+  stroke: var(--plate);
+  stroke-width: 1.5;
+}
+.pp-shadow-label {
+  font-size: 14px;
+  font-weight: 500;
+  fill: var(--ink-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .pp-scale line { stroke: var(--ink-2); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
 .pp-scale text { fill: var(--ink-2); font-size: 17px; }
 

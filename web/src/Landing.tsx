@@ -56,7 +56,7 @@ export function Landing() {
   const [hour, setHour] = useState(0)
   const [playing, setPlaying] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [validation, setValidation] = useState<Validation | null>(null)
-  const [figMode, setFigMode] = useState<'3d' | '2d'>('3d')
+  const [figMode, setFigMode] = useState<'3d' | '2d'>('2d')
 
   useEffect(() => {
     loadVectors(DEFAULT_YEAR).then(setVec, () => setVec(null))
@@ -87,38 +87,29 @@ export function Landing() {
   return (
     <div className="landing">
       <header className="l-collar">
-        <a className="l-mark" href="./" aria-label="Lunar South Pole Mission Planner, home">
+        <a className="l-mark" href="./" aria-label="Lunar Statio, home">
           <svg width="28" height="28" viewBox="0 0 34 34" aria-hidden="true">
             <circle cx="17" cy="17" r="15.5" fill="none" stroke="var(--line-2)" />
             <circle cx="17" cy="17" r="9" fill="none" stroke="var(--line-2)" />
             <path d="M17 1.5v31M1.5 17h31" stroke="var(--line-2)" />
             <circle cx="28" cy="9.8" r="2.6" fill="var(--sun)" />
           </svg>
-          <span>Lunar South Pole Mission Planner</span>
+          <span>Lunar Statio</span>
         </a>
         <nav aria-label="Page">
           <a href="#fig-2">Fig. 2</a>
           <a href="#contents">Screens</a>
           <a href="#method">Method</a>
           <a href="#refs">References</a>
-          <a className="l-open" href="?view=site">Open the planner</a>
+          <a className="l-open" href="?view=site">Open Lunar Statio</a>
         </nav>
       </header>
 
       <section className="l-hero" aria-labelledby="l-title">
         <figure className="l-fig1">
           <div className="l-fig1-head">
-            <span className="l-fig-designation">Fig. 1 · {figMode === '3d' ? '3D Lunar Globe' : 'Polar Map Plate'}</span>
+            <span className="l-fig-designation">Fig. 1 · {figMode === '2d' ? 'Polar Map Plate' : '3D Lunar Globe'}</span>
             <div className="l-fig1-tabs" role="tablist" aria-label="Figure 1 visualization mode">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={figMode === '3d'}
-                className={`l-fig1-tab ${figMode === '3d' ? 'is-active' : ''}`}
-                onClick={() => setFigMode('3d')}
-              >
-                3D Moon (NASA LRO)
-              </button>
               <button
                 type="button"
                 role="tab"
@@ -127,6 +118,15 @@ export function Landing() {
                 onClick={() => setFigMode('2d')}
               >
                 2D Polar Map
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={figMode === '3d'}
+                className={`l-fig1-tab ${figMode === '3d' ? 'is-active' : ''}`}
+                onClick={() => setFigMode('3d')}
+              >
+                3D Moon (NASA LRO)
               </button>
             </div>
           </div>
@@ -162,11 +162,11 @@ export function Landing() {
             can talk home only while Earth clears the same skyline. Land a few days later and both can change.
           </p>
           <p className="l-lead">
-            This planner traces that skyline from NASA laser altimetry for any site near the pole and works out, hour by hour for a
+            Lunar Statio traces that skyline from NASA laser altimetry for any site near the pole and works out, hour by hour for a
             whole year, when the Sun and Earth are in view.
           </p>
           <div className="l-actions">
-            <a className="l-btn l-btn-primary" href="?view=site">Open the planner</a>
+            <a className="l-btn l-btn-primary" href="?view=site">Open Lunar Statio</a>
             <a className="l-link" href="?view=validation">How the numbers are checked</a>
           </div>
 
@@ -268,9 +268,9 @@ export function Landing() {
       </div>
 
       <footer className="l-foot">
-        <span>Lunar South Pole Mission Planner · NASA Space Apps Challenge 2026</span>
+        <span>Lunar Statio · South Pole Mission Planner · NASA Space Apps Challenge 2026</span>
         <span>Set in Archivo. Data from NASA and JPL; the full list is on the <a href="?view=validation">validation</a> screen.</span>
-        <a className="l-btn l-btn-primary" href="?view=site">Open the planner</a>
+        <a className="l-btn l-btn-primary" href="?view=site">Open Lunar Statio</a>
       </footer>
     </div>
   )
@@ -329,6 +329,27 @@ function PolarPlate({
   const at = (r: number, lon: number) => [C + r * Math.sin(lon * D2R), C - r * Math.cos(lon * D2R)] as const
   const MERIDIANS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
 
+  // Sun and Opposite-Side Shadow geometry
+  const sunAz = sun ? sun.az : null
+  const sunEl = sun ? sun.el : 0
+  const oppAz = sunAz !== null ? (sunAz + 180) % 360 : null
+
+  const [sunX, sunY] = sunAz !== null ? at(R, sunAz) : [C, C - R]
+  const [oppX, oppY] = oppAz !== null ? at(R, oppAz) : [C, C + R]
+
+  // Solar terminator shift: when sunEl > 0, the illuminated hemisphere extends slightly past the pole
+  const normDx = sunAz !== null ? Math.sin(sunAz * D2R) : 0
+  const normDy = sunAz !== null ? -Math.cos(sunAz * D2R) : -1
+  const termShiftPx = Math.max(-80, Math.min(80, sunEl * 45))
+  const termCx = C + termShiftPx * normDx
+  const termCy = C + termShiftPx * normDy
+  const perpX = -normDy
+  const perpY = normDx
+  const termX1 = termCx + R * 1.05 * perpX
+  const termY1 = termCy + R * 1.05 * perpY
+  const termX2 = termCx - R * 1.05 * perpX
+  const termY2 = termCy - R * 1.05 * perpY
+
   const marker = (b: { az: number } | null, cls: string, label: string) => {
     if (!b) return null
     const [x, y] = at(R + 28, b.az)
@@ -337,6 +358,9 @@ function PolarPlate({
     return (
       <g className={cls}>
         <line x1={C} y1={C} x2={x0} y2={y0} className="pp-ray" />
+        {cls === 'pp-sun' && (
+          <circle cx={x} cy={y} r={18} className="pp-sun-corona" />
+        )}
         <circle cx={x} cy={y} r={cls === 'pp-sun' ? 10 : 8} />
         <text x={x} y={y} dy={below ? 32 : -20} textAnchor="middle">{label}</text>
       </g>
@@ -348,6 +372,41 @@ function PolarPlate({
       <canvas ref={canvas} className="pp-map" aria-hidden="true" />
 
       <svg viewBox="0 0 1000 1000" className="pp-chart" role="img" aria-label="Polar chart of long-term sunlight with the current Sun and Earth bearings">
+        <defs>
+          <clipPath id="pp-plate-clip">
+            <circle cx={C} cy={C} r={R} />
+          </clipPath>
+
+          {sunAz !== null && (
+            <linearGradient
+              id="pp-shadow-gradient"
+              x1={sunX}
+              y1={sunY}
+              x2={oppX}
+              y2={oppY}
+              gradientUnits="userSpaceOnUse"
+            >
+              {/* Sunward illuminated side with subtle warm solar wash */}
+              <stop offset="0%" stopColor="#c98419" stopOpacity="0.14" />
+              <stop offset="36%" stopColor="#000000" stopOpacity="0" />
+              {/* Sharp, airless lunar terminator transition */}
+              <stop offset="47%" stopColor="#0a0908" stopOpacity="0.38" />
+              <stop offset="53%" stopColor="#080706" stopOpacity="0.78" />
+              {/* Opposite side deep night shadow */}
+              <stop offset="68%" stopColor="#050403" stopOpacity="0.91" />
+              <stop offset="100%" stopColor="#020202" stopOpacity="0.96" />
+            </linearGradient>
+          )}
+        </defs>
+
+        {/* Dynamic Lunar Night & Terminator Shadow covering the opposite hemisphere */}
+        {sunAz !== null && (
+          <g clipPath="url(#pp-plate-clip)" className="pp-shadow-layer" aria-hidden="true">
+            <rect x={C - R} y={C - R} width={R * 2} height={R * 2} fill="url(#pp-shadow-gradient)" />
+            <line x1={termX1} y1={termY1} x2={termX2} y2={termY2} className="pp-terminator-line" />
+          </g>
+        )}
+
         {/* Polar graticule rings */}
         {[86, 87, 88, 89].map((l) => (
           <g key={l}>
@@ -382,6 +441,23 @@ function PolarPlate({
 
         {marker(earth, 'pp-earth', 'Earth')}
         {marker(sun, 'pp-sun', 'Sun')}
+
+        {/* Night / Shadow indicator on opposite rim */}
+        {oppAz !== null && (
+          <g className="pp-night-marker" aria-hidden="true">
+            <line x1={C} y1={C} x2={oppX} y2={oppY} className="pp-shadow-ray" />
+            <circle cx={at(R + 24, oppAz)[0]} cy={at(R + 24, oppAz)[1]} r={3.5} className="pp-shadow-dot" />
+            <text
+              x={at(R + 24, oppAz)[0]}
+              y={at(R + 24, oppAz)[1]}
+              dy={oppAz > 90 && oppAz < 270 ? 22 : -14}
+              textAnchor="middle"
+              className="pp-shadow-label"
+            >
+              Shadow
+            </text>
+          </g>
+        )}
 
         {/* 50 km Scale Bar */}
         <g className="pp-scale" transform={`translate(${C + R - (R * 50) / 151.7} ${C + R + 44})`}>

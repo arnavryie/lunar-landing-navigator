@@ -19,7 +19,7 @@ Run these and record each result in section 13 of `PROJECT_PLAN.md` (you own tha
 
 | Decision | Options | Notes |
 |---|---|---|
-| **Product name** | Team vote | Needed before slides. "Lunar South Pole Mission Planner" is a working title |
+| **Product name** | Team vote | ✅ Decided 2026-11-15: **Lunar Statio** (subtitle: South Pole Mission Planner) |
 | **Default viability thresholds** | Keep the example values (14 days, sunlit ≥ 60%, darkness ≤ 48 h, Earth ≥ 50%) or sourced real values | If you use "real" values, they need a source (e.g. a published lander's battery or comms requirement). Otherwise keep them and call them examples on screen |
 | **Analysis period** | Keep 2027, or two years | **Recommend keeping 2027.** Two years would mean rerunning the pipeline and the finder data and doubling download size, and it would touch #3, #4 and #5. Decide on day one or not at all |
 | **Missions to replay** | IM-2 Athena, IM-1 Odysseus, Chandrayaan-3 | #3 sources the facts; agree on the 2–3 with them |

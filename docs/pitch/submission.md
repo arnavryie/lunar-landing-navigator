@@ -17,7 +17,7 @@ Judging: Impact, Creativity, Validity, Relevance, Presentation, each 1-5 (2026 J
 ---
 
 ## Project Name
-Lunar South Pole Mission Planner *(working title; change it if the team picks a name)*
+Lunar Statio (South Pole Mission Planner)
 
 ## High-Level Project Summary
 *(~150 words)*

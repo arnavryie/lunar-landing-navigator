@@ -65,6 +65,52 @@ export function LunarMap2D({
   const slopesRef = useRef<Float32Array | null>(null)
   const [hoverInfo, setHoverInfo] = useState<string>('')
 
+  // Interactive Zoom & Pan states
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
+  const hasMovedRef = useRef(false)
+
+  // Reset zoom & pan when switching projection modes
+  useEffect(() => {
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }, [projection])
+
+  // Mouse wheel zoom towards pointer
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect = canvas.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      const zoomFactor = e.deltaY < 0 ? 1.18 : 1 / 1.18
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.min(15, Math.max(1, prevZoom * zoomFactor))
+        if (nextZoom === prevZoom) return prevZoom
+
+        setPan((prevPan) => {
+          if (nextZoom === 1) return { x: 0, y: 0 }
+          const scaleChange = nextZoom / prevZoom
+          const newPanX = mouseX - (mouseX - prevPan.x) * scaleChange
+          const newPanY = mouseY - (mouseY - prevPan.y) * scaleChange
+          const maxPan = (nextZoom - 1) * Math.max(rect.width, rect.height)
+          return {
+            x: Math.max(-maxPan, Math.min(maxPan, newPanX)),
+            y: Math.max(-maxPan, Math.min(maxPan, newPanY)),
+          }
+        })
+        return nextZoom
+      })
+    }
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', onWheel)
+  }, [])
+
   // Load local LRO 2k global mosaic and polar MapData once
   useEffect(() => {
     let alive = true
@@ -163,11 +209,12 @@ export function LunarMap2D({
     ctx.fillRect(0, 0, w, h)
 
     if (projection === 'global') {
-      // Equirectangular box preserving 2:1 aspect inside canvas
-      const boxW = Math.min(w - 24, (h - 24) * 2)
+      // Equirectangular box preserving 2:1 aspect inside canvas, scaled and panned
+      const baseW = Math.min(w - 24, (h - 24) * 2)
+      const boxW = baseW * zoom
       const boxH = boxW / 2
-      const ox = (w - boxW) / 2
-      const oy = (h - boxH) / 2
+      const ox = (w - boxW) / 2 + pan.x
+      const oy = (h - boxH) / 2 + pan.y
       const toXY = (lat: number, lon: number): [number, number] => {
         const normLon = ((((lon + 180) % 360) + 360) % 360) - 180
         return [ox + ((normLon + 180) / 360) * boxW, oy + ((90 - lat) / 180) * boxH]
@@ -305,10 +352,11 @@ export function LunarMap2D({
         ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.stroke()
       }
     } else {
-      // Polar stereographic 85 S - 90 S
-      const size = Math.min(w - 20, h - 20)
-      const ox = (w - size) / 2
-      const oy = (h - size) / 2
+      // Polar stereographic 85 S - 90 S, scaled and panned
+      const baseSize = Math.min(w - 20, h - 20)
+      const size = baseSize * zoom
+      const ox = (w - size) / 2 + pan.x
+      const oy = (h - size) / 2 + pan.y
 
       if (mapData) {
         const raster = getPolarRaster(mapData, polarBg)
@@ -434,7 +482,7 @@ export function LunarMap2D({
       ctx.lineWidth = 1
       ctx.strokeRect(ox, oy, size, size)
     }
-  }, [projection, polarBg, mapData, globalImg, ephemeris, layers, sites, siteStates, artemis, selected, cameraCenter, ellipse])
+  }, [projection, polarBg, mapData, globalImg, ephemeris, layers, sites, siteStates, artemis, selected, cameraCenter, ellipse, zoom, pan])
 
   const pointerToCoords = (clientX: number, clientY: number): { lat: number; lon: number; row?: number; col?: number } | null => {
     const canvas = canvasRef.current
@@ -445,16 +493,20 @@ export function LunarMap2D({
     const w = rect.width, h = rect.height
 
     if (projection === 'global') {
-      const boxW = Math.min(w - 24, (h - 24) * 2)
+      const baseW = Math.min(w - 24, (h - 24) * 2)
+      const boxW = baseW * zoom
       const boxH = boxW / 2
-      const ox = (w - boxW) / 2, oy = (h - boxH) / 2
+      const ox = (w - boxW) / 2 + pan.x
+      const oy = (h - boxH) / 2 + pan.y
       if (x < ox || x > ox + boxW || y < oy || y > oy + boxH) return null
       const lon = ((x - ox) / boxW) * 360 - 180
       const lat = 90 - ((y - oy) / boxH) * 180
       return { lat, lon }
     } else {
-      const size = Math.min(w - 20, h - 20)
-      const ox = (w - size) / 2, oy = (h - size) / 2
+      const baseSize = Math.min(w - 20, h - 20)
+      const size = baseSize * zoom
+      const ox = (w - size) / 2 + pan.x
+      const oy = (h - size) / 2 + pan.y
       if (x < ox || x > ox + size || y < oy || y > oy + size) return null
       const n = mapData?.n ?? 1266
       const scale = mapData?.scale ?? 240
@@ -465,10 +517,44 @@ export function LunarMap2D({
     }
   }
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const pt = pointerToCoords(e.clientX, e.clientY)
-    if (!pt) return
-    onPickPoint(pt.lat, pt.lon)
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return
+    setIsDragging(true)
+    hasMovedRef.current = false
+    dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging) {
+      const dx = e.clientX - dragStartRef.current.x
+      const dy = e.clientY - dragStartRef.current.y
+      if (Math.hypot(dx, dy) > 3) {
+        hasMovedRef.current = true
+      }
+      if (hasMovedRef.current) {
+        const canvas = canvasRef.current
+        const rect = canvas?.getBoundingClientRect()
+        const maxPan = (zoom - 1) * Math.max(rect?.width ?? 400, rect?.height ?? 400) + 160
+        setPan({
+          x: Math.max(-maxPan, Math.min(maxPan, dragStartRef.current.panX + dx)),
+          y: Math.max(-maxPan, Math.min(maxPan, dragStartRef.current.panY + dy)),
+        })
+      }
+    }
+    handleMove(e)
+  }
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging && !hasMovedRef.current) {
+      const pt = pointerToCoords(e.clientX, e.clientY)
+      if (pt) onPickPoint(pt.lat, pt.lon)
+    }
+    setIsDragging(false)
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+    setHoverInfo('')
   }
 
   const handleMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -526,13 +612,49 @@ export function LunarMap2D({
           </div>
         )}
       </div>
-      <canvas
-        ref={canvasRef}
-        className="mx-map2d-canvas"
-        onClick={handleClick}
-        onMouseMove={handleMove}
-        onMouseLeave={() => setHoverInfo('')}
-      />
+      <div className="mx-map2d-viewport">
+        <canvas
+          ref={canvasRef}
+          className={`mx-map2d-canvas ${isDragging ? 'is-dragging' : ''}`}
+          style={{ cursor: isDragging ? 'grabbing' : zoom > 1 ? 'grab' : 'crosshair' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        />
+        <div className="mx-map2d-controls" aria-label="2D Map zoom and pan controls">
+          <button
+            type="button"
+            title="Zoom in (+)"
+            onClick={() => setZoom((z) => Math.min(15, Number((z * 1.35).toFixed(2))))}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            title="Zoom out (−)"
+            onClick={() => {
+              setZoom((z) => {
+                const nz = Math.max(1, Number((z / 1.35).toFixed(2)))
+                if (nz === 1) setPan({ x: 0, y: 0 })
+                return nz
+              })
+            }}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            title="Reset zoom and pan"
+            onClick={() => {
+              setZoom(1)
+              setPan({ x: 0, y: 0 })
+            }}
+          >
+            ⊙
+          </button>
+        </div>
+      </div>
       <div className="mx-map2d-foot">
         <span>{hoverInfo || 'Click anywhere on the 2D map to target & fly the 3D Moon camera'}</span>
         <span>{projection === 'global' ? 'Terminator synced to 24h clock' : 'NASA LOLA / PGDA 240 m grid'}</span>
