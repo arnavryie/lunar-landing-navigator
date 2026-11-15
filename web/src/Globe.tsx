@@ -471,9 +471,9 @@ export function Globe({
         renderer.domElement.addEventListener('pointerup', onUp)
         renderer.domElement.addEventListener('pointermove', onMove)
 
-        // Initial view: frame lunar South Pole with all 9 Artemis landing sites visible
-        camera.position.copy(unitAt(-74, 0).multiplyScalar(2.7))
-        controls.target.copy(unitAt(-86, 0))
+        // Initial view: frame lunar South Pole perfectly centered in the middle of the viewport
+        camera.position.copy(unitAt(-42, 0).multiplyScalar(3.4))
+        controls.target.set(0, 0, 0)
         controls.update()
 
         const vecArray = new Float32Array(vecBuf)
@@ -811,7 +811,7 @@ export function Globe({
     } else if (k === 'system') {
       startFlight(new THREE.Vector3(0.3, 14, 0.3), new THREE.Vector3(0, 0, 0), 850)
     } else if (k === 'south') {
-      startFlight(unitAt(-74, 0).multiplyScalar(2.7), unitAt(-86, 0), 800)
+      startFlight(unitAt(-42, 0).multiplyScalar(3.4), new THREE.Vector3(0, 0, 0), 800)
     } else if (k === 'site' && site) {
       const target = unitAt(site.lat, site.lon)
       const camPos = unitAt(Math.min(-68, site.lat + 10), site.lon).multiplyScalar(1.9)
