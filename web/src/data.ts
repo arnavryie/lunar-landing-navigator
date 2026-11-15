@@ -421,7 +421,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     zoneLabel: 'Sub-Polar (>100 km from Polar Ice)',
     iceTrapped: false,
   },
-  'change-4': {
+  'far-side-spa': {
     distToPsrKm: 1200.0,
     inPsr: false,
     tempK: 275,

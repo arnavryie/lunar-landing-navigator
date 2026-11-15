@@ -102,12 +102,12 @@
   }
  },
  {
-  "id": "change-4",
+  "id": "far-side-spa",
   "group": "Contrast",
-  "name": "Chang'e-4, Von K\u00e1rm\u00e1n crater (far side)",
-  "lat": -45.4561,
-  "lon": 177.5885,
-  "kind": "landing",
+  "name": "South Pole–Aitken Basin (Far Side)",
+  "lat": -53.0,
+  "lon": 191.0,
+  "kind": "feature",
   "metrics": {
    "sunlit_pct": 51.07,
    "mean_sun_disc_pct": 50.89,

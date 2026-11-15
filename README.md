@@ -95,7 +95,7 @@ The data to answer these questions exists, but in specialist tools (NASA LRO Qui
 
 **Across all screens:** one shared site + time, any landing year (2024–2040 shipped, any year 1900–2049 on demand), typed or clicked coordinates, permalinks that restore the exact scenario, provenance and resolution on every number, colour-blind-safe meaning colours (amber = Sun, blue = Earth, green = both, grey = neither).
 
-**Curated sites:** Apollo 11, Chandrayaan-3, Chang'e-4, IM-1 Odysseus, IM-2 Athena, Blue Ghost Mission 1, Griffin-1 target (Nobile), IM-3 target (Reiner Gamma), Shackleton rim, Mons Mouton, best-lit points and example "safe" sites. Every coordinate carries a cited source.
+**Curated sites:** Apollo 11, Chandrayaan-3, South Pole–Aitken Basin (far side), IM-1 Odysseus, IM-2 Athena, Blue Ghost Mission 1, Griffin-1 target (Nobile), IM-3 target (Reiner Gamma), Shackleton rim, Mons Mouton, best-lit points and example "safe" sites. Every coordinate carries a cited source.
 
 ---
 
