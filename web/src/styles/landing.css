@@ -240,12 +240,13 @@
   position: absolute;
   bottom: 10px;
   left: 10px;
-  right: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: space-between;
+  justify-content: flex-start;
+  align-items: center;
   pointer-events: auto;
+  max-width: calc(100% - 20px);
 }
 
 .moon-3d-btn-group {
@@ -279,7 +280,7 @@
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
-  transition: all 120ms ease;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .moon-3d-btn:hover {
   color: var(--ink);
@@ -290,7 +291,11 @@
   color: var(--ink);
   background: rgba(235, 231, 221, 0.15);
   border-color: var(--line-2);
-  font-weight: 600;
+  font-weight: 500;
+}
+.moon-3d-btn-relief {
+  min-width: 66px;
+  text-align: center;
 }
 
 .moon-3d-foot-hint {

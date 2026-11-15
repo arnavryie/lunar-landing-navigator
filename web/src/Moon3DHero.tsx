@@ -392,7 +392,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
         <div className="moon-3d-btn-group" role="group" aria-label="Display Toggles">
           <button
             type="button"
-            className={`moon-3d-btn ${reliefMode === 'enhanced' ? 'active' : ''}`}
+            className={`moon-3d-btn moon-3d-btn-relief ${reliefMode === 'enhanced' ? 'active' : ''}`}
             onClick={() => setReliefMode((m) => (m === 'enhanced' ? 'standard' : 'enhanced'))}
             title="Toggle LOLA elevation relief shading"
           >
