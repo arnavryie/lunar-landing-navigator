@@ -40,13 +40,6 @@ const CALENDAR_SITES = [
   { id: 'apollo-11', short: 'Apollo 11' },
 ]
 
-// Sites drawn on Fig. 1 (coordinates from pipeline/sites.json).
-const PLATE_SITES = [
-  { name: 'Shackleton', lat: -89.67, lon: 129.78, dx: 12, dy: 18, end: false },
-  { name: 'Best-lit spot', lat: -89.4749, lon: 222.557, dx: -12, dy: 20, end: true },
-  { name: 'Safe spot C', lat: -86.9193, lon: 278.0468, dx: 12, dy: -10, end: false },
-  { name: 'Nobile', lat: -85.28, lon: 53.27, dx: -12, dy: 20, end: true },
-]
 
 const REFS = [
   { n: 1, text: 'Mazarico, E., et al. (2011). Illumination conditions of the lunar polar regions using LOLA topography. Icarus 211, 1066–1081. Data: NASA PGDA Lunar Polar Illumination.', url: 'https://pgda.gsfc.nasa.gov/products/69' },
@@ -283,7 +276,13 @@ export function Landing() {
 }
 
 /** Fig. 1: NASA's long-term illumination map in a polar chart frame, with the hour's Sun and Earth bearings. */
-function PolarPlate({ sun, earth }: { sun: { el: number; az: number } | null; earth: { el: number; az: number } | null }) {
+function PolarPlate({
+  sun,
+  earth,
+}: {
+  sun: { el: number; az: number } | null
+  earth: { el: number; az: number } | null
+}) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [ready, setReady] = useState(false)
 
@@ -346,41 +345,44 @@ function PolarPlate({ sun, earth }: { sun: { el: number; az: number } | null; ea
   return (
     <div className={`pp${ready ? ' is-ready' : ''}`}>
       <canvas ref={canvas} className="pp-map" aria-hidden="true" />
+
       <svg viewBox="0 0 1000 1000" className="pp-chart" role="img" aria-label="Polar chart of long-term sunlight with the current Sun and Earth bearings">
+        {/* Polar graticule rings */}
         {[86, 87, 88, 89].map((l) => (
           <g key={l}>
             <circle cx={C} cy={C} r={rOf(-l)} className="pp-grat" />
             <text x={C + 5} y={C - rOf(-l) - 5} className="pp-lat">{l}° S</text>
           </g>
         ))}
+
+        {/* Meridians */}
         {MERIDIANS.map((lon) => {
           const [x, y] = at(R, lon)
           const [x1, y1] = at(rOf(-89), lon)
           return <line key={lon} x1={x1} y1={y1} x2={x} y2={y} className="pp-grat" />
         })}
+
         <circle cx={C} cy={C} r={R} className="pp-neat" />
         <circle cx={C} cy={C} r={R + 50} className="pp-neat pp-outer" />
+
+        {/* 5-deg Rim Ticks */}
         {Array.from({ length: 72 }, (_, k) => k * 5).map((t) => {
           const [x1, y1] = at(R, t)
           const [x2, y2] = at(R + (t % 30 === 0 ? 16 : t % 10 === 0 ? 10 : 6), t)
           return <line key={t} x1={x1} y1={y1} x2={x2} y2={y2} className="pp-tick" />
         })}
+
+        {/* Meridian degree labels */}
         {MERIDIANS.map((lon) => {
           const [x, y] = at(R + 74, lon)
           const name = lon === 0 ? '0°' : lon === 180 ? '180°' : lon < 180 ? `${lon}° E` : `${360 - lon}° W`
           return <text key={lon} x={x} y={y} dy="0.35em" textAnchor="middle" className="pp-lon">{name}</text>
         })}
-        {PLATE_SITES.map((s) => {
-          const [x, y] = at(rOf(s.lat), s.lon)
-          return (
-            <g key={s.name} className="pp-site">
-              <path d={`M${x - 7} ${y}h14M${x} ${y - 7}v14`} />
-              <text x={x + s.dx} y={y + s.dy} textAnchor={s.end ? 'end' : 'start'}>{s.name}</text>
-            </g>
-          )
-        })}
+
         {marker(earth, 'pp-earth', 'Earth')}
         {marker(sun, 'pp-sun', 'Sun')}
+
+        {/* 50 km Scale Bar */}
         <g className="pp-scale" transform={`translate(${C + R - (R * 50) / 151.7} ${C + R + 44})`}>
           <line x1="0" x2={(R * 50) / 151.7} y1="0" y2="0" />
           <line x1="0" x2="0" y1="-5" y2="5" />

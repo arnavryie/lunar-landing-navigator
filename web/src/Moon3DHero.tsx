@@ -6,7 +6,6 @@ import { FRAG, VERT } from './moonShader'
 const base = import.meta.env.BASE_URL
 const D2R = Math.PI / 180
 
-// Scene units: Moon radii (1.0 = lunar surface).
 // ME frame to Three.js scene axes: X = x, Y = z (North pole up), Z = -y.
 const meToScene = (x: number, y: number, z: number) => new THREE.Vector3(x, z, -y)
 const unitAt = (lat: number, lon: number) =>
@@ -91,9 +90,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
         controls.autoRotate = autoRotate
         controls.autoRotateSpeed = 0.35
         controls.update()
-        controls.autoRotate = autoRotate
-        controls.autoRotateSpeed = 0.35
-        controls.update()
 
         // Pause auto-rotation when user interacts with mouse/touch
         controls.addEventListener('start', () => {
@@ -101,7 +97,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
           setAutoRotate(false)
         })
 
-        // Moon Shader Material (Lommel-Seeliger + Lunar Lambert reflection)
+        // Moon Shader Material (Lommel-Seeliger + Lunar Lambert reflection with exact solar penumbra)
         const moonMat = new THREE.ShaderMaterial({
           uniforms: {
             uColor: { value: colorTex },
@@ -267,7 +263,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     }
   }, [])
 
-  // 2. Update Solar and Earth directions dynamically from JPL DE421 ephemeris as hour scrubs
+  // 2. Dynamic Update of Solar and Earth ephemeris vectors as hour scrubs
   useEffect(() => {
     const w = worldRef.current
     if (!w || !vec) return
@@ -276,7 +272,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     const sunDir = meToScene(vec[k], vec[k + 1], vec[k + 2]).normalize()
     const earthDir = meToScene(vec[k + 3], vec[k + 4], vec[k + 5]).normalize()
 
-    // Pass Sun vector into shader (Lommel-Seeliger terminator shading)
+    // Pass Sun vector into Moon shader (Lommel-Seeliger + exact solar disc penumbra)
     w.moonMat.uniforms.uSun.value.set(sunDir.x, -sunDir.z, sunDir.y)
 
     // Position Sun marker & directional ray
@@ -301,7 +297,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     w.moonMat.uniforms.uRel.value = relVal
   }, [reliefMode])
 
-  // 4. Update Grid and Sites Visibility
+  // 4. Update Grid Visibility
   useEffect(() => {
     const w = worldRef.current
     if (!w) return
@@ -315,7 +311,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     w.controls.autoRotate = autoRotate
   }, [autoRotate])
 
-  // Camera Presets (all targeted at sphere center 0, 0, 0)
+  // Camera Presets
   const setCameraPreset = (preset: 'pole' | 'equator' | 'sun') => {
     const w = worldRef.current
     if (!w) return
@@ -342,7 +338,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
       {/* 3D Canvas Host */}
       <div ref={containerRef} className={`moon-3d-canvas ${ready ? 'is-ready' : ''}`} />
 
-      {/* Top Header Badge */}
+      {/* Top Header Badge & Global Telemetry */}
       <div className="moon-3d-hud-top">
         <span className="moon-3d-badge">
           NASA LRO 3D MODEL · SVS #14959
@@ -350,7 +346,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
         <div style={{ display: 'flex', gap: '6px' }}>
           {sun && (
             <span className="moon-3d-telemetry">
-              Sun: <b>{sun.el >= 0 ? '+' : ''}{sun.el.toFixed(1)}°</b>
+              Sun: <b>{sun.el >= 0 ? '+' : ''}{sun.el.toFixed(1)}°</b> · {sun.az.toFixed(0)}° E
             </span>
           )}
           {earth && (
@@ -363,13 +359,14 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
 
       {/* Interactive Controls Overlay Bar */}
       <div className="moon-3d-controls-bar">
+        {/* Camera Views */}
         <div className="moon-3d-btn-group" role="group" aria-label="Camera presets">
           <span className="moon-3d-group-label">View:</span>
           <button
             type="button"
             className="moon-3d-btn"
             onClick={() => setCameraPreset('pole')}
-            title="Focus on South Polar landing regions (80-90° S)"
+            title="Focus on South Polar region (80-90° S)"
           >
             South Pole
           </button>
@@ -391,13 +388,13 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
           </button>
         </div>
 
-        <div className="moon-3d-btn-group" role="group" aria-label="NASA SVS 14959 display modes">
-          <span className="moon-3d-group-label">NASA Data:</span>
+        {/* Display Toggles */}
+        <div className="moon-3d-btn-group" role="group" aria-label="Display Toggles">
           <button
             type="button"
             className={`moon-3d-btn ${reliefMode === 'enhanced' ? 'active' : ''}`}
             onClick={() => setReliefMode((m) => (m === 'enhanced' ? 'standard' : 'enhanced'))}
-            title="Toggle LOLA elevation relief shading (SVS #14959 Group 379575)"
+            title="Toggle LOLA elevation relief shading"
           >
             {reliefMode === 'enhanced' ? 'Relief: 2.5×' : 'Relief: 1×'}
           </button>
@@ -405,7 +402,7 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
             type="button"
             className={`moon-3d-btn ${showGrid ? 'active' : ''}`}
             onClick={() => setShowGrid((g) => !g)}
-            title="Toggle Latitude / Longitude lines (SVS #14959 Group 379586)"
+            title="Toggle Latitude / Longitude lines"
           >
             Grid: {showGrid ? 'ON' : 'OFF'}
           </button>

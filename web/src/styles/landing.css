@@ -75,8 +75,6 @@
 .pp-tick { stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .pp-lon { fill: var(--ink-2); font-size: 21px; }
 .pp-lat { fill: var(--ink); fill-opacity: 0.55; font-size: 17px; }
-.pp-site path { stroke: var(--ink); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
-.pp-site text { fill: var(--ink); font-size: 19px; font-weight: 560; paint-order: stroke; stroke: var(--plate); stroke-width: 5px; stroke-linejoin: round; }
 .pp-ray { stroke-width: 1.2; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
 .pp-sun .pp-ray { stroke: var(--sun); }
 .pp-earth .pp-ray { stroke: var(--earth); stroke-opacity: 0.8; }
@@ -347,4 +345,6 @@
   color: var(--sheet);
   font-weight: 600;
 }
+
+
 
