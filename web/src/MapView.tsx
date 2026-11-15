@@ -149,6 +149,10 @@ export function MapView(p: Props) {
   const [err, setErr] = useState('')
   const [layer, setLayer] = useState<Layer>('relief')
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
+  const hasMovedRef = useRef(false)
   const [hover, setHover] = useState<{ lat: number; lon: number; r: number; c: number; x: number; y: number; size: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [regions, setRegions] = useState<Region[]>([])
@@ -180,21 +184,40 @@ export function MapView(p: Props) {
   // zoom 0 = centred on the landing ellipse; switch to it when an ellipse appears, back out when it goes.
   const focusKey = p.focus ? `${p.focus.lat},${p.focus.lon}` : ''
   useEffect(() => {
+    setPan({ x: 0, y: 0 })
     if (focusKey) setZoom(0)
     else setZoom((z) => z || 1)
   }, [focusKey])
 
-  // Map pixel <-> canvas position for the current zoom (centred on the pole).
+  // Mouse wheel zoom towards mouse cursor
+  useEffect(() => {
+    const cv = canvas.current
+    if (!cv) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2
+      setZoom((prevZoom) => {
+        const cur = prevZoom === 0 ? 3 : prevZoom || 1
+        const next = Math.max(1, Math.min(24, Number((cur * zoomFactor).toFixed(2))))
+        if (next === 1) setPan({ x: 0, y: 0 })
+        return next
+      })
+    }
+    cv.addEventListener('wheel', onWheel, { passive: false })
+    return () => cv.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Map pixel <-> canvas position for the current zoom and pan.
   const view = useMemo(() => {
     if (!data) return null
     if (zoom === 0 && p.focus) {
       const sw = Math.max((p.focus.km * 3000) / data.scale, 16) // ellipse fills about a third of the map
       const [row, col] = polarRowCol(p.focus.lat, p.focus.lon, data.n, data.scale)
-      return { sx: col + 0.5 - sw / 2, sy: row + 0.5 - sw / 2, sw }
+      return { sx: col + 0.5 - sw / 2 + pan.x, sy: row + 0.5 - sw / 2 + pan.y, sw }
     }
     const sw = data.n / (zoom || 1)
-    return { sx: (data.n - sw) / 2, sy: (data.n - sw) / 2, sw }
-  }, [data, zoom, p.focus])
+    return { sx: (data.n - sw) / 2 + pan.x, sy: (data.n - sw) / 2 + pan.y, sw }
+  }, [data, zoom, p.focus, pan])
 
   const toCanvas = (lat: number, lon: number, size: number): [number, number] | null => {
     if (!data || !view) return null
@@ -464,6 +487,45 @@ export function MapView(p: Props) {
     }
   }
 
+  const onMouseDown = (e: MouseEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return
+    setIsDragging(true)
+    hasMovedRef.current = false
+    dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
+  }
+
+  const onMouseMove = (e: MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging) {
+      const dx = e.clientX - dragStartRef.current.x
+      const dy = e.clientY - dragStartRef.current.y
+      if (Math.hypot(dx, dy) > 3) {
+        hasMovedRef.current = true
+      }
+      if (hasMovedRef.current && view && canvas.current) {
+        const size = canvas.current.clientWidth || 1
+        const scale = view.sw / size
+        setPan({
+          x: dragStartRef.current.panX - dx * scale,
+          y: dragStartRef.current.panY - dy * scale,
+        })
+      }
+    }
+    const q = pixelAt(e)
+    setHover(q && q.lat <= -85 ? q : null)
+  }
+
+  const onMouseUp = (e: MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging && !hasMovedRef.current) {
+      onClick(e)
+    }
+    setIsDragging(false)
+  }
+
+  const onMouseLeave = () => {
+    setIsDragging(false)
+    setHover(null)
+  }
+
   const t = data && hover && hover.r >= 1 && hover.c >= 1 && hover.r < data.n - 1 && hover.c < data.n - 1 ? terrainAt(data, hover.r, hover.c) : null
   const k = data && hover ? hover.r * data.n + hover.c : 0
   const layerValue = (l: Layer) => {
@@ -526,17 +588,50 @@ export function MapView(p: Props) {
         {!data && !err && <p className="loading">Loading the south-pole map (about 14 MB, once)</p>}
         <canvas
           ref={canvas}
-          className="map-canvas"
-          style={{ display: data ? 'block' : 'none' }}
-          role="img"
-          aria-label="Map of the lunar south pole, 0° E at the top. Click anywhere to analyse that point."
-          onMouseMove={(e) => {
-            const q = pixelAt(e)
-            setHover(q && q.lat <= -85 ? q : null)
+          className={`map-canvas ${isDragging ? 'is-dragging' : ''}`}
+          style={{
+            display: data ? 'block' : 'none',
+            cursor: isDragging ? 'grabbing' : zoom > 1 || (zoom === 0 && p.focus) ? 'grab' : 'crosshair',
           }}
-          onMouseLeave={() => setHover(null)}
-          onClick={onClick}
+          role="img"
+          aria-label="Map of the lunar south pole, 0° E at the top. Click anywhere to analyse that point. Drag to pan, scroll to zoom."
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
         />
+        <div className="map-zoom-controls" aria-label="Map zoom controls">
+          <button
+            type="button"
+            title="Zoom in (+)"
+            onClick={() => setZoom((z) => Math.min(24, Number(((z === 0 ? 3 : z || 1) * 1.35).toFixed(2))))}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            title="Zoom out (−)"
+            onClick={() => {
+              setZoom((z) => {
+                const nz = Math.max(1, Number(((z === 0 ? 3 : z || 1) / 1.35).toFixed(2)))
+                if (nz === 1) setPan({ x: 0, y: 0 })
+                return nz
+              })
+            }}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            title="Reset map view"
+            onClick={() => {
+              setZoom(1)
+              setPan({ x: 0, y: 0 })
+            }}
+          >
+            ⊙
+          </button>
+        </div>
       </div>
 
       <aside className="map-side">
@@ -572,12 +667,25 @@ export function MapView(p: Props) {
         )}
         <div className="seg" role="group" aria-label="Zoom">
           {ZOOMS.map((z) => (
-            <button key={z.z} aria-pressed={zoom === z.z} onClick={() => setZoom(z.z)}>
+            <button
+              key={z.z}
+              aria-pressed={zoom === z.z}
+              onClick={() => {
+                setPan({ x: 0, y: 0 })
+                setZoom(z.z)
+              }}
+            >
               {z.label}
             </button>
           ))}
           {p.focus && (
-            <button aria-pressed={zoom === 0} onClick={() => setZoom(0)}>
+            <button
+              aria-pressed={zoom === 0}
+              onClick={() => {
+                setPan({ x: 0, y: 0 })
+                setZoom(0)
+              }}
+            >
               Ellipse
             </button>
           )}
