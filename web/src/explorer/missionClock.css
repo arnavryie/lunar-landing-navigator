@@ -1,4 +1,4 @@
-/* MissionClock — dark "mission control" 24 h dial. All classes prefixed mc-. */
+/* MissionClock — Editorial survey-sheet 24 h astronomical chronometer (tokens from index.css). */
 
 .mc-root {
   display: inline-flex;
@@ -19,7 +19,7 @@
 }
 
 .mc-dial:focus-visible {
-  box-shadow: 0 0 0 2px #0b0f14, 0 0 0 4px #38e1ff;
+  box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink);
 }
 
 .mc-svg {
@@ -31,66 +31,60 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---- outer lunar-day ring ---- */
+/* ---- outer lunar-day bearing ring ---- */
 .mc-ring {
   fill: none;
-  stroke: rgba(148, 170, 196, 0.22);
-  stroke-width: 1.4;
+  stroke: var(--line);
+  stroke-width: 1.2;
 }
 
 .mc-ring-arc {
   fill: none;
-  stroke: #38e1ff;
-  stroke-width: 2.6;
+  stroke: var(--sun);
+  stroke-width: 2.2;
   stroke-linecap: round;
-  opacity: 0.75;
+  opacity: 0.78;
 }
 
-/* ---- face ---- */
-.mc-glow {
-  fill: none;
-  stroke: #38e1ff;
-  stroke-width: 3;
-  opacity: 0.55;
-}
-
+/* ---- dial face ---- */
 .mc-face-edge {
   fill: none;
-  stroke: rgba(56, 225, 255, 0.45);
+  stroke: var(--line-2);
   stroke-width: 1.2;
 }
 
 /* ---- ticks + numerals ---- */
 .mc-tick-minor {
-  stroke: rgba(200, 214, 230, 0.28);
+  stroke: var(--line-2);
   stroke-width: 0.8;
+  opacity: 0.55;
 }
 
 .mc-tick-hour {
-  stroke: rgba(230, 238, 248, 0.7);
-  stroke-width: 1.4;
+  stroke: var(--ink-3);
+  stroke-width: 1.2;
 }
 
 .mc-tick-major {
-  stroke: #38e1ff;
-  stroke-width: 2.4;
+  stroke: var(--ink);
+  stroke-width: 2;
   stroke-linecap: round;
 }
 
 .mc-num {
-  fill: rgba(255, 255, 255, 0.82);
-  font-size: 10.5px;
+  fill: var(--ink-2);
+  font-size: 10px;
   font-weight: 500;
   pointer-events: none;
 }
 
 .mc-num-major {
-  fill: #ffffff;
-  font-size: 16px;
-  font-weight: 800;
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
 }
 
-/* ---- Sun / Earth markers ---- */
+/* ---- Sun / Earth bearing markers ---- */
 .mc-marker {
   pointer-events: none;
 }
@@ -102,55 +96,55 @@
 }
 
 .mc-marker-sun circle {
-  fill: #f5b041;
+  fill: var(--sun);
 }
 
 .mc-marker-sun text {
-  fill: #f5b041;
+  fill: var(--sun);
 }
 
 .mc-marker-earth circle {
-  fill: #4f9dff;
-  stroke: rgba(255, 255, 255, 0.55);
-  stroke-width: 0.8;
+  fill: var(--earth);
+  stroke: var(--ink);
+  stroke-width: 0.75;
 }
 
 .mc-marker-earth text {
-  fill: #4f9dff;
+  fill: var(--earth);
 }
 
-/* ---- readout ---- */
+/* ---- digital readout ---- */
 .mc-readout {
   pointer-events: none;
 }
 
 .mc-readout-time {
-  fill: #ffffff;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  fill: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .mc-readout-date {
-  fill: rgba(220, 230, 242, 0.85);
-  font-size: 9.5px;
-  font-weight: 600;
+  fill: var(--ink-2);
+  font-size: 9px;
+  font-weight: 550;
 }
 
 .mc-readout-utc {
-  fill: #38e1ff;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  fill: var(--sun);
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .mc-readout-ist {
-  fill: rgba(190, 204, 222, 0.7);
+  fill: var(--ink-3);
   font-size: 8.5px;
   font-weight: 500;
 }
 
 .mc-readout-sun {
-  fill: #f5b041;
+  fill: var(--sun);
   font-size: 8.5px;
   font-weight: 600;
 }
@@ -158,7 +152,7 @@
 /* ---- hands ---- */
 .mc-hand {
   cursor: grab;
-  transition: transform 120ms ease-out;
+  transition: transform 110ms var(--ease-out);
 }
 
 .mc-dragging .mc-hand {
@@ -178,43 +172,43 @@
 
 .mc-hand-hit {
   stroke: transparent;
-  stroke-width: 16;
+  stroke-width: 18;
   pointer-events: stroke;
 }
 
 .mc-hand-hour .mc-hand-line {
-  stroke: #ffffff;
-  stroke-width: 7;
+  stroke: var(--ink);
+  stroke-width: 6;
 }
 
 .mc-hand-minute .mc-hand-line {
-  stroke: #c9d3df;
-  stroke-width: 4;
+  stroke: var(--ink-2);
+  stroke-width: 3.5;
 }
 
 .mc-hand-second .mc-hand-line {
-  stroke: #ffb547;
-  stroke-width: 1.6;
+  stroke: var(--sun);
+  stroke-width: 1.5;
 }
 
 .mc-second-tip {
-  fill: #ffb547;
+  fill: var(--sun);
   pointer-events: none;
 }
 
 .mc-hand-active .mc-hand-line {
-  filter: drop-shadow(0 0 3px rgba(56, 225, 255, 0.85));
+  stroke: var(--warn);
 }
 
 .mc-hub {
-  fill: #0b0f14;
-  stroke: #ffffff;
+  fill: var(--plate);
+  stroke: var(--ink);
   stroke-width: 2;
   pointer-events: none;
 }
 
 .mc-hub-dot {
-  fill: #ffb547;
+  fill: var(--sun);
   pointer-events: none;
 }
 
@@ -223,7 +217,7 @@
   margin: 0;
   font-size: 11px;
   line-height: 1.35;
-  color: rgba(170, 186, 206, 0.7);
+  color: var(--ink-3);
   text-align: center;
 }
 

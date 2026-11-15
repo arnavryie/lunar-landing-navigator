@@ -65,16 +65,16 @@ export interface CesiumMoonProps {
 
 const STATE_HEX: Record<State, string> = {
   both: '#1fa38a',
-  sun: '#f5b041',
-  earth: '#4f9dff',
-  none: '#6b7280',
+  sun: '#c98419',
+  earth: '#5590d8',
+  none: '#4a515a',
 }
 
 const V_HEX = {
-  viable: '#3fb27f',
+  viable: '#6fcf9f',
   marginal: '#e6c15a',
-  not: '#f05a50',
-  nodata: '#64748b',
+  not: '#f08a7a',
+  nodata: '#4a515a',
 }
 
 export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function CesiumMoon(
@@ -190,7 +190,10 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
     globe.lightingFadeOutDistance = 100
     globe.lightingFadeInDistance = 200
     globe.lambertDiffuseMultiplier = 1.6
-    globe.baseColor = Cesium.Color.fromCssColorString('#1a1c20')
+    globe.maximumScreenSpaceError = 4
+    globe.tileCacheSize = 48
+    globe.preloadAncestors = false
+    globe.baseColor = Cesium.Color.fromCssColorString('#181715')
 
     const viewer = new Cesium.Viewer(el, {
       globe,
@@ -208,12 +211,21 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
       selectionIndicator: false,
       skyAtmosphere: false,
       scene3DOnly: false,
+      requestRenderMode: true,
+      maximumRenderTimeChange: Infinity,
+      useBrowserRecommendedResolution: false,
     })
 
+    viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 1.5)
     if (viewer.scene.moon) viewer.scene.moon.show = false
     if (viewer.scene.sun) viewer.scene.sun.show = false
     viewer.scene.fog.enabled = false
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#05080d')
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0f0e0c')
+
+    const renderNow = () => {
+      if (!viewer.isDestroyed()) viewer.scene.requestRender()
+    }
+    const stopTileProgress = globe.tileLoadProgressEvent.addEventListener(() => renderNow())
 
     let disposed = false
 
@@ -225,8 +237,9 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
       .then((prov) => {
         if (disposed || viewer.isDestroyed()) return
         const layer = viewer.imageryLayers.addImageryProvider(prov, 0)
-        layer.brightness = 1.4
-        layer.contrast = 1.12
+        layer.brightness = 1.38
+        layer.contrast = 1.1
+        renderNow()
       })
       .catch(() => {
         /* ignore if offline */
@@ -300,46 +313,42 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         ellipse: {
           semiMajorAxis: psr.radiusKm * 1000,
           semiMinorAxis: psr.radiusKm * 1000,
-          material: Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.22),
+          material: Cesium.Color.fromCssColorString('#9fd3cf').withAlpha(0.18),
           outline: true,
-          outlineColor: Cesium.Color.fromCssColorString('#38e1ff').withAlpha(0.85),
-          outlineWidth: 2,
+          outlineColor: Cesium.Color.fromCssColorString('#9fd3cf').withAlpha(0.75),
+          outlineWidth: 1.8,
           height: 300,
         },
         label: {
           text: `${psr.name.replace(' PSR', '')} · ${psr.tempK} K`,
-          font: '600 11px Archivo, system-ui, sans-serif',
-          fillColor: Cesium.Color.fromCssColorString('#a5f3fc'),
-          outlineColor: Cesium.Color.BLACK,
+          font: '550 11px Archivo, system-ui, sans-serif',
+          fillColor: Cesium.Color.fromCssColorString('#9fd3cf'),
+          outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           pixelOffset: new Cesium.Cartesian2(0, -10),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1_400_000),
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1_100_000),
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       })
     }
 
-    // Dynamic CallbackProperty entities (sub-solar, sub-earth, selected marker, Sun/Earth sight lines, traverse line)
+    // Dynamic entities updated on ephemeris / selection changes (no per-frame CallbackProperty CPU churn)
     dsDyn.entities.add({
       id: 'subsolar-pin',
-      position: new Cesium.CallbackProperty(() => {
-        const e = ephemRef.current
-        if (!e) return Cesium.Cartesian3.fromDegrees(0, 0, 5000, moon)
-        return Cesium.Cartesian3.fromDegrees(e.subSolar.lon, e.subSolar.lat, 8000, moon)
-      }, false) as unknown as Cesium.PositionProperty,
+      position: Cesium.Cartesian3.fromDegrees(0, 0, 8000, moon),
       point: {
-        pixelSize: 10,
-        color: Cesium.Color.fromCssColorString('#f5b041'),
-        outlineColor: Cesium.Color.BLACK,
+        pixelSize: 9,
+        color: Cesium.Color.fromCssColorString('#c98419'),
+        outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
         outlineWidth: 2,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
       },
       label: {
         text: 'SUB-SOLAR',
-        font: '700 10px Archivo, system-ui, sans-serif',
-        fillColor: Cesium.Color.fromCssColorString('#fbd38d'),
-        outlineColor: Cesium.Color.BLACK,
+        font: '650 10px Archivo, system-ui, sans-serif',
+        fillColor: Cesium.Color.fromCssColorString('#e6c15a'),
+        outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
         outlineWidth: 3,
         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
         pixelOffset: new Cesium.Cartesian2(0, -14),
@@ -347,90 +356,44 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
       },
     })
 
-    // Selected point ring + Sun/Earth 3D beams + Nearest PSR traverse vector
     dsDyn.entities.add({
       id: 'selected-marker',
       show: true,
-      position: new Cesium.CallbackProperty(() => {
-        const s = selectedRef.current
-        return s
-          ? Cesium.Cartesian3.fromDegrees(s.lon, s.lat, 1200, moon)
-          : Cesium.Cartesian3.fromDegrees(0, -89.5, 1200, moon)
-      }, false) as unknown as Cesium.PositionProperty,
+      position: Cesium.Cartesian3.fromDegrees(0, -89.5, 1200, moon),
       point: {
-        pixelSize: 11,
-        color: Cesium.Color.fromCssColorString('#ffffff'),
-        outlineColor: Cesium.Color.fromCssColorString('#38e1ff'),
-        outlineWidth: 3,
+        pixelSize: 10,
+        color: Cesium.Color.fromCssColorString('#ebe7dd'),
+        outlineColor: Cesium.Color.fromCssColorString('#c98419'),
+        outlineWidth: 2.5,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
       },
     })
 
-    const rayPositions = (body: 'sun' | 'earth') =>
-      new Cesium.CallbackProperty(() => {
-        const s = selectedRef.current
-        const e = ephemRef.current
-        if (!s || !e || !layersRef.current.rays) return []
-        const origin = Cesium.Cartesian3.fromDegrees(s.lon, s.lat, 1500, moon)
-        const tgt = body === 'sun' ? e.sun : e.earth
-        const ox = origin.x / 1000, oy = origin.y / 1000, oz = origin.z / 1000
-        const dx = tgt.x - ox, dy = tgt.y - oy, dz = tgt.z - oz
-        const d = Math.hypot(dx, dy, dz) || 1
-        const lenM = 180_000
-        const tip = new Cesium.Cartesian3(
-          origin.x + (dx / d) * lenM,
-          origin.y + (dy / d) * lenM,
-          origin.z + (dz / d) * lenM,
-        )
-        return [origin, tip]
-      }, false)
-
-    const rayColor = (body: 'sun' | 'earth') =>
-      new Cesium.CallbackProperty(() => {
-        const s = selectedRef.current
-        const e = ephemRef.current
-        if (!s || !e) return Cesium.Color.GRAY
-        const { elDeg } = topocentricAzEl(s.lat, s.lon, body === 'sun' ? e.sun : e.earth)
-        const baseColor =
-          elDeg > -0.25
-            ? Cesium.Color.fromCssColorString(body === 'sun' ? '#f5b041' : '#4f9dff')
-            : Cesium.Color.fromCssColorString('#f08a7a').withAlpha(0.55)
-        return baseColor
-      }, false)
-
     dsDyn.entities.add({
       id: 'sun-ray',
       polyline: {
-        positions: rayPositions('sun'),
-        width: 3,
-        material: new Cesium.ColorMaterialProperty(rayColor('sun')),
+        positions: [],
+        width: 2.6,
+        material: Cesium.Color.fromCssColorString('#c98419'),
       },
     })
 
     dsDyn.entities.add({
       id: 'earth-ray',
       polyline: {
-        positions: rayPositions('earth'),
-        width: 3,
-        material: new Cesium.ColorMaterialProperty(rayColor('earth')),
+        positions: [],
+        width: 2.6,
+        material: Cesium.Color.fromCssColorString('#5590d8'),
       },
     })
 
     dsDyn.entities.add({
       id: 'psr-traverse',
       polyline: {
-        positions: new Cesium.CallbackProperty(() => {
-          const s = selectedRef.current
-          if (!s || !layersRef.current.psrs || s.lat > -78) return []
-          const { psr } = nearestPsr(s.lat, s.lon)
-          return [
-            Cesium.Cartesian3.fromDegrees(s.lon, s.lat, 1200, moon),
-            Cesium.Cartesian3.fromDegrees(psr.lon, psr.lat, 1200, moon),
-          ]
-        }, false),
-        width: 2.5,
+        positions: [],
+        width: 2.0,
         material: new Cesium.PolylineDashMaterialProperty({
-          color: Cesium.Color.fromCssColorString('#00f5d4'),
+          color: Cesium.Color.fromCssColorString('#9fd3cf'),
           dashLength: 14,
         }),
       },
@@ -499,6 +462,7 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
 
     return () => {
       disposed = true
+      stopTileProgress()
       handler.destroy()
       if (!viewer.isDestroyed()) {
         viewer.camera.moveEnd.removeEventListener(onMoveEnd)
@@ -519,10 +483,11 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
     }
   }, [mode, ready])
 
-  // Sync Sun DirectionalLight from DE421 ephemeris + layer visibility
+  // Sync Sun DirectionalLight, dynamic vectors, & layer visibility, then request one crisp frame
   useEffect(() => {
     const v = viewerRef.current
     if (!v || !ready || v.isDestroyed()) return
+    const moon = Cesium.Ellipsoid.MOON
     v.scene.globe.enableLighting = layers.solarLighting
     if (wacLayerRef.current) wacLayerRef.current.show = layers.wacImagery
     if (lolaLayerRef.current) lolaLayerRef.current.show = layers.elevationTint
@@ -534,14 +499,76 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
     if (ephemeris) {
       const { x, y, z } = ephemeris.sun
       const mag = Math.hypot(x, y, z) || 1
-      // DirectionalLight.direction emits light FROM Sun TOWARD Moon center -> negate sun vector
       v.scene.light = new Cesium.DirectionalLight({
         direction: new Cesium.Cartesian3(-x / mag, -y / mag, -z / mag),
         color: Cesium.Color.fromCssColorString('#fffaf0'),
         intensity: 2.2,
       })
     }
-  }, [ephemeris, layers, ready])
+
+    const dsDyn = dsDynRef.current
+    if (dsDyn) {
+      const subPin = dsDyn.entities.getById('subsolar-pin')
+      if (subPin) {
+        subPin.position = new Cesium.ConstantPositionProperty(
+          ephemeris
+            ? Cesium.Cartesian3.fromDegrees(ephemeris.subSolar.lon, ephemeris.subSolar.lat, 8000, moon)
+            : Cesium.Cartesian3.fromDegrees(0, 0, 5000, moon),
+        )
+      }
+      const selMarker = dsDyn.entities.getById('selected-marker')
+      if (selMarker) {
+        selMarker.position = new Cesium.ConstantPositionProperty(
+          selected
+            ? Cesium.Cartesian3.fromDegrees(selected.lon, selected.lat, 1200, moon)
+            : Cesium.Cartesian3.fromDegrees(0, -89.5, 1200, moon),
+        )
+      }
+      const updateRay = (id: string, body: 'sun' | 'earth') => {
+        const ent = dsDyn.entities.getById(id)
+        if (!ent?.polyline) return
+        if (!selected || !ephemeris || !layers.rays) {
+          ent.polyline.positions = new Cesium.ConstantProperty([])
+          return
+        }
+        const origin = Cesium.Cartesian3.fromDegrees(selected.lon, selected.lat, 1500, moon)
+        const tgt = body === 'sun' ? ephemeris.sun : ephemeris.earth
+        const ox = origin.x / 1000, oy = origin.y / 1000, oz = origin.z / 1000
+        const dx = tgt.x - ox, dy = tgt.y - oy, dz = tgt.z - oz
+        const d = Math.hypot(dx, dy, dz) || 1
+        const lenM = 180_000
+        const tip = new Cesium.Cartesian3(
+          origin.x + (dx / d) * lenM,
+          origin.y + (dy / d) * lenM,
+          origin.z + (dz / d) * lenM,
+        )
+        const { elDeg } = topocentricAzEl(selected.lat, selected.lon, tgt)
+        const col =
+          elDeg > -0.25
+            ? Cesium.Color.fromCssColorString(body === 'sun' ? '#c98419' : '#5590d8')
+            : Cesium.Color.fromCssColorString('#f08a7a').withAlpha(0.55)
+        ent.polyline.positions = new Cesium.ConstantProperty([origin, tip])
+        ent.polyline.material = new Cesium.ColorMaterialProperty(col)
+      }
+      updateRay('sun-ray', 'sun')
+      updateRay('earth-ray', 'earth')
+
+      const trav = dsDyn.entities.getById('psr-traverse')
+      if (trav?.polyline) {
+        if (!selected || !layers.psrs || selected.lat > -78) {
+          trav.polyline.positions = new Cesium.ConstantProperty([])
+        } else {
+          const { psr } = nearestPsr(selected.lat, selected.lon)
+          trav.polyline.positions = new Cesium.ConstantProperty([
+            Cesium.Cartesian3.fromDegrees(selected.lon, selected.lat, 1200, moon),
+            Cesium.Cartesian3.fromDegrees(psr.lon, psr.lat, 1200, moon),
+          ])
+        }
+      }
+    }
+
+    v.scene.requestRender()
+  }, [ephemeris, layers, selected, ready])
 
   // Rebuild Artemis regions & global landmarks
   useEffect(() => {
@@ -558,28 +585,28 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         ellipse: {
           semiMajorAxis: 12_000,
           semiMinorAxis: 12_000,
-          material: Cesium.Color.fromCssColorString('#cf86c3').withAlpha(0.16),
+          material: Cesium.Color.fromCssColorString('#cf86c3').withAlpha(0.14),
           outline: true,
-          outlineColor: Cesium.Color.fromCssColorString('#e879f9'),
-          outlineWidth: 2,
+          outlineColor: Cesium.Color.fromCssColorString('#cf86c3'),
+          outlineWidth: 1.5,
           height: 400,
         },
         point: {
-          pixelSize: 8,
-          color: Cesium.Color.fromCssColorString('#e879f9'),
-          outlineColor: Cesium.Color.BLACK,
+          pixelSize: 7,
+          color: Cesium.Color.fromCssColorString('#cf86c3'),
+          outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
           outlineWidth: 1.5,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         label: {
           text: d ? `${r.name} (${d.resources.water_ice_potential})` : r.name,
-          font: '600 11px Archivo, system-ui, sans-serif',
-          fillColor: Cesium.Color.fromCssColorString('#f5d0fe'),
-          outlineColor: Cesium.Color.BLACK,
+          font: '550 11px Archivo, system-ui, sans-serif',
+          fillColor: Cesium.Color.fromCssColorString('#e7c3e1'),
+          outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           pixelOffset: new Cesium.Cartesian2(0, -14),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1_800_000),
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1_500_000),
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       })
@@ -609,6 +636,7 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         })
       }
     }
+    viewerRef.current?.scene.requestRender()
   }, [artemis, artemisDossiers, layers.landmarks, ready])
 
   // Rebuild site markers colored by instantaneous Sun/Earth state
@@ -644,6 +672,7 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         },
       })
     }
+    viewerRef.current?.scene.requestRender()
   }, [sites, siteStates, selected, ready])
 
   // Rebuild landing ellipse dispersion outline + tiles
@@ -652,7 +681,10 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
     if (!ds || !ready) return
     const moon = Cesium.Ellipsoid.MOON
     ds.entities.removeAll()
-    if (!ellipse) return
+    if (!ellipse) {
+      viewerRef.current?.scene.requestRender()
+      return
+    }
 
     const ring = ellipseOutline(ellipse.center, ellipse.spec, 72)
     ds.entities.add({
@@ -678,6 +710,7 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         },
       })
     })
+    viewerRef.current?.scene.requestRender()
   }, [ellipse, ready])
 
   return (

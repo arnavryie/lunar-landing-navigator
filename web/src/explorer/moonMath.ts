@@ -1,5 +1,7 @@
-import type { Region, ScienceTradeoff, Site } from '../data'
+import { DEFAULT_THRESHOLDS, windowStats, viability, type Region, type ScienceTradeoff, type Site, type Viability, type WindowStats } from '../data'
 import { ARTEMIS_3_SITES, type ArtemisSiteData } from '../data/artemisData'
+import { polarRowCol } from '../engine'
+import { terrainAt, type MapData } from '../mapData'
 
 export const R_MOON_KM = 1737.4
 export const R_MOON_M = 1_737_400
@@ -256,6 +258,202 @@ export function formatUtcFull(ms: number): string {
   const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()} · ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`
+}
+
+export interface NearbyPsr {
+  psr: PsrZone
+  distKm: number
+  bearingDeg: number
+}
+
+export function bearingBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const p1 = lat1 * D2R
+  const p2 = lat2 * D2R
+  const dl = (lon2 - lon1) * D2R
+  const y = Math.sin(dl) * Math.cos(p2)
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)
+  return ((Math.atan2(y, x) * R2D) % 360 + 360) % 360
+}
+
+export function nearbyPsrs(lat: number, lon: number, count = 3): NearbyPsr[] {
+  return SOUTH_POLE_PSRS.map((psr) => ({
+    psr,
+    distKm: surfaceKm(lat, lon, psr.lat, psr.lon),
+    bearingDeg: bearingBetween(lat, lon, psr.lat, psr.lon),
+  }))
+    .sort((a, b) => a.distKm - b.distKm)
+    .slice(0, count)
+}
+
+export interface NeighborhoodHazard {
+  inPolarGrid: boolean
+  centerElevM: number | null
+  centerSlopeDeg: number | null
+  minElevM: number | null
+  maxElevM: number | null
+  maxSlopeDeg: number | null
+  meanSlopeDeg: number | null
+  steepCount: number
+  sampleCount: number
+  steepSectors: string[]
+  meanSunPct: number | null
+  meanEarthPct: number | null
+}
+
+const DIRS_8 = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
+
+/** Instant static 4 km neighborhood terrain/hazard scan from LOLA 240 m polar grids (0 ms CPU). */
+export function scanTerrainNeighborhood(map: MapData | null, lat: number, lon: number, maxSlopeLimit = 8): NeighborhoodHazard {
+  if (!map || lat > -84.2) {
+    return {
+      inPolarGrid: false,
+      centerElevM: null,
+      centerSlopeDeg: null,
+      minElevM: null,
+      maxElevM: null,
+      maxSlopeDeg: null,
+      meanSlopeDeg: null,
+      steepCount: 0,
+      sampleCount: 0,
+      steepSectors: [],
+      meanSunPct: null,
+      meanEarthPct: null,
+    }
+  }
+  const [rc, cc] = polarRowCol(lat, lon, map.n, map.scale)
+  const r0 = Math.round(rc)
+  const c0 = Math.round(cc)
+  if (r0 < 2 || r0 >= map.n - 2 || c0 < 2 || c0 >= map.n - 2) {
+    return {
+      inPolarGrid: false,
+      centerElevM: null,
+      centerSlopeDeg: null,
+      minElevM: null,
+      maxElevM: null,
+      maxSlopeDeg: null,
+      meanSlopeDeg: null,
+      steepCount: 0,
+      sampleCount: 0,
+      steepSectors: [],
+      meanSunPct: null,
+      meanEarthPct: null,
+    }
+  }
+  const ct = terrainAt(map, r0, c0)
+  const kmPerDegLat = (Math.PI * R_MOON_KM) / 180
+  const cosLat = Math.max(0.02, Math.cos(lat * D2R))
+  const kmPerDegLon = kmPerDegLat * cosLat
+
+  let minE = ct.h
+  let maxE = ct.h
+  let maxS = ct.slope
+  let sumS = 0
+  let sumSun = 0
+  let sumEarth = 0
+  let steep = 0
+  let count = 0
+  const steepDirSet = new Set<string>()
+
+  for (const distKm of [1, 2, 3, 4]) {
+    for (let dIdx = 0; dIdx < 8; dIdx++) {
+      const az = (dIdx * 45 * Math.PI) / 180
+      const dLat = (distKm * Math.cos(az)) / kmPerDegLat
+      const dLon = (distKm * Math.sin(az)) / kmPerDegLon
+      const [rr, ccc] = polarRowCol(lat + dLat, lon + dLon, map.n, map.scale)
+      const r = Math.round(rr)
+      const c = Math.round(ccc)
+      if (r < 1 || r >= map.n - 1 || c < 1 || c >= map.n - 1) continue
+      const t = terrainAt(map, r, c)
+      if (!Number.isFinite(t.h) || !Number.isFinite(t.slope)) continue
+      count++
+      minE = Math.min(minE, t.h)
+      maxE = Math.max(maxE, t.h)
+      maxS = Math.max(maxS, t.slope)
+      sumS += t.slope
+      const k = r * map.n + c
+      sumSun += (map.sun[k] / 255) * 100
+      sumEarth += (map.earth[k] / 255) * 100
+      if (t.slope > maxSlopeLimit) {
+        steep++
+        steepDirSet.add(`${DIRS_8[dIdx]} (~${t.slope.toFixed(0)}°)`)
+      }
+    }
+  }
+
+  return {
+    inPolarGrid: true,
+    centerElevM: ct.h,
+    centerSlopeDeg: ct.slope,
+    minElevM: minE,
+    maxElevM: maxE,
+    maxSlopeDeg: maxS,
+    meanSlopeDeg: count > 0 ? sumS / count : ct.slope,
+    steepCount: steep,
+    sampleCount: count,
+    steepSectors: Array.from(steepDirSet).slice(0, 4),
+    meanSunPct: count > 0 ? sumSun / count : null,
+    meanEarthPct: count > 0 ? sumEarth / count : null,
+  }
+}
+
+export interface RankedCandidate {
+  site: Site
+  stats: WindowStats | null
+  v: Viability
+  slopeDeg: number | null
+  steep: boolean
+  score: number
+  psrKm: number
+  errors: string[]
+}
+
+/** Fast instantaneous site scorer over static hourly Site vectors for any chosen UTC hour & mission duration. */
+export function rankSitesForWindow(sites: Site[], hourIdx: number, missionHours = 336, map: MapData | null = null): RankedCandidate[] {
+  const th = DEFAULT_THRESHOLDS
+  return sites
+    .filter((s) => s.lat <= -75 && !s.replay && !s.id.startsWith('replay-'))
+    .map((site) => {
+      const i = Math.max(0, Math.min(site.samples - 1, Math.round(hourIdx)))
+      const stats = windowStats(site, i, missionHours)
+      let slopeDeg: number | null = site.slope_deg ?? null
+      if (slopeDeg === null && map && site.lat <= -85) {
+        const [r, c] = polarRowCol(site.lat, site.lon, map.n, map.scale)
+        const ri = Math.round(r), ci = Math.round(c)
+        if (ri >= 1 && ci >= 1 && ri < map.n - 1 && ci < map.n - 1) {
+          slopeDeg = terrainAt(map, ri, ci).slope
+        }
+      }
+      const slopeVal = slopeDeg ?? 4
+      const steep = slopeDeg !== null && slopeDeg > 8
+      const baseV: Viability = stats ? viability(stats, th) : 'nodata'
+      const v: Viability = steep && baseV === 'viable' ? 'marginal' : steep ? 'not' : baseV
+      const { distKm: psrKm } = nearestPsr(site.lat, site.lon)
+
+      const errors: string[] = []
+      if (steep && slopeDeg !== null) errors.push(`Slope ${slopeDeg.toFixed(1)}° exceeds 8° limit`)
+      if (!stats) {
+        errors.push('Mission window crosses end of year')
+      } else {
+        if (stats.sunPct < th.minSunPct) errors.push(`Sunlight ${stats.sunPct.toFixed(0)}% < ${th.minSunPct}% min`)
+        if (stats.longestDarkH > th.maxDarkH) errors.push(`Longest darkness ${stats.longestDarkH}h > ${th.maxDarkH}h max`)
+        if (stats.earthPct < th.minEarthPct) errors.push(`Earth link ${stats.earthPct.toFixed(0)}% < ${th.minEarthPct}% min`)
+      }
+
+      // Composite score (0..100): matches Find sites weights cleanly
+      let score = 0
+      if (stats) {
+        const power = (Math.min(100, stats.sunPct) / 100) * 40
+        const comms = (Math.min(100, stats.earthPct) / 100) * 25
+        const darkScore = Math.max(0, 1 - stats.longestDarkH / 168) * 20
+        const flatScore = Math.max(0, 1 - slopeVal / 16) * 15
+        score = Math.round(power + comms + darkScore + flatScore)
+      }
+      if (v === 'viable') score += 100
+      else if (v === 'marginal') score += 45
+
+      return { site, stats, v, slopeDeg, steep, score, psrKm, errors }
+    })
+    .sort((a, b) => b.score - a.score)
 }
 
 export type { ScienceTradeoff, Region }
