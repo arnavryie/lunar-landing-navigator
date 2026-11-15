@@ -30,6 +30,7 @@ const SCREENS = [
   { view: 'globe', name: 'Globe', what: 'The whole Moon, lit from the true Sun direction, with the sites marked.' },
   { view: 'compare', name: 'Compare', what: 'Up to four site-and-date scenarios side by side.' },
   { view: 'lander', name: 'Lander systems', what: 'Battery and recharge planning for a rover at the chosen site.' },
+  { view: 'explorer', name: 'Moon Explorer', what: 'Google-Earth 3D Moon + synced 2D map, rotatable 24h mission clock, and 5-stage mission pipeline.' },
   { view: 'validation', name: 'Validation', what: 'Each check against JPL Horizons and NASA illumination maps, with how to rerun it.' },
 ]
 
@@ -210,7 +211,7 @@ export function Landing() {
         <section className="l-sec" id="contents" aria-labelledby="l-contents-title">
           <aside className="l-margin" aria-hidden="true">Contents</aside>
           <div className="l-main">
-            <h2 id="l-contents-title">Eight screens over the same hourly data</h2>
+            <h2 id="l-contents-title">Nine screens over the same hourly data</h2>
             <ol className="l-rows">
               {SCREENS.map((s) => (
                 <li key={s.view}>
