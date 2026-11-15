@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { ARTEMIS_3_SITES } from './data/artemisData'
 import { FRAG, VERT } from './moonShader'
 
 const base = import.meta.env.BASE_URL
@@ -29,7 +28,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
   const [ready, setReady] = useState(false)
   const [reliefMode, setReliefMode] = useState<'standard' | 'enhanced' | 'flat'>('standard')
   const [showGrid, setShowGrid] = useState(true)
-  const [showSites, setShowSites] = useState(true)
   const [autoRotate, setAutoRotate] = useState(true)
 
   // Internal Three.js references
@@ -41,7 +39,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     moonMesh: THREE.Mesh
     moonMat: THREE.ShaderMaterial
     gridGroup: THREE.Group
-    sitesGroup: THREE.Group
     sunMarker: THREE.Mesh
     earthMarker: THREE.Mesh
     sunBeam: THREE.Line
@@ -173,34 +170,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
         }
         scene.add(gridGroup)
 
-        // Artemis candidate landing site markers
-        const sitesGroup = new THREE.Group()
-        for (const site of ARTEMIS_3_SITES) {
-          const p = unitAt(site.lat, site.lon).multiplyScalar(1.002)
-
-          // Touchdown circle on terrain
-          const ringGeo = new THREE.RingGeometry(0.014, 0.022, 24)
-          ringGeo.lookAt(p)
-          const ringMat = new THREE.MeshBasicMaterial({
-            color: 0x38bdf8,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.85,
-          })
-          const ringMesh = new THREE.Mesh(ringGeo, ringMat)
-          ringMesh.position.copy(p)
-          sitesGroup.add(ringMesh)
-
-          // Center beacon diamond
-          const diamondGeo = new THREE.OctahedronGeometry(0.009)
-          const diamondMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-          const diamondMesh = new THREE.Mesh(diamondGeo, diamondMat)
-          diamondMesh.position.copy(p.clone().multiplyScalar(1.012))
-          diamondMesh.userData = { siteName: site.name }
-          sitesGroup.add(diamondMesh)
-        }
-        scene.add(sitesGroup)
-
         // Lighting & celestial markers
         const light = new THREE.DirectionalLight(0xffffff, 1.8)
         scene.add(light)
@@ -240,7 +209,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
           moonMesh,
           moonMat,
           gridGroup,
-          sitesGroup,
           sunMarker,
           earthMarker,
           sunBeam,
@@ -336,12 +304,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
     if (!w) return
     w.gridGroup.visible = showGrid
   }, [showGrid])
-
-  useEffect(() => {
-    const w = worldRef.current
-    if (!w) return
-    w.sitesGroup.visible = showSites
-  }, [showSites])
 
   // 5. Update Auto-rotation
   useEffect(() => {
@@ -443,14 +405,6 @@ export function Moon3DHero({ vec, hour, sun, earth }: Moon3DHeroProps) {
             title="Toggle Latitude / Longitude lines (SVS #14959 Group 379586)"
           >
             Grid: {showGrid ? 'ON' : 'OFF'}
-          </button>
-          <button
-            type="button"
-            className={`moon-3d-btn ${showSites ? 'active' : ''}`}
-            onClick={() => setShowSites((s) => !s)}
-            title="Toggle Artemis III candidate landing sites"
-          >
-            Sites: {showSites ? 'ON' : 'OFF'}
           </button>
           <button
             type="button"

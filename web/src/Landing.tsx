@@ -148,8 +148,8 @@ export function Landing() {
               <>
                 <b>Fig. 1.</b> Interactive 3D Moon model rendered from NASA Lunar Reconnaissance Orbiter (LRO) data [SVS #14959] with
                 LOLA laser altimetry elevation topography and LROC color mapping [1][2]. The Moon is dynamically lit in real time by the
-                hourly JPL DE421 solar ephemeris vector [3]. Drag to inspect south-polar ridges; scrub the timeline below to sweep the
-                calculated solar shadow line across candidate Artemis landing zones.
+                hourly JPL DE421 solar ephemeris vector [3]. Drag to rotate and inspect surface topography; scrub the timeline below to sweep the
+                calculated solar terminator across polar craters.
               </>
             ) : (
               <>
