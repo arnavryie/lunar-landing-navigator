@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_ARRAY, DEFAULT_THRESHOLDS, KIND_LABEL, peakWatts, type SolarArray, STATE_LABEL, formatDeg, formatDuration, getSiteScienceStats, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
   loadValidation, stateAt,
@@ -82,6 +82,19 @@ export default function App() {
   const [ellipse, setEllipse] = useState<EllipseOverlay | null>(null)
   // The ellipse overlay belongs to the site it was drawn for (it stays when switching between Map and 3D).
   const ell = ellipse && site && ellipse.focus.lat === site.lat && ellipse.focus.lon === site.lon ? ellipse : null
+
+  // Artemis III candidate matching site
+  const artemisMatch = useMemo(() => {
+    if (!site) return null
+    return (
+      ARTEMIS_3_SITES.find((a) => {
+        if (site.id === `artemis-${a.id}`) return true
+        if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
+        const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
+        return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
+      }) ?? null
+    )
+  }, [site])
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -258,16 +271,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [site])
 
-  // Artemis III candidate region the current site sits in (by id, name or within ~0.5° of its centre).
-  const artemisMatch = site
-    ? ARTEMIS_3_SITES.find((a) => {
-        if (site.id === `artemis-${a.id}`) return true
-        if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
-        const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
-        return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
-      })
-    : undefined
-
   return (
     <div className="app">
       <header className="top">
@@ -327,40 +330,40 @@ export default function App() {
         </nav>
         <div className="controls-row">
         {view !== 'compare' && (
-        <label className="site-pick">
-          <span>Site</span>
-          <select
-            value={siteId}
-            onChange={(e) => {
-              const val = e.target.value
-              if (val.startsWith('artemis-')) {
-                const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
-                if (a) pickArtemisSite(a)
-              } else {
-                setSiteId(val)
-              }
-            }}
-          >
-            <optgroup label="Artemis III Candidate Landing Sites">
-              {ARTEMIS_3_SITES.map((a) => (
-                <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
-                  {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})
-                </option>
-              ))}
-            </optgroup>
-            {[...new Set(sites.map((s) => s.group))].map((g) => (
-              <optgroup key={g} label={g}>
-                {sites
-                  .filter((s) => s.group === g)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
+          <label className="site-pick">
+            <span>Site</span>
+            <select
+              value={siteId}
+              onChange={(e) => {
+                const val = e.target.value
+                if (val.startsWith('artemis-')) {
+                  const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
+                  if (a) pickArtemisSite(a)
+                } else {
+                  setSiteId(val)
+                }
+              }}
+            >
+              <optgroup label="Artemis III Candidate Landing Sites">
+                {ARTEMIS_3_SITES.map((a) => (
+                  <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
+                    {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})
+                  </option>
+                ))}
               </optgroup>
-            ))}
-          </select>
-        </label>
+              {[...new Set(sites.map((s) => s.group))].map((g) => (
+                <optgroup key={g} label={g}>
+                  {sites
+                    .filter((s) => s.group === g)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
         )}
         {/* Any landing year */}
         {view !== 'compare' && (
