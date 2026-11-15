@@ -607,10 +607,10 @@ export function MoonExplorer() {
       {/* Matching Site Sheet Header Collar */}
       <div className="mx-collar-wrap">
         <header className="top">
-          <a className="mark" href="./" title="About this mission planner">
+          <a className="mark" href="./" title="About Lunar Statio">
             <Mark />
             <h1>
-              Lunar South Pole
+              Lunar Statio
               <span>3D/2D Explorer &amp; Pipeline</span>
             </h1>
           </a>

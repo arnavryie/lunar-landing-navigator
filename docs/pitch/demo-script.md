@@ -26,7 +26,7 @@ Careful with wording: these are **NASA's candidate regions (Oct 2024)**. NASA ha
 ## Option A (recommended): 7-slide deck
 Easier to get right in a day, nothing to record, judges read it at their own pace. Must be ≤ 7 slides including the title. English. Big screenshots, few words. Export as PDF and share a public link (Google Drive "anyone with the link", or upload it next to the site).
 
-1. **Title:** Lunar South Pole Mission Planner. Team Stranded (names), Pune. Challenge: Lunar Landing Site Navigator. One screenshot of the horizon dial.
+1. **Title:** Lunar Statio, South Pole Mission Planner. Team Stranded (names), Pune. Challenge: Lunar Landing Site Navigator. One screenshot of the horizon dial.
 2. **The problem:** "At the south pole the Sun skims the horizon." Scene 1 numbers: Sun +2.07° vs ridge +2.08°; Pune +49.9° the same day. "Launches slip, and a perfect site can go dark."
 3. **Our answer (user experience):** screenshot of Site and plan: pick a site and date → power and Earth contact at a glance → slip → re-plan.
 4. **Demo moment:** scenes 2→3→4 as three small screenshots with the numbers: viable 100% / 0 h → +7 days: 53% / 6 d 13 h → 21 km away: viable 94% / 11 h.

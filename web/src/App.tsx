@@ -274,11 +274,11 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <a className="mark" href="./" title="About this planner">
+        <a className="mark" href="./" title="About Lunar Statio">
           <Mark />
           <h1>
-            Lunar South Pole
-            <span>Mission Planner</span>
+            Lunar Statio
+            <span>South Pole Mission Planner</span>
           </h1>
         </a>
         {site && view !== 'compare' ? (

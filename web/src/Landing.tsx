@@ -87,21 +87,21 @@ export function Landing() {
   return (
     <div className="landing">
       <header className="l-collar">
-        <a className="l-mark" href="./" aria-label="Lunar South Pole Mission Planner, home">
+        <a className="l-mark" href="./" aria-label="Lunar Statio, home">
           <svg width="28" height="28" viewBox="0 0 34 34" aria-hidden="true">
             <circle cx="17" cy="17" r="15.5" fill="none" stroke="var(--line-2)" />
             <circle cx="17" cy="17" r="9" fill="none" stroke="var(--line-2)" />
             <path d="M17 1.5v31M1.5 17h31" stroke="var(--line-2)" />
             <circle cx="28" cy="9.8" r="2.6" fill="var(--sun)" />
           </svg>
-          <span>Lunar South Pole Mission Planner</span>
+          <span>Lunar Statio</span>
         </a>
         <nav aria-label="Page">
           <a href="#fig-2">Fig. 2</a>
           <a href="#contents">Screens</a>
           <a href="#method">Method</a>
           <a href="#refs">References</a>
-          <a className="l-open" href="?view=site">Open the planner</a>
+          <a className="l-open" href="?view=site">Open Lunar Statio</a>
         </nav>
       </header>
 
@@ -162,11 +162,11 @@ export function Landing() {
             can talk home only while Earth clears the same skyline. Land a few days later and both can change.
           </p>
           <p className="l-lead">
-            This planner traces that skyline from NASA laser altimetry for any site near the pole and works out, hour by hour for a
+            Lunar Statio traces that skyline from NASA laser altimetry for any site near the pole and works out, hour by hour for a
             whole year, when the Sun and Earth are in view.
           </p>
           <div className="l-actions">
-            <a className="l-btn l-btn-primary" href="?view=site">Open the planner</a>
+            <a className="l-btn l-btn-primary" href="?view=site">Open Lunar Statio</a>
             <a className="l-link" href="?view=validation">How the numbers are checked</a>
           </div>
 
@@ -268,9 +268,9 @@ export function Landing() {
       </div>
 
       <footer className="l-foot">
-        <span>Lunar South Pole Mission Planner · NASA Space Apps Challenge 2026</span>
+        <span>Lunar Statio · South Pole Mission Planner · NASA Space Apps Challenge 2026</span>
         <span>Set in Archivo. Data from NASA and JPL; the full list is on the <a href="?view=validation">validation</a> screen.</span>
-        <a className="l-btn l-btn-primary" href="?view=site">Open the planner</a>
+        <a className="l-btn l-btn-primary" href="?view=site">Open Lunar Statio</a>
       </footer>
     </div>
   )

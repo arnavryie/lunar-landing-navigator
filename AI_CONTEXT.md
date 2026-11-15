@@ -1,4 +1,4 @@
-# AI Context Brief: Lunar South Pole Mission Planner
+# AI Context Brief: Lunar Statio (Lunar South Pole Mission Planner)
 
 > **What this file is:** paste or attach it at the start of any AI chat (ChatGPT, Claude, Gemini, Cursor, Copilot, v0, Lovable…) so the AI works with the same context as the rest of the team.
 > **Source of truth:** [PROJECT_PLAN.md](PROJECT_PLAN.md). If this file and the plan disagree, the plan wins. Attach both when the AI's task touches features or design decisions.
@@ -154,7 +154,7 @@ If a judge asks: *"Out of scope for the hackathon; listed as future work."*
 ---
 
 ## 9. Open decisions (ask the team, don't assume)
-3D engine · default viability thresholds · product name (working title in use) · curated site list with verified coordinates · analysis period and time step (must cover a full seasons cycle) · which 2–3 missions to replay · landing-ellipse presets · team size and roles.
+3D engine · default viability thresholds · product name (Lunar Statio, decided 2026-11-15) · curated site list with verified coordinates · analysis period and time step (must cover a full seasons cycle) · which 2–3 missions to replay · landing-ellipse presets · team size and roles.
 
 ---
 

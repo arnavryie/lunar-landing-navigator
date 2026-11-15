@@ -131,6 +131,8 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--ink); }
   scrollbar-width: none;
 }
 .views::-webkit-scrollbar { display: none; }
+/* Sub-tabs reuse .views inside one-column side panels: don't span 2 columns there, or the grid grows an implicit 2nd column. */
+.map-side .views { grid-column: auto; }
 .views button {
   position: relative; flex: none; min-width: 0; padding: 10px 11px 11px; border: 0; border-radius: 0; background: none;
   color: var(--ink-2); font-weight: 540; white-space: nowrap;

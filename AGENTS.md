@@ -1,8 +1,8 @@
-# AGENTS.md — Lunar South Pole Mission Planner
+# AGENTS.md — Lunar Statio (Lunar South Pole Mission Planner)
 
 ## 1. Project Identity
 
-You are working on the **Lunar South Pole Mission Planner**, a NASA Space Apps Challenge 2026 project.
+You are working on **Lunar Statio** (the Lunar South Pole Mission Planner), a NASA Space Apps Challenge 2026 project.
 
 The application helps mission planners evaluate lunar south-pole landing sites by analysing:
 
