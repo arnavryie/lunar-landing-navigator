@@ -681,6 +681,44 @@ export function Globe({
         stemLine.userData = { artemis: a, id: a.id }
         reticleGroup.add(stemLine)
 
+        // 5b. Mathematically accurate Ground Shadow cast by vertical beacon stem on the terrain
+        const localSun = sunDir.clone().applyQuaternion(reticleGroup.quaternion.clone().invert())
+        if (localSun.y > -0.0047) {
+          const horizLen = Math.hypot(localSun.x, localSun.z)
+          if (horizLen > 1e-4) {
+            const shadowDirX = -localSun.x / horizLen
+            const shadowDirZ = -localSun.z / horizLen
+            const sinAlpha = Math.max(0.015, localSun.y)
+            const shadowL = Math.min(stemH / sinAlpha, boundaryRadius * 1.8)
+            const shadowPts = [
+              new THREE.Vector3(0, 0.0004, 0),
+              new THREE.Vector3(shadowDirX * shadowL, 0.0004, shadowDirZ * shadowL),
+            ]
+            const shadowLine = new THREE.Line(
+              new THREE.BufferGeometry().setFromPoints(shadowPts),
+              new THREE.LineBasicMaterial({
+                color: '#050403',
+                transparent: true,
+                opacity: 0.88,
+              }),
+            )
+            shadowLine.userData = { artemis: a, id: a.id }
+            reticleGroup.add(shadowLine)
+
+            // Diamond head shadow at tip
+            const tipCenter = new THREE.Vector3(shadowDirX * shadowL, 0.0004, shadowDirZ * shadowL)
+            const tipGeo = new THREE.RingGeometry(0.001, 0.006, 4)
+            tipGeo.rotateX(-Math.PI / 2)
+            const tipMesh = new THREE.Mesh(
+              tipGeo,
+              new THREE.MeshBasicMaterial({ color: '#050403', side: THREE.DoubleSide, transparent: true, opacity: 0.85 }),
+            )
+            tipMesh.position.copy(tipCenter)
+            tipMesh.userData = { artemis: a, id: a.id }
+            reticleGroup.add(tipMesh)
+          }
+        }
+
         // 6. Radiant Gold diamond head + inner jewel
         const headMesh = new THREE.Mesh(
           new THREE.OctahedronGeometry(0.016),
