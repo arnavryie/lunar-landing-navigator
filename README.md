@@ -476,8 +476,8 @@ Much of the code (Python pipeline and web app) and the documentation was written
 | **Arnav Tagade** | `@arnavryie` | [@arnavryie](https://github.com/arnavryie) | Moon Explorer (CesiumJS globe, 2D map, mission clock), 3D science lens, interactive 2D maps, mission replays and validation page, deployment |
 | **Pratik Sonar** | `@mystic945` | [@Mystic945](https://github.com/Mystic945) | Interactive 3D Moon hero, mission planner layout, 3D page layout and Artemis resource panels |
 | **Sanskar Arnale** | `@arthurg0n` | [@SanskarArnale-07](https://github.com/SanskarArnale-07) | Lander systems: solar recharge planner, illumination map, rover energy model |
-| **Rajsinh Sangramsinh Ghorpade** | `@rajsinh` | [@rajghorpade03](https://github.com/rajghorpade03) | LOLA South Pole topography, PSR (Permanently Shadowed Region) cold trap modeling, terrain roughness & slope safety analysis (`pipeline/psr_topography_analysis.py`, 1,293 lines) |
-| **Nikhil Manmohan Sharma** | `@codebynikhil08` | [@codebynikhil08](https://github.com/codebynikhil08) | Artemis III candidate landing zone telemetry evaluation, ephemeris verification, solar irradiance & direct-to-Earth link modeling (`pipeline/artemis_telemetry_eval.py`, 1,356 lines) |
+| **Rajsinh Sangramsinh Ghorpade** | `@rajsinh` | [@rajghorpade03](https://github.com/rajghorpade03) | LOLA South Pole topography, PSR (Permanently Shadowed Region) cold trap modeling, terrain roughness & slope safety analysis (`pipeline/psr_topography_analysis.py`,  |
+| **Nikhil Manmohan Sharma** | `@codebynikhil08` | [@codebynikhil08](https://github.com/codebynikhil08) | Artemis III candidate landing zone telemetry evaluation, ephemeris verification, solar irradiance & direct-to-Earth link modeling (`pipeline/artemis_telemetry_eval.py`,  |
 
 > **Teammates:** please fill in your GitHub ID and a one-line contribution summary in the table above (and correct anything listed for you).
 
