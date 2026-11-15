@@ -13,7 +13,7 @@ export function MethodologySection() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: 'var(--earth)' }}>ℹ</span>
           <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
-            Scientific Methodology, Provenance &amp; Engineering Caveats
+            Method, sources and caveats
           </h4>
         </div>
         <button
@@ -29,7 +29,7 @@ export function MethodologySection() {
         <div className="methodology-content">
           <div className="methodology-grid">
             <div className="meth-col">
-              <h5>1. Ephemeris &amp; Solar Lighting Vector</h5>
+              <h5>1. Ephemeris and Sun direction</h5>
               <p>
                 Solar and Earth vectors originate from the <strong>JPL DE421</strong> planetary ephemeris computed in the
                 Moon Mean Earth / Polar Axis (MOON_ME_DE421) frame via Skyfield. Evaluated against official JPL Horizons vectors,
@@ -42,7 +42,7 @@ export function MethodologySection() {
             </div>
 
             <div className="meth-col">
-              <h5>2. Lunar Topography &amp; LOLA Resolution</h5>
+              <h5>2. Terrain and LOLA resolution</h5>
               <p>
                 Topography derives from NASA Lunar Reconnaissance Orbiter (LRO) LOLA <strong>LDEM_60S_240M</strong> elevation data,
                 resampled to 240 m per pixel. Bilinear interpolation computes elevations and slopes.
@@ -55,7 +55,7 @@ export function MethodologySection() {
             </div>
 
             <div className="meth-col">
-              <h5>3. Rover Kinematics &amp; Solar Panel Model</h5>
+              <h5>3. Rover motion and solar panel model</h5>
               <p>
                 Mobility power draws are calculated with an empirical slope penalty multiplier:
                 <br />
@@ -71,7 +71,7 @@ export function MethodologySection() {
             </div>
 
             <div className="meth-col">
-              <h5>4. Permanent Shadow &amp; Communications Disclaimer</h5>
+              <h5>4. Permanent shadow and communications</h5>
               <p>
                 Permanently Shadowed Regions (PSRs) represent cryogenic cold traps identified in NASA PGDA maps.
                 PSR classification does <em>not</em> prove the existence of accessible surface water ice deposits.

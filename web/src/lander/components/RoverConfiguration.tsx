@@ -113,7 +113,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
       <div className="config-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: 'var(--sun)' }}>⚙</span> Rover Architecture &amp; Mission Parameters
+            Rover and mission parameters
           </h3>
           <span className="pill" style={{ fontSize: '0.75rem' }}>
             Usable Energy: {usableEnergyKwh.toFixed(2)} kWh
@@ -148,9 +148,9 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
       <div className="config-grid">
         {/* Card 1: Battery */}
         <div className="config-col">
-          <div className="config-col-title">Battery Storage</div>
+          <div className="config-col-title">Battery storage</div>
           <label className="cfg-field" title="Total nameplate battery electrical storage capacity">
-            <span>Total Capacity</span>
+            <span>Total capacity</span>
             <input
               type="number"
               min={1}
@@ -174,7 +174,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit">%</span>
           </label>
           <label className="cfg-field" title="Minimum reserve threshold to protect vehicle survival">
-            <span>Min Reserve</span>
+            <span>Min reserve</span>
             <input
               type="number"
               min={5}
@@ -189,9 +189,9 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
 
         {/* Card 2: Solar Panels */}
         <div className="config-col">
-          <div className="config-col-title">Solar Array</div>
+          <div className="config-col-title">Solar array</div>
           <label className="cfg-field" title="Nameplate rated solar array power under 1 AU AM0 illumination">
-            <span>Rated Output</span>
+            <span>Rated output</span>
             <input
               type="number"
               min={50}
@@ -203,7 +203,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit">W</span>
           </label>
           <label className="cfg-field" title="Panel tilt relative to horizontal (90 deg = vertical, ideal for low polar sun)">
-            <span>Array Tilt</span>
+            <span>Array tilt</span>
             <input
               type="number"
               min={45}
@@ -223,7 +223,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             >
               <option value="sun_tracking">Sun-Tracking Gimbal</option>
               <option value="fixed_vertical">Fixed Vertical (90°)</option>
-              <option value="fixed_tilt">Fixed Tilted Array</option>
+              <option value="fixed_tilt">Fixed tilted array</option>
             </select>
             <span className="cfg-unit" />
           </label>
@@ -231,9 +231,9 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
 
         {/* Card 3: Mobility */}
         <div className="config-col">
-          <div className="config-col-title">Mobility &amp; Drive</div>
+          <div className="config-col-title">Mobility &amp; drive</div>
           <label className="cfg-field" title="Average ground traversal speed across lunar regolith">
-            <span>Traverse Speed</span>
+            <span>Traverse speed</span>
             <input
               type="number"
               min={0.02}
@@ -245,7 +245,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit">km/h</span>
           </label>
           <label className="cfg-field" title="Mechanical wheel actuator draw on flat ground">
-            <span>Drive Power</span>
+            <span>Drive power</span>
             <input
               type="number"
               min={20}
@@ -257,7 +257,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit">W</span>
           </label>
           <label className="cfg-field" title="Terrain difficulty multiplier accounting for wheel sinkage &amp; rolling resistance">
-            <span>Terrain Factor</span>
+            <span>Terrain factor</span>
             <input
               type="number"
               min={1.0}
@@ -272,9 +272,9 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
 
         {/* Card 4: Location & Search */}
         <div className="config-col">
-          <div className="config-col-title">Mission Origin &amp; Search</div>
+          <div className="config-col-title">Mission origin &amp; search</div>
           <label className="cfg-field" title="Preselected lunar south polar locations">
-            <span>Preset Spot</span>
+            <span>Preset spot</span>
             <select
               onChange={(e) => handleLocationPreset(e.target.value)}
               className="cfg-select"
@@ -288,7 +288,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit" />
           </label>
           <label className="cfg-field" title="Search radius for candidate recharge ridges">
-            <span>Search Radius</span>
+            <span>Search radius</span>
             <input
               type="number"
               min={1.0}
@@ -300,7 +300,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
             <span className="cfg-unit">km</span>
           </label>
           <label className="cfg-field" title="Planning evaluation horizon in hours">
-            <span>Horizon Window</span>
+            <span>Horizon window</span>
             <input
               type="number"
               min={24}
@@ -322,7 +322,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
           </div>
           <div className="config-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
             <label className="cfg-field" title="Thermal survival heaters">
-              <span>Heating Load</span>
+              <span>Heating load</span>
               <input
                 type="number"
                 min={0}
@@ -366,7 +366,7 @@ export function RoverConfiguration({ config, onChange, onReset }: RoverConfigura
               <span className="cfg-unit">W</span>
             </label>
             <label className="cfg-field" title="Solar cell dust de-rating factor">
-              <span>Dust Derating</span>
+              <span>Dust derating</span>
               <input
                 type="number"
                 min={0.7}

@@ -48,7 +48,7 @@ export function Validation({ onReturnToSite }: { onReturnToSite: () => void }) {
     <div className="validation-page">
       <div className="validation-top">
         <button type="button" className="validation-back-btn" onClick={onReturnToSite}>
-          ← Back to Mission Planner
+          Back to the planner
         </button>
         <h2>How we checked the numbers</h2>
         <p className="validation-lead">
@@ -119,7 +119,7 @@ export function Validation({ onReturnToSite }: { onReturnToSite: () => void }) {
             return [s.name.replace('Replay: ', ''), <>
               Our model at landing: Sun {a.sunUp ? 'up' : 'blocked'}, Earth {a.earthUp ? 'in view' : 'hidden'}; first sunset {fmtDate(a.sunset)}.
               {' '}Reported: {s.replay!.outcome}{' '}
-              <a href={s.replay!.outcome_url} target="_blank" rel="noopener noreferrer">{s.replay!.outcome_source} ↗</a>
+              <a href={s.replay!.outcome_url} target="_blank" rel="noopener noreferrer">{s.replay!.outcome_source}</a>
             </>] as [string, ReactNode]
           })}
           rerun={<span>Site and plan → Mission replays</span>} />

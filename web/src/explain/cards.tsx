@@ -33,7 +33,7 @@ export function getCardContent(topic: Topic, site: Site, i: number): CardContent
           <svg viewBox="0 0 160 80" className="explain-diagram" aria-hidden="true">
             {/* Horizon ground line */}
             <line x1="10" y1="65" x2="150" y2="65" stroke="var(--c-border)" strokeWidth="2" />
-            <text x="80" y="75" textAnchor="middle" fontSize="9" fill="var(--c-muted)">Lunar Horizon</text>
+            <text x="80" y="75" textAnchor="middle" fontSize="9" fill="var(--c-muted)">Lunar horizon</text>
             {/* Surface stick figure / lander */}
             <circle cx="80" cy="58" r="3" fill="#1fa38a" />
             <line x1="80" y1="61" x2="80" y2="65" stroke="#1fa38a" strokeWidth="1.5" />

@@ -149,7 +149,7 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh, onFindA
 
           {onFindAlternatives && (
             <button className={today && today.status !== 'viable' ? 'find-alt is-needed' : 'find-alt'} onClick={onFindAlternatives}>
-              Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))} →
+              Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))}
             </button>
           )}
 

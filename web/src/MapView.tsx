@@ -217,7 +217,7 @@ export function MapView(p: Props) {
     const g = cv.getContext('2d')!
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
     g.imageSmoothingEnabled = zoom > 0 && zoom < 4
-    g.fillStyle = '#111418'
+    g.fillStyle = '#0f0e0c'
     g.fillRect(0, 0, size, size) // the ellipse zoom can reach past the map edge
     g.drawImage(layerCanvas, view.sx, view.sy, view.sw, view.sw, 0, 0, size, size)
 
@@ -227,9 +227,9 @@ export function MapView(p: Props) {
     g.font = '11px "Public Sans", sans-serif'
     const label = (text: string, x: number, y: number) => {
       g.lineWidth = 3
-      g.strokeStyle = 'rgba(17,20,24,0.9)'
+      g.strokeStyle = 'rgba(15,14,12,0.9)'
       g.strokeText(text, x, y)
-      g.fillStyle = '#d9d6cf'
+      g.fillStyle = '#ebe7dd'
       g.fillText(text, x, y)
       g.lineWidth = 1
       g.strokeStyle = 'rgba(255,255,255,0.32)'
@@ -268,7 +268,7 @@ export function MapView(p: Props) {
         g.fillStyle = d.cross ? VCOLOR.viable : '#e4e1da'
         g.fill()
         g.lineWidth = 1
-        g.strokeStyle = '#111418'
+        g.strokeStyle = '#0f0e0c'
         g.stroke()
       } else if (d.v === 'marginal') {
         g.lineWidth = d.cross ? 2.5 : 1.5
@@ -281,13 +281,13 @@ export function MapView(p: Props) {
         g.moveTo(pt[0] + r0, pt[1] - r0)
         g.lineTo(pt[0] - r0, pt[1] + r0)
         g.lineWidth = 3.5
-        g.strokeStyle = '#111418'
+        g.strokeStyle = '#0f0e0c'
         g.stroke()
         g.lineWidth = 1.5
         g.strokeStyle = VCOLOR.not
         g.stroke()
       } else {
-        g.fillStyle = 'rgba(17,20,24,0.4)'
+        g.fillStyle = 'rgba(15,14,12,0.4)'
         g.fill()
       }
     }
@@ -318,7 +318,7 @@ export function MapView(p: Props) {
         g.restore()
       }
       const line = p.verdict ? VERDICT_COLOR[p.verdict] : '#e4e1da'
-      for (const [w, c, dash] of [[p.verdict ? 5 : 4, '#111418', []], [p.verdict ? 2.8 : 1.8, line, p.verdict ? [] : [6, 4]]] as const) {
+      for (const [w, c, dash] of [[p.verdict ? 5 : 4, '#0f0e0c', []], [p.verdict ? 2.8 : 1.8, line, p.verdict ? [] : [6, 4]]] as const) {
         g.beginPath()
         pts.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)))
         g.lineWidth = w
@@ -338,9 +338,9 @@ export function MapView(p: Props) {
       g.fillStyle = '#e4e1da'
       g.fill()
       g.lineWidth = 2
-      g.strokeStyle = '#111418'
+      g.strokeStyle = '#0f0e0c'
       g.stroke()
-      g.fillStyle = '#111418'
+      g.fillStyle = '#0f0e0c'
       g.fillText(String(d.rank), pt[0], pt[1] + 4)
     }
     g.textAlign = 'start'
@@ -353,10 +353,10 @@ export function MapView(p: Props) {
       const selected = p.site?.id === s.id
       g.beginPath()
       g.arc(pt[0], pt[1], selected ? 6 : 4.5, 0, 2 * Math.PI)
-      g.fillStyle = selected ? '#d9d6cf' : '#1a1f26'
+      g.fillStyle = selected ? '#ebe7dd' : '#181715'
       g.fill()
       g.lineWidth = 2
-      g.strokeStyle = '#d9d6cf'
+      g.strokeStyle = '#ebe7dd'
       g.stroke()
       let ly = pt[1] + 4
       while (placed.some((y) => Math.abs(y - ly) < 15)) ly += 15
@@ -365,7 +365,7 @@ export function MapView(p: Props) {
         g.beginPath()
         g.moveTo(pt[0] + 5, pt[1] + 2)
         g.lineTo(pt[0] + 8, ly - 4)
-        g.strokeStyle = '#d9d6cf'
+        g.strokeStyle = '#ebe7dd'
         g.lineWidth = 1
         g.stroke()
       }
@@ -383,17 +383,17 @@ export function MapView(p: Props) {
         g.lineTo(pt[0] - 7, pt[1])
         g.closePath()
         g.lineWidth = 3.5
-        g.strokeStyle = '#111418'
+        g.strokeStyle = '#0f0e0c'
         g.stroke()
         const isArtemisSel = selectedArtemis?.name.toLowerCase() === r.name.toLowerCase()
         g.lineWidth = isArtemisSel ? 2.5 : 1.5
-        g.strokeStyle = isArtemisSel ? '#f59e0b' : '#38bdf8'
+        g.strokeStyle = isArtemisSel ? '#f2efe8' : '#cf86c3'
         g.stroke()
         if (isArtemisSel) {
           g.beginPath()
           g.arc(pt[0], pt[1], 12, 0, Math.PI * 2)
           g.lineWidth = 1
-          g.strokeStyle = '#f59e0b'
+          g.strokeStyle = '#f2efe8'
           g.stroke()
         }
         let ly = pt[1] + 4
@@ -411,10 +411,10 @@ export function MapView(p: Props) {
         g.lineTo(pt[0] - 7, pt[1] - 16)
         g.arc(pt[0], pt[1] - 18, 7, Math.PI * 0.8, Math.PI * 0.2)
         g.closePath()
-        g.fillStyle = '#d9d6cf'
+        g.fillStyle = '#ebe7dd'
         g.fill()
         g.lineWidth = 2
-        g.strokeStyle = '#1a1f26'
+        g.strokeStyle = '#181715'
         g.stroke()
       }
     }
@@ -422,7 +422,7 @@ export function MapView(p: Props) {
     const viewKm = (view.sw * data.scale) / 1000
     const km = zoom === 1 ? 50 : zoom === 2 ? 20 : zoom === 4 ? 10 : [10, 5, 2, 1, 0.5].find((k) => k <= viewKm / 4) ?? 0.5
     const len = ((km * 1000) / (view.sw * data.scale)) * size
-    g.fillStyle = '#d9d6cf'
+    g.fillStyle = '#ebe7dd'
     g.fillRect(16, size - 22, len, 3)
     label(`${km} km`, 16, size - 28)
   })
@@ -582,8 +582,8 @@ export function MapView(p: Props) {
             </button>
           )}
         </div>
-        <fieldset className="thresholds" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-          <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites &amp; Resources</legend>
+        <fieldset className="thresholds" style={{ borderColor: 'rgba(207, 134, 195, 0.4)' }}>
+          <legend style={{ color: '#cf86c3', fontWeight: 600 }}>Artemis III candidate regions</legend>
           <div className="slips" style={{ gap: '6px' }}>
             {ARTEMIS_3_SITES.map((a) => (
               <button
@@ -593,9 +593,9 @@ export function MapView(p: Props) {
                   fontSize: '0.74rem',
                   padding: '3px 7px',
                   minWidth: 'auto',
-                  borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
-                  background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
-                  color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                  borderColor: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
+                  background: selectedArtemis?.id === a.id ? 'rgba(207, 134, 195, 0.22)' : undefined,
+                  color: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
                   fontWeight: selectedArtemis?.id === a.id ? 600 : 400
                 }}
                 onClick={() => {
@@ -609,22 +609,22 @@ export function MapView(p: Props) {
           </div>
 
           {selectedArtemis && (
-            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid #38bdf8', borderRadius: 'var(--radius-s)' }}>
+            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(16, 15, 13, 0.85)', border: '1px solid #cf86c3', borderRadius: 'var(--radius-s)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#cf86c3', fontWeight: 600 }}>{selectedArtemis.name}</h4>
                   <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
                     {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
                   </span>
                 </div>
-                <span style={{ fontSize: '0.68rem', padding: '2px 5px', borderRadius: '3px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
+                <span style={{ fontSize: '0.68rem', padding: '2px 5px', borderRadius: '3px', fontWeight: 600, background: 'rgba(207, 134, 195, 0.2)', color: '#cf86c3', border: '1px solid currentColor' }}>
                   {selectedArtemis.resources.water_ice_potential} Ice
                 </span>
               </div>
               <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
               
               <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
-                <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
+                <strong style={{ color: '#e8e4da' }}>Mineral Composition:</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
                   {selectedArtemis.minerals.primary.map((m) => (
                     <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 5px', borderRadius: '3px', fontSize: '0.7rem' }}>
@@ -636,16 +636,16 @@ export function MapView(p: Props) {
               </div>
 
               <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
-                <strong style={{ color: '#38bdf8' }}>Water-Ice &amp; Cryogenic Volatiles:</strong>
-                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
+                <strong style={{ color: '#cf86c3' }}>Water ice and volatiles</strong>
+                <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.water_ice_details}</p>
                 <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                   Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
                 </div>
               </div>
 
               <div style={{ margin: '6px 0', fontSize: '0.74rem' }}>
-                <strong style={{ color: '#f59e0b' }}>Lander In-Situ Resources (ISRU):</strong>
-                <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
+                <strong style={{ color: '#f2efe8' }}>In-situ resources (ISRU)</strong>
+                <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.isru_applications}</p>
                 <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                   Extractable Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
                 </div>
@@ -654,21 +654,21 @@ export function MapView(p: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
                 <button
                   type="button"
-                  style={{ padding: '6px 10px', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ padding: '6px 10px', fontSize: '0.78rem', background: 'var(--ink)', color: 'var(--sheet)', border: 'none', borderRadius: 'var(--radius-s)', fontWeight: 600, cursor: 'pointer' }}
                   onClick={() => {
                     p.onPickPoint(selectedArtemis.lat, selectedArtemis.lon)
                     p.onOpenSite()
                   }}
                 >
-                  Analyze in Site &amp; Plan Tab →
+                  Analyse in Site and plan
                 </button>
                 {p.onOpenArtemis && (
                   <button
                     type="button"
-                    style={{ padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
+                    style={{ padding: '5px 8px', fontSize: '0.74rem', background: 'rgba(255, 255, 255, 0.08)', color: '#cf86c3', border: '1px solid rgba(207, 134, 195, 0.35)', borderRadius: 'var(--radius-s)', cursor: 'pointer' }}
                     onClick={p.onOpenArtemis}
                   >
-                    View in 3D Tab (Terrain &amp; Resources) →
+                    Terrain and resources in 3D
                   </button>
                 )}
               </div>

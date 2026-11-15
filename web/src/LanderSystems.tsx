@@ -148,7 +148,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
       <header className="planner-header">
         <div className="planner-title-row">
           <h2>
-            <span style={{ color: 'var(--sun)' }}>☀️</span> LANDER SYSTEMS — Lunar Solar Recharge Planner
+            Lander systems: solar recharge planner
           </h2>
           <div className="planner-actions">
             {site && (
@@ -162,7 +162,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
               onClick={handleResetConfig}
               title="Reset rover and mission configuration to default parameters"
             >
-              Reset Configuration
+              Reset configuration
             </button>
           </div>
         </div>
@@ -180,7 +180,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
         {/* 2. Top Mission Status Indicators (HUD) */}
         <div className="mission-hud" role="region" aria-label="Mission Energy Status Telemetry">
           <div className="hud-item">
-            <span className="hud-label">Rover Stored Energy</span>
+            <span className="hud-label">Rover stored energy</span>
             <span className="hud-value">
               {currentStepTelemetry
                 ? currentStepTelemetry.storedEnergyKwh.toFixed(1)
@@ -201,7 +201,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
           </div>
 
           <div className="hud-item">
-            <span className="hud-label">Current Illumination</span>
+            <span className="hud-label">Current illumination</span>
             <span
               className="hud-value"
               style={{
@@ -216,7 +216,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
           </div>
 
           <div className="hud-item">
-            <span className="hud-label">Next Sunlight Opportunity</span>
+            <span className="hud-label">Next sunlight opportunity</span>
             <span className="hud-value" style={{ color: 'var(--sun)' }}>
               {activeCandidate ? `${activeCandidate.sunlitWindowDurationH} h Window` : 'Searching...'}
             </span>
@@ -228,7 +228,7 @@ export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsPr
           </div>
 
           <div className="hud-item">
-            <span className="hud-label">Recharge Feasibility</span>
+            <span className="hud-label">Recharge feasibility</span>
             <div style={{ marginTop: '4px' }}>
               <span
                 className={`hud-badge ${

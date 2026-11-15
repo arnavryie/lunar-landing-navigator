@@ -123,10 +123,15 @@ Design principles:
 - Simple first, depth on demand.
 - Responsive desktop layouts.
 
+### Visual system ("Survey sheet", 2026-11-15)
+
+The app is styled like a lunar map sheet at night. Tokens live in `web/src/index.css` `:root`; see `web/DESIGN.md`.
+Use the tokens (`--sheet`, `--plate`, `--line`, `--ink`, `--ink-2`, `--region`, ...), never new hex values.
+
 ### Typography
 
-- Inter for interface typography.
-- IBM Plex Mono for telemetry and numerical data.
+- Archivo (self-hosted variable font, `@fontsource-variable/archivo`) for everything, with tabular numerals.
+  Use `font-stretch` (100–120%) for headings and big numbers instead of a second family. No monospace.
 
 ### Semantic colours
 
@@ -138,6 +143,7 @@ Use the project's shared colour language:
 | Blue `#5590d8` | Earth |
 | Green `#1fa38a` | Both visible |
 | Grey `#4a515a` | Neither visible |
+| Magenta `#cf86c3` | NASA Artemis III candidate regions (chart overprint) |
 
 Do not assign new meanings to these colours.
 

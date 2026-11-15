@@ -2,9 +2,9 @@
 
 .replays-section {
   margin-top: 18px;
-  background: #141b24;
-  border: 1px solid #283341;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #34322e;
+  border-radius: var(--radius-m);
   padding: 16px;
   font-family: inherit;
 }
@@ -13,12 +13,12 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .replays-subtitle {
   font-size: 11px;
-  color: #8b99aa;
+  color: #aaa598;
   margin: 4px 0 12px 0;
 }
 
@@ -29,9 +29,9 @@
 }
 
 .replay-card {
-  background: #0d1218;
-  border: 1px solid #1f2732;
-  border-radius: 6px;
+  background: #14120e;
+  border: 1px solid #24221f;
+  border-radius: var(--radius-s);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -41,7 +41,7 @@
 
 .replay-card.active {
   border-color: #5590d8;
-  box-shadow: 0 0 12px rgba(85, 144, 216, 0.15);
+  box-shadow: none;
 }
 
 .replay-card-top {
@@ -54,9 +54,7 @@
 .replay-agency {
   font-size: 9px;
   font-weight: 700;
-  text-transform: uppercase;
   color: #5590d8;
-  letter-spacing: 0.05em;
   display: block;
 }
 
@@ -64,21 +62,21 @@
   margin: 2px 0;
   font-size: 13px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .replay-meta {
   font-size: 10px;
-  color: #64748b;
+  color: #8f8b80;
   display: block;
-  font-family: monospace;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
 }
 
 .replay-btn {
-  background: #19222e;
-  border: 1px solid #2d3846;
-  color: #e2e8f0;
-  border-radius: 4px;
+  background: #201f1c;
+  border: 1px solid #393733;
+  color: #e8e4da;
+  border-radius: var(--radius-s);
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
@@ -87,7 +85,7 @@
 }
 
 .replay-btn:hover {
-  background: #232d3b;
+  background: #2f2d29;
   border-color: #5590d8;
 }
 
@@ -99,22 +97,22 @@
 
 .replay-summary {
   font-size: 11px;
-  color: #94a3b8;
+  color: #aaa598;
   line-height: 1.4;
   margin: 0;
 }
 
 .replay-live-analysis {
-  background: #141b24;
-  border-radius: 5px;
+  background: #1d1b17;
+  border-radius: var(--radius-s);
   padding: 10px;
   margin-top: 6px;
-  border: 1px solid #222c38;
+  border: 1px solid #2d2b27;
 }
 
 .live-analysis-header {
   font-size: 11px;
-  color: #cbd5e1;
+  color: #c9c4b8;
   margin-bottom: 6px;
 }
 
@@ -127,9 +125,9 @@
 
 .eval-chip {
   font-size: 10px;
-  font-family: monospace;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   font-weight: 600;
 }
 
@@ -141,8 +139,8 @@
 
 .eval-chip.dark {
   background: rgba(74, 81, 90, 0.2);
-  color: #8b99aa;
-  border: 1px solid #363e48;
+  color: #aaa598;
+  border: 1px solid #403e3a;
 }
 
 .eval-chip.earth {
@@ -153,30 +151,28 @@
 
 .eval-chip.no-earth {
   background: rgba(74, 81, 90, 0.2);
-  color: #8b99aa;
-  border: 1px solid #363e48;
+  color: #aaa598;
+  border: 1px solid #403e3a;
 }
 
 .replay-outcome-box {
-  background: #0d1218;
-  border-left: 2px solid #1fa38a;
+  background: #14120e;
+  border-left: 0; border-top: 2px solid #1fa38a;
   padding: 8px 10px;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
   margin-bottom: 6px;
 }
 
 .outcome-label {
   font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
   color: #1fa38a;
-  letter-spacing: 0.04em;
   display: block;
 }
 
 .outcome-text {
   font-size: 11px;
-  color: #cbd5e1;
+  color: #c9c4b8;
   line-height: 1.45;
   margin: 3px 0 6px 0;
 }
@@ -193,7 +189,7 @@
 
 .replay-honesty-note {
   font-size: 9.5px;
-  color: #64748b;
+  color: #8f8b80;
   font-style: italic;
   line-height: 1.35;
 }
@@ -204,7 +200,7 @@
   margin: 0 auto;
   padding: 24px 16px 48px;
   font-family: inherit;
-  color: #e2e8f0;
+  color: #e8e4da;
 }
 
 .validation-top {
@@ -212,11 +208,11 @@
 }
 
 .validation-back-btn {
-  background: #19222e;
-  border: 1px solid #2d3846;
-  color: #cbd5e1;
+  background: #201f1c;
+  border: 1px solid #393733;
+  color: #c9c4b8;
   padding: 6px 14px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -224,20 +220,20 @@
 }
 
 .validation-back-btn:hover {
-  background: #232d3b;
-  color: #f1f5f9;
+  background: #2f2d29;
+  color: #f2efe8;
 }
 
 .validation-top h2 {
   font-size: 22px;
   font-weight: 700;
   margin: 0 0 6px 0;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .validation-lead {
   font-size: 13px;
-  color: #94a3b8;
+  color: #aaa598;
   margin: 0;
   line-height: 1.5;
 }
@@ -250,9 +246,9 @@
 }
 
 .val-card {
-  background: #141b24;
-  border: 1px solid #283341;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #34322e;
+  border-radius: var(--radius-m);
   padding: 16px;
   position: relative;
   display: flex;
@@ -265,9 +261,9 @@
   align-self: flex-start;
   font-size: 10px;
   font-weight: 700;
-  font-family: monospace;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   margin-bottom: 8px;
 }
 
@@ -281,21 +277,21 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 6px 0;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .val-desc {
   font-size: 11px;
-  color: #94a3b8;
+  color: #aaa598;
   line-height: 1.45;
   margin: 0 0 12px 0;
 }
 
 .val-metrics-table {
-  background: #0d1218;
-  border-radius: 5px;
+  background: #14120e;
+  border-radius: var(--radius-s);
   padding: 8px 10px;
-  border: 1px solid #1f2732;
+  border: 1px solid #24221f;
   margin-bottom: 10px;
 }
 
@@ -305,7 +301,7 @@
   align-items: center;
   font-size: 10.5px;
   padding: 3px 0;
-  border-bottom: 1px solid #18202a;
+  border-bottom: 1px solid #22201c;
 }
 
 .val-row:last-child {
@@ -313,21 +309,21 @@
 }
 
 .val-row span {
-  color: #8b99aa;
+  color: #aaa598;
 }
 
 .val-row strong {
-  color: #f1f5f9;
-  font-family: monospace;
+  color: #f2efe8;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
 }
 
 .val-cmd {
   font-size: 10px;
-  color: #64748b;
-  font-family: monospace;
-  background: #19222e;
+  color: #8f8b80;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
+  background: #201f1c;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
 }
 
 .val-cmd code {
@@ -336,16 +332,16 @@
 
 /* Assumptions */
 .val-assumptions {
-  background: #141b24;
-  border: 1px solid #283341;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #34322e;
+  border-radius: var(--radius-m);
   padding: 18px;
 }
 
 .val-assumptions h3 {
   font-size: 14px;
   margin: 0 0 12px 0;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .assumptions-grid {
@@ -355,10 +351,10 @@
 }
 
 .assump-box {
-  background: #0d1218;
+  background: #14120e;
   padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #1f2732;
+  border-radius: var(--radius-s);
+  border: 1px solid #24221f;
 }
 
 .assump-box strong {
@@ -370,15 +366,15 @@
 
 .assump-box p {
   font-size: 10px;
-  color: #94a3b8;
+  color: #aaa598;
   line-height: 1.4;
   margin: 0;
 }
 
 .replay-notice-card {
-  background: #141b24;
-  border: 1px solid #283341;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #34322e;
+  border-radius: var(--radius-m);
   padding: 32px 24px;
   text-align: center;
   max-width: 560px;
@@ -390,7 +386,7 @@
 }
 
 .replay-notice-card p {
-  color: #cbd5e1;
+  color: #c9c4b8;
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
@@ -401,7 +397,7 @@
   color: #fff;
   border: none;
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -417,3 +413,11 @@
   color: #e0705c;
   border: 1px solid rgba(220, 80, 60, 0.4);
 }
+
+/* Survey sheet: sections are ruled, not boxed (no nested cards); actions in ink, not blue (blue means Earth). */
+.replays-section, .val-card, .val-assumptions, .replay-live-analysis { background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding-inline: 0; }
+.replay-card, .assump-box, .val-metrics-table, .replay-outcome-box { background: var(--plate); border-color: var(--line); }
+.replay-notice-card { background: none; border: 1px solid var(--line); }
+.replay-notice-card button { background: var(--ink); color: var(--sheet); border: 1px solid var(--ink); }
+.replay-notice-card button:hover:not(:disabled) { background: #fffaf0; }
+.replay-btn, .validation-back-btn { background: var(--raise); border-color: var(--line); color: var(--ink); }

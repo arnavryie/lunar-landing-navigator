@@ -280,7 +280,7 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
     <div className="science-tradeoff-section">
       <div className="science-tradeoff-header">
         <div>
-          <h3>Science vs. Engineering Trade-off: The Sweet Spot Navigator</h3>
+          <h3>Science and engineering trade-off</h3>
           <p>
             Balances Engineering power survival (Sunlight %) against Science return (Proximity to permanently shadowed water ice).
           </p>
@@ -290,19 +290,19 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
       <div className="quadrant-legend">
         <div className="quadrant-legend-item">
           <span className="quadrant-legend-dot dot-sweet-spot" />
-          <span><strong>Sweet Spot ⭐:</strong> Sun ≥ {th.minSunPct}% &amp; Ice ≤ 5 km</span>
+          <span><strong>Sweet spot:</strong> Sun ≥ {th.minSunPct}% &amp; Ice ≤ 5 km</span>
         </div>
         <div className="quadrant-legend-item">
           <span className="quadrant-legend-dot dot-safe-dry" />
-          <span><strong>Safe but Dry 🛡️:</strong> Sun ≥ {th.minSunPct}%, Ice &gt; 5 km</span>
+          <span><strong>Safe but dry:</strong> Sun ≥ {th.minSunPct}%, Ice &gt; 5 km</span>
         </div>
         <div className="quadrant-legend-item">
           <span className="quadrant-legend-dot dot-cryo-danger" />
-          <span><strong>Cryo Hazard ⚠️:</strong> Near/In Ice, Sun &lt; {th.minSunPct}%</span>
+          <span><strong>Cryo hazard:</strong> Near/In Ice, Sun &lt; {th.minSunPct}%</span>
         </div>
         <div className="quadrant-legend-item">
           <span className="quadrant-legend-dot dot-non-viable" />
-          <span><strong>Non-Viable 🚫:</strong> Low Sun &amp; Distant from Ice</span>
+          <span><strong>Not viable:</strong> Low Sun &amp; Distant from Ice</span>
         </div>
       </div>
 
@@ -311,24 +311,24 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
           {/* Quadrant Backgrounds */}
           <rect x={ml} y={mt} width={splitX - ml} height={splitY - mt} fill="rgba(31, 163, 138, 0.12)" />
           <rect x={splitX} y={mt} width={w - mr - splitX} height={splitY - mt} fill="rgba(85, 144, 216, 0.08)" />
-          <rect x={ml} y={splitY} width={splitX - ml} height={mt + ph - splitY} fill="rgba(245, 158, 11, 0.09)" />
-          <rect x={splitX} y={splitY} width={w - mr - splitX} height={mt + ph - splitY} fill="rgba(100, 116, 139, 0.05)" />
+          <rect x={ml} y={splitY} width={splitX - ml} height={mt + ph - splitY} fill="rgba(230, 193, 90, 0.08)" />
+          <rect x={splitX} y={splitY} width={w - mr - splitX} height={mt + ph - splitY} fill="rgba(117, 115, 111, 0.05)" />
 
           {/* Quadrant Titles */}
-          <text x={ml + 12} y={mt + 20} fill="#1fa38a" fontSize="11" fontWeight="bold">SWEET SPOT ⭐</text>
-          <text x={ml + 12} y={mt + 34} fill="#8b99aa" fontSize="9">Power Viable + Ice Accessible (&lt;5 km)</text>
+          <text x={ml + 12} y={mt + 20} fill="#1fa38a" fontSize="11" fontWeight="bold">Sweet spot</text>
+          <text x={ml + 12} y={mt + 34} fill="#aaa598" fontSize="9">Power Viable + Ice Accessible (&lt;5 km)</text>
 
-          <text x={splitX + 12} y={mt + 20} fill="#5590d8" fontSize="11" fontWeight="bold">SAFE BUT DRY 🛡️</text>
-          <text x={splitX + 12} y={mt + 34} fill="#8b99aa" fontSize="9">Lander Survives · Ice Unreachable</text>
+          <text x={splitX + 12} y={mt + 20} fill="#5590d8" fontSize="11" fontWeight="bold">Safe but dry</text>
+          <text x={splitX + 12} y={mt + 34} fill="#aaa598" fontSize="9">Lander Survives · Ice Unreachable</text>
 
-          <text x={ml + 12} y={splitY + 22} fill="#f59e0b" fontSize="11" fontWeight="bold">CRYO HAZARD ⚠️</text>
-          <text x={ml + 12} y={splitY + 36} fill="#8b99aa" fontSize="9">Rich in Ice · Lander Freeze Hazard</text>
+          <text x={ml + 12} y={splitY + 22} fill="#e6c15a" fontSize="11" fontWeight="bold">Cryo hazard</text>
+          <text x={ml + 12} y={splitY + 36} fill="#aaa598" fontSize="9">Rich in Ice · Lander Freeze Hazard</text>
 
-          <text x={splitX + 12} y={splitY + 22} fill="#64748b" fontSize="11" fontWeight="bold">NON-VIABLE 🚫</text>
-          <text x={splitX + 12} y={splitY + 36} fill="#8b99aa" fontSize="9">Low Power · Far from Ice</text>
+          <text x={splitX + 12} y={splitY + 22} fill="#8f8b80" fontSize="11" fontWeight="bold">Not viable</text>
+          <text x={splitX + 12} y={splitY + 36} fill="#aaa598" fontSize="9">Low Power · Far from Ice</text>
 
           {/* Threshold Divider Lines */}
-          <line x1={splitX} y1={mt} x2={splitX} y2={mt + ph} stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" />
+          <line x1={splitX} y1={mt} x2={splitX} y2={mt + ph} stroke="#cf86c3" strokeWidth="1.5" strokeDasharray="3 3" />
           <line x1={ml} y1={splitY} x2={w - mr} y2={splitY} stroke="#c98419" strokeWidth="1.5" strokeDasharray="3 3" />
 
           {/* X Axis Ticks */}
@@ -336,8 +336,8 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
             const x = toX(km)
             return (
               <g key={km}>
-                <line x1={x} y1={mt} x2={x} y2={mt + ph} stroke="#1f2732" strokeWidth="0.5" />
-                <text x={x} y={mt + ph + 16} fill="#8b99aa" fontSize="10" textAnchor="middle">
+                <line x1={x} y1={mt} x2={x} y2={mt + ph} stroke="#24221f" strokeWidth="0.5" />
+                <text x={x} y={mt + ph + 16} fill="#aaa598" fontSize="10" textAnchor="middle">
                   {km === 20 ? '20+ km' : `${km} km`}
                 </text>
               </g>
@@ -349,8 +349,8 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
             const y = toY(p)
             return (
               <g key={p}>
-                <line x1={ml} y1={y} x2={w - mr} y2={y} stroke="#1f2732" strokeWidth="0.5" />
-                <text x={ml - 8} y={y + 4} fill="#8b99aa" fontSize="10" textAnchor="end">
+                <line x1={ml} y1={y} x2={w - mr} y2={y} stroke="#24221f" strokeWidth="0.5" />
+                <text x={ml - 8} y={y + 4} fill="#aaa598" fontSize="10" textAnchor="end">
                   {p}%
                 </text>
               </g>
@@ -358,8 +358,8 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
           })}
 
           {/* Axis Labels */}
-          <text x={ml + pw / 2} y={h - 6} fill="#cbd5e1" fontSize="11" fontWeight="bold" textAnchor="middle">
-            Distance to Nearest Water-Ice Cold Trap (km) →
+          <text x={ml + pw / 2} y={h - 6} fill="#c9c4b8" fontSize="11" fontWeight="bold" textAnchor="middle">
+            Distance to nearest water-ice cold trap (km)
           </text>
           <text
             x={-mt - ph / 2}
@@ -370,7 +370,7 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
             fontWeight="bold"
             textAnchor="middle"
           >
-            Mission Sunlight % (Power) →
+            Mission sunlight (%)
           </text>
 
           {/* Scenario Points */}
@@ -384,8 +384,8 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
 
             let dotColor = '#5590d8'
             if (sc.zone === 'sweet_spot') dotColor = '#1fa38a'
-            else if (sc.zone === 'cryo_danger') dotColor = '#f59e0b'
-            else if (sc.zone === 'non_viable') dotColor = '#64748b'
+            else if (sc.zone === 'cryo_danger') dotColor = '#e6c15a'
+            else if (sc.zone === 'non_viable') dotColor = '#8f8b80'
 
             return (
               <g
@@ -407,14 +407,14 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
                 {/* Solid core */}
                 <circle cx={cx} cy={cy} r={8} fill={dotColor} />
                 {/* Letter */}
-                <text x={cx} y={cy + 3.5} fill="#0d1218" fontSize="10" fontWeight="bold" textAnchor="middle">
+                <text x={cx} y={cy + 3.5} fill="#14120e" fontSize="10" fontWeight="bold" textAnchor="middle">
                   {letter}
                 </text>
                 {/* Name Tag */}
                 <text
                   x={cx}
                   y={cy - 16}
-                  fill="#f1f5f9"
+                  fill="#f2efe8"
                   fontSize="10"
                   fontWeight={isHover ? 'bold' : 'normal'}
                   textAnchor="middle"

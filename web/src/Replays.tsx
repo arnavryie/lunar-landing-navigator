@@ -93,7 +93,7 @@ export function Replays({ currentSite, currentHourIndex, onLoadReplay }: Replays
                     <span className="outcome-label">What the agency reported:</span>
                     <p className="outcome-text">{s.replay!.outcome}</p>
                     <a href={s.replay!.outcome_url} target="_blank" rel="noopener noreferrer" className="outcome-citation">
-                      Source: {s.replay!.outcome_source} ↗
+                      Source: {s.replay!.outcome_source}
                     </a>
                   </div>
 

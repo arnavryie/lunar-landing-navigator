@@ -83,7 +83,7 @@ export function MissionTimeline({
     <div className="timeline-panel" aria-label="Mission Illumination & Battery Energy Progression Profile">
       <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
         <h3>
-          <span style={{ color: 'var(--sun)' }}>⚡</span> Mission Illumination &amp; Battery State-of-Charge Profile
+          Illumination and battery state of charge
         </h3>
         <div style={{ fontSize: '0.84rem', color: 'var(--muted)' }}>
           Cursor: <strong style={{ color: 'var(--text)' }}>T+{activeStep.stepTimeH}h</strong> ({activeStep.phaseLabel}) —{' '}
@@ -119,7 +119,7 @@ export function MissionTimeline({
             <linearGradient id="batterySoCGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#1fa38a" stopOpacity="0.4" />
               <stop offset="60%" stopColor="#5590d8" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#1a1f26" stopOpacity="0.0" />
+              <stop offset="100%" stopColor="#181715" stopOpacity="0.0" />
             </linearGradient>
           </defs>
 
@@ -130,10 +130,10 @@ export function MissionTimeline({
             const x2 = toX(idx)
             const fill =
               step.phase === 'transit'
-                ? '#19222e'
+                ? '#201f1c'
                 : step.phase === 'recharge'
                 ? '#282216'
-                : '#14181f'
+                : '#1b1915'
             return (
               <rect
                 key={idx}
@@ -176,14 +176,14 @@ export function MissionTimeline({
                   y1={y}
                   x2={padLeft + plotWidth}
                   y2={y}
-                  stroke="#2d3540"
+                  stroke="#373531"
                   strokeWidth="1"
                   strokeDasharray={val === 0 || val === 100 ? undefined : '2 4'}
                 />
                 <text
                   x={padLeft - 8}
                   y={y + 4}
-                  fill="#959a9c"
+                  fill="#aaa598"
                   fontSize="11"
                   textAnchor="end"
                 >
@@ -235,11 +235,11 @@ export function MissionTimeline({
             const x = toX(idx)
             return (
               <g key={idx}>
-                <line x1={x} y1={padTop + plotHeight} x2={x} y2={padTop + plotHeight + 5} stroke="#3a434e" />
+                <line x1={x} y1={padTop + plotHeight} x2={x} y2={padTop + plotHeight + 5} stroke="#34322d" />
                 <text
                   x={x}
                   y={padTop + plotHeight + 18}
-                  fill="#959a9c"
+                  fill="#aaa598"
                   fontSize="11"
                   textAnchor="middle"
                 >
@@ -277,7 +277,7 @@ export function MissionTimeline({
                 y1={padTop}
                 x2={toX(hoverIndex)}
                 y2={padTop + plotHeight}
-                stroke="#d9d6cf"
+                stroke="#ebe7dd"
                 strokeWidth="1"
                 strokeDasharray="3 3"
               />
@@ -286,7 +286,7 @@ export function MissionTimeline({
                 cy={toY(telemetrySteps[hoverIndex]?.socPct || 50)}
                 r="4.5"
                 fill="#1fa38a"
-                stroke="#d9d6cf"
+                stroke="#ebe7dd"
                 strokeWidth="1.5"
               />
             </g>
@@ -307,15 +307,15 @@ export function MissionTimeline({
           </div>
           <div className="timeline-legend-entry">
             <span style={{ width: '10px', height: '6px', background: '#c98419', borderRadius: '1px' }} />
-            <span>Direct Solar Illumination</span>
+            <span>Direct solar illumination</span>
           </div>
           <div className="timeline-legend-entry">
-            <span style={{ width: '10px', height: '10px', background: '#19222e', border: '1px solid #3a434e' }} />
-            <span>Transit Phase</span>
+            <span style={{ width: '10px', height: '10px', background: '#201f1c', border: '1px solid #34322d' }} />
+            <span>Transit phase</span>
           </div>
           <div className="timeline-legend-entry">
             <span style={{ width: '10px', height: '10px', background: '#282216', border: '1px solid #c98419' }} />
-            <span>Solar Recharge Phase</span>
+            <span>Solar recharge phase</span>
           </div>
         </div>
 

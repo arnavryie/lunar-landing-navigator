@@ -19,12 +19,12 @@ export function RechargeRecommendation({
       <div className="recommendation-card infeasible" aria-label="Recharge Recommendation">
         <div className="rec-header">
           <div>
-            <div className="rec-pretitle">PRIMARY MISSION RECOMMENDATION</div>
+            <div className="rec-pretitle">Recommended recharge site</div>
             <h3 className="rec-title">
               <span style={{ color: '#e0705c' }}>✕</span> NO SUITABLE RECHARGE LOCATION FOUND
             </h3>
           </div>
-          <span className="rec-badge infeasible">INSUFFICIENT ENERGY</span>
+          <span className="rec-badge infeasible">Insufficient energy</span>
         </div>
         <p className="rec-summary" style={{ color: '#f08a7a' }}>
           No candidate terrain within the configured {config.mission.searchRadiusKm.toFixed(1)} km search radius can be reached
@@ -65,7 +65,7 @@ export function RechargeRecommendation({
       {/* Header */}
       <div className="rec-header">
         <div>
-          <div className="rec-pretitle">PRIMARY MISSION RECOMMENDATION</div>
+          <div className="rec-pretitle">Recommended recharge site</div>
           <h3 className="rec-title">
             <span style={{ color: 'var(--sun)' }}>★</span> {candidate.name}
           </h3>
@@ -79,14 +79,14 @@ export function RechargeRecommendation({
 
       {sim.feasibility === 'INFEASIBLE' && (
         <div style={{ background: 'rgba(224, 112, 92, 0.12)', border: '1px solid #e0705c', borderRadius: '4px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#f08a7a' }}>
-          <strong>MISSION INFEASIBLE:</strong> {sim.failureReason}
+          <strong>Mission infeasible:</strong> {sim.failureReason}
         </div>
       )}
 
       {/* Hero Telemetry Grid */}
       <div className="rec-hero-grid">
         <div className="rec-hero-item">
-          <span className="rec-hero-label">Target Direction</span>
+          <span className="rec-hero-label">Target direction</span>
           <span className="rec-hero-val" style={{ color: 'var(--earth)' }}>
             {candidate.cardinalDirection}
           </span>
@@ -94,7 +94,7 @@ export function RechargeRecommendation({
         </div>
 
         <div className="rec-hero-item">
-          <span className="rec-hero-label">Traverse Distance</span>
+          <span className="rec-hero-label">Traverse distance</span>
           <span className="rec-hero-val">{sim.transitDistanceKm.toFixed(2)} km</span>
           <span className="rec-hero-sub">
             {!sim.isDestinationReached
@@ -104,7 +104,7 @@ export function RechargeRecommendation({
         </div>
 
         <div className="rec-hero-item">
-          <span className="rec-hero-label">Transit Time</span>
+          <span className="rec-hero-label">Transit time</span>
           <span className="rec-hero-val">{sim.transitDurationH.toFixed(1)} h</span>
           <span className="rec-hero-sub">
             {!sim.isDestinationReached
@@ -126,7 +126,7 @@ export function RechargeRecommendation({
         </div>
 
         <div className="rec-hero-item">
-          <span className="rec-hero-label">Arrival Battery</span>
+          <span className="rec-hero-label">Arrival battery</span>
           <span
             className="rec-hero-val"
             style={{
@@ -143,7 +143,7 @@ export function RechargeRecommendation({
         </div>
 
         <div className="rec-hero-item">
-          <span className="rec-hero-label">Net Mission Benefit</span>
+          <span className="rec-hero-label">Net mission benefit</span>
           <span
             className="rec-hero-val"
             style={{ color: isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '#6fcf9f' : '#f08a7a' }}
@@ -162,7 +162,7 @@ export function RechargeRecommendation({
       <div className="rec-breakdown-table">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
-            Authoritative Mission Energy Ledger
+            Authoritative mission energy ledger
           </span>
           <span
             className="pill"
@@ -177,7 +177,7 @@ export function RechargeRecommendation({
         </div>
 
         <dl className="metric-table">
-          <dt>Coordinates &amp; Heading</dt>
+          <dt>Coordinates &amp; heading</dt>
           <dd>
             {Math.abs(candidate.lat).toFixed(4)}°S, {candidate.lon.toFixed(3)}°E ({candidate.cardinalDirection}, {candidate.bearingDeg.toFixed(0)}°)
           </dd>
@@ -210,7 +210,7 @@ export function RechargeRecommendation({
           </dd>
 
           <dt style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px' }}>
-            <strong>= Arrival Battery State</strong>
+            <strong>= arrival battery state</strong>
           </dt>
           <dd style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px', fontWeight: 600 }}>
             {sim.arrivalBatteryKwh.toFixed(2)} kWh{' '}
@@ -240,7 +240,7 @@ export function RechargeRecommendation({
           </dd>
 
           <dt>
-            <strong>= Reachable Net Solar Potential</strong>
+            <strong>= reachable net solar potential</strong>
           </dt>
           <dd style={{ fontWeight: 600 }}>
             {sim.reachableRechargePotentialKwh >= 0 ? '+' : ''}{sim.reachableRechargePotentialKwh.toFixed(2)} kWh{' '}
@@ -262,21 +262,21 @@ export function RechargeRecommendation({
           </dd>
 
           <dt style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px' }}>
-            <strong>= Actual Stored Energy Added to Battery</strong>
+            <strong>= energy actually added to the battery</strong>
           </dt>
           <dd style={{ borderTop: '1px dashed var(--rule)', paddingTop: '4px', color: sim.rechargeStoredEnergyKwh > 0 ? '#6fcf9f' : 'var(--muted)', fontWeight: 600 }}>
             +{sim.rechargeStoredEnergyKwh.toFixed(2)} kWh
           </dd>
 
           <dt style={{ borderTop: '1px solid var(--rule)', paddingTop: '6px' }}>
-            <strong>Final Stored Battery Energy</strong>
+            <strong>Final stored battery energy</strong>
           </dt>
           <dd style={{ borderTop: '1px solid var(--rule)', paddingTop: '6px', fontWeight: 600 }}>
             {sim.finalBatteryKwh.toFixed(2)} kWh <span className="muted">({sim.finalSocPct.toFixed(1)}% SoC)</span>
           </dd>
 
           <dt>
-            <strong>Primary Mission Net Energy Benefit</strong>
+            <strong>Net energy benefit</strong>
           </dt>
           <dd style={{ color: isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '#6fcf9f' : '#f08a7a', fontWeight: 700, fontSize: '0.95rem' }}>
             {isPositiveBenefit && sim.feasibility !== 'INFEASIBLE' ? '+' : ''}{sim.netMissionEnergyBenefitKwh.toFixed(2)} kWh{' '}
@@ -331,7 +331,7 @@ export function RechargeRecommendation({
                       style={{ fontSize: '0.75rem', color: 'var(--earth)', padding: 0 }}
                       onClick={() => onSelectCandidate(alt.id)}
                     >
-                      Compare →
+                      Compare
                     </button>
                   )}
                 </div>

@@ -4,22 +4,24 @@
   display: inline-flex;
   align-items: center;
   margin-left: 6px;
-  padding: 1px 6px;
-  font-size: 10px;
+  padding: 1px 7px;
+  min-width: 0;
+  font-size: 0.72rem;
   font-family: inherit;
-  font-weight: 600;
-  color: #c98419;
-  background: rgba(201, 132, 25, 0.12);
-  border: 1px solid rgba(201, 132, 25, 0.35);
-  border-radius: 999px;
+  font-weight: 560;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 150ms ease, border-color 150ms ease;
   vertical-align: middle;
 }
 
-.why-pill:hover {
-  background: rgba(201, 132, 25, 0.25);
-  border-color: #c98419;
+.why-pill:hover:not(:disabled) {
+  color: var(--ink);
+  background: none;
+  border-color: var(--ink-3);
 }
 
 .why-dialog {
@@ -32,16 +34,16 @@
 }
 
 .why-dialog::backdrop {
-  background: rgba(8, 12, 18, 0.75);
+  background: rgba(14, 12, 8, 0.75);
   backdrop-filter: blur(3px);
 }
 
 .why-card {
-  background: #141b24;
-  border: 1px solid #2d3846;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #393733;
+  border-radius: var(--radius-m);
   padding: 18px;
-  color: #e2e8f0;
+  color: #e8e4da;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
   font-family: inherit;
 }
@@ -52,7 +54,7 @@
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #232d3b;
+  border-bottom: 1px solid #2f2d29;
   padding-bottom: 10px;
 }
 
@@ -60,23 +62,23 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #f2efe8;
   line-height: 1.3;
 }
 
 .why-close {
   background: transparent;
   border: none;
-  color: #8b99aa;
+  color: #aaa598;
   font-size: 14px;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
 }
 
 .why-close:hover {
-  color: #f1f5f9;
-  background: #232d3b;
+  color: #f2efe8;
+  background: #2f2d29;
 }
 
 .why-body {
@@ -86,17 +88,17 @@
 .why-text {
   font-size: 12px;
   line-height: 1.55;
-  color: #cbd5e1;
+  color: #c9c4b8;
   margin: 0 0 12px 0;
 }
 
 .why-diagram-wrap {
   display: flex;
   justify-content: center;
-  background: #0d1218;
-  border-radius: 6px;
+  background: #14120e;
+  border-radius: var(--radius-s);
   padding: 8px;
-  border: 1px solid #1f2732;
+  border: 1px solid #24221f;
 }
 
 .explain-diagram {
@@ -109,32 +111,30 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: #19222e;
+  background: #201f1c;
   padding: 8px 12px;
-  border-radius: 6px;
-  border-left: 3px solid #c98419;
+  border-radius: var(--radius-s);
+  border-left: 0; border-top: 2px solid #c98419;
 }
 
 .why-live-label {
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #8b99aa;
+  color: #aaa598;
   font-weight: 600;
 }
 
 .why-live-val {
   font-size: 11px;
-  font-family: monospace;
-  color: #e2e8f0;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
+  color: #e8e4da;
 }
 
 /* Moon vs Earth Contrast Card */
 .contrast-card {
   margin-top: 14px;
-  background: #141b24;
-  border: 1px solid #283341;
-  border-radius: 8px;
+  background: #1d1b17;
+  border: 1px solid #34322e;
+  border-radius: var(--radius-m);
   padding: 14px;
   font-family: inherit;
 }
@@ -147,15 +147,14 @@
   flex-wrap: wrap;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #222b37;
+  border-bottom: 1px solid #2d2b27;
 }
 
 .contrast-header h4 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #f1f5f9;
-  letter-spacing: 0.02em;
+  color: #f2efe8;
 }
 
 .city-picker-wrap {
@@ -166,14 +165,14 @@
 
 .city-label {
   font-size: 11px;
-  color: #8b99aa;
+  color: #aaa598;
 }
 
 .city-select {
-  background: #0d1218;
-  color: #e2e8f0;
-  border: 1px solid #2d3846;
-  border-radius: 4px;
+  background: #14120e;
+  color: #e8e4da;
+  border: 1px solid #393733;
+  border-radius: var(--radius-s);
   padding: 3px 8px;
   font-size: 11px;
   cursor: pointer;
@@ -184,10 +183,10 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
-  background: #0d1218;
-  border-radius: 6px;
+  background: #14120e;
+  border-radius: var(--radius-s);
   padding: 12px 14px;
-  border: 1px solid #1f2732;
+  border: 1px solid #24221f;
   margin-bottom: 12px;
 }
 
@@ -207,27 +206,24 @@
 
 .contrast-label {
   font-size: 10px;
-  text-transform: uppercase;
-  color: #8b99aa;
-  letter-spacing: 0.04em;
+  color: #aaa598;
 }
 
 .contrast-value {
   font-size: 20px;
   font-weight: 700;
-  font-family: monospace;
+  font-family: var(--font); font-variant-numeric: tabular-nums; font-stretch: 94%;
 }
 
 .contrast-hint {
   font-size: 10px;
-  color: #64748b;
+  color: #8f8b80;
 }
 
 .contrast-vs {
   font-size: 11px;
   font-weight: 700;
   color: #4a515a;
-  text-transform: uppercase;
 }
 
 .contrast-facts {
@@ -240,19 +236,25 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: #19222e;
+  background: #201f1c;
   padding: 8px 10px;
-  border-radius: 5px;
-  border-left: 2px solid #5590d8;
+  border-radius: var(--radius-s);
+  border-left: 0; border-top: 2px solid #5590d8;
 }
 
 .fact-item strong {
   font-size: 11px;
-  color: #f1f5f9;
+  color: #f2efe8;
 }
 
 .fact-item span {
   font-size: 10px;
-  color: #94a3b8;
+  color: #aaa598;
   line-height: 1.35;
 }
+
+/* Survey sheet: sections are ruled, not boxed (no nested cards). */
+.contrast-card { background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding-inline: 0; }
+.why-card { background: var(--raise); border-color: var(--line-2); border-radius: var(--radius-m); }
+.why-diagram-wrap, .contrast-stat-grid { background: var(--plate); border-color: var(--line); }
+.fact-item { background: none; border-top: 1px solid var(--line); }

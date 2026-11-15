@@ -25,7 +25,6 @@
 .planner-title-row h2 {
   font-size: 1.35rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
   margin: 0;
   display: flex;
   align-items: center;
@@ -42,7 +41,7 @@
 .disclaimer-banner {
   background: color-mix(in srgb, var(--surface) 92%, var(--earth));
   border: 1px solid color-mix(in srgb, var(--rule) 70%, var(--earth));
-  border-left: 4px solid var(--earth);
+  border-left: 0; border-top: 2px solid var(--earth);
   border-radius: var(--radius-s);
   padding: 10px 14px;
   font-size: 0.85rem;
@@ -86,8 +85,6 @@
 
 .hud-label {
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
@@ -121,8 +118,6 @@
   font-size: 0.78rem;
   font-weight: 600;
   width: fit-content;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .hud-badge.nominal {
@@ -179,8 +174,6 @@
 .config-col-title {
   font-size: 0.78rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
   margin-bottom: 2px;
 }
@@ -276,7 +269,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(26, 31, 38, 0.9);
+  background: rgba(24, 23, 21, 0.9);
   border: 1px solid var(--rule);
   border-radius: var(--radius-s);
   padding: 4px 10px;
@@ -314,7 +307,7 @@
   position: absolute;
   bottom: 12px;
   left: 12px;
-  background: rgba(20, 24, 30, 0.94);
+  background: rgba(26, 24, 20, 0.94);
   border: 1px solid var(--rule);
   border-radius: var(--radius-s);
   padding: 8px 10px;
@@ -342,8 +335,6 @@
 .legend-title {
   font-size: 0.72rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text);
 }
 
@@ -366,7 +357,7 @@
   background: transparent;
   border: none;
   padding: 3px 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-s);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -402,7 +393,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(20, 24, 30, 0.95);
+  background: rgba(26, 24, 20, 0.95);
   border: 1px solid var(--rule);
   border-radius: var(--radius-s);
   padding: 12px 14px;
@@ -429,8 +420,6 @@
 .map-inspector-title {
   font-size: 0.7rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
@@ -479,7 +468,7 @@
   position: absolute;
   bottom: 12px;
   left: 295px;
-  background: rgba(20, 24, 30, 0.96);
+  background: rgba(26, 24, 20, 0.96);
   border: 1px solid var(--earth);
   border-radius: var(--radius-s);
   padding: 12px 14px;
@@ -520,8 +509,6 @@
 
 .map-explanation-subtitle {
   font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
@@ -547,7 +534,7 @@
 .map-help-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 14, 20, 0.8);
+  background: rgba(16, 14, 10, 0.8);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -600,8 +587,6 @@
   margin: 0;
   font-size: 0.82rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--sun);
 }
 
@@ -673,8 +658,6 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .sim-phase-badge.standby {
@@ -773,15 +756,15 @@
 }
 
 .recommendation-card.feasible {
-  border-left: 4px solid var(--both);
+  border-left: 0; border-top: 2px solid var(--both);
 }
 
 .recommendation-card.caution {
-  border-left: 4px solid #e5a83b;
+  border-left: 0; border-top: 2px solid #e5a83b;
 }
 
 .recommendation-card.infeasible {
-  border-left: 4px solid #e0705c;
+  border-left: 0; border-top: 2px solid #e0705c;
 }
 
 .rec-header {
@@ -796,8 +779,6 @@
 
 .rec-pretitle {
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--muted);
 }
 
@@ -816,8 +797,6 @@
   border-radius: var(--radius-s);
   font-size: 0.82rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .rec-badge.feasible {
@@ -862,8 +841,6 @@
 
 .rec-hero-label {
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
@@ -916,8 +893,6 @@
   color: var(--muted);
   font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .candidates-table tr.selected-row {
@@ -925,7 +900,7 @@
 }
 
 .candidates-table tr.recommended-row {
-  border-left: 3px solid var(--sun);
+  border-left: 0; border-top: 2px solid var(--sun);
   background: color-mix(in srgb, var(--sun) 6%, transparent);
 }
 
@@ -934,7 +909,6 @@
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 999px;
-  text-transform: uppercase;
 }
 
 .cand-status-pill.feasible {
@@ -1065,3 +1039,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Survey sheet: panels are ruled sections, not boxed cards; plates stay dark; actions in ink (blue means Earth). */
+.mission-hud, .config-box, .map-panel, .sim-controls-bar, .recommendation-card, .candidates-panel, .timeline-panel, .methodology-panel {
+  background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding-inline: 0;
+}
+.map-canvas-wrapper, .timeline-chart-wrap, .rec-hero-grid { background: var(--plate); border-color: var(--line); }
+.disclaimer-banner { background: none; border: 1px solid var(--line); border-top: 2px solid var(--line-2); color: var(--ink-2); }
+.btn-map-guide { background: none; border: 1px solid var(--line-2); color: var(--ink); }
+.btn-map-guide:hover { background: var(--raise-2); color: var(--ink); }
+.legend-item-btn.active { background: var(--raise-2); }
+.candidates-table tr.selected-row { background: var(--raise-2); }
+.btn-table-pick.active { background: var(--ink); color: var(--sheet); }

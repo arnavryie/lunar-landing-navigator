@@ -441,7 +441,7 @@ export function IlluminationMap({
       const lx = polePx[0] + rad * Math.sin(diagAngle)
       const ly = polePx[1] - rad * Math.cos(diagAngle)
       if (lx > 20 && lx < W - 50 && ly > 20 && ly < H - 20) {
-        g.fillStyle = 'rgba(18, 22, 28, 0.82)'
+        g.fillStyle = 'rgba(16, 15, 13, 0.82)'
         g.strokeStyle = 'rgba(255, 255, 255, 0.2)'
         drawRoundedRect(g, lx - 22, ly - 7, 44, 14, 3)
         g.fill()
@@ -478,7 +478,7 @@ export function IlluminationMap({
         const pad = 14
         const ex = edge[0] + (lon === 90 ? -pad - 40 : lon === 270 ? pad : 0)
         const ey = edge[1] + (lon === 0 ? pad + 8 : lon === 180 ? -pad : 0)
-        g.fillStyle = 'rgba(18, 22, 28, 0.82)'
+        g.fillStyle = 'rgba(16, 15, 13, 0.82)'
         g.strokeStyle = 'rgba(255, 255, 255, 0.2)'
         drawRoundedRect(g, ex - 38, ey - 7, 76, 14, 3)
         g.fill()
@@ -507,7 +507,7 @@ export function IlluminationMap({
     g.fillText('South Pole 90°S', polePx[0] + 8, polePx[1] - 4)
 
     // Graticule explanation subtext in bottom-right (above scale bar)
-    g.fillStyle = 'rgba(154, 160, 166, 0.75)'
+    g.fillStyle = 'rgba(162, 160, 156, 0.75)'
     g.font = '400 9px "Public Sans", sans-serif'
     g.textAlign = 'right'
     g.fillText('Concentric rings: latitude • Radial lines: longitude', W - 24, H - 38)
@@ -524,7 +524,7 @@ export function IlluminationMap({
     const sunEndpointY = rayOrigin[1] + sunDirY * sunDist
 
     g.save()
-    g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#6b7280'
+    g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#8f8b80'
     g.lineWidth = 1.6
     g.setLineDash([5, 4])
     g.beginPath()
@@ -563,9 +563,9 @@ export function IlluminationMap({
       // Sun is below horizon: slate disc with crossed-out horizon line
       g.beginPath()
       g.arc(sunEndpointX, sunEndpointY, 7, 0, 2 * Math.PI)
-      g.fillStyle = '#4b5563'
+      g.fillStyle = '#575551'
       g.fill()
-      g.strokeStyle = '#9ca3af'
+      g.strokeStyle = '#aaa598'
       g.lineWidth = 1.5
       g.stroke()
 
@@ -592,15 +592,15 @@ export function IlluminationMap({
     tagX = Math.max(10, Math.min(W - tagW - 10, tagX))
     tagY = Math.max(10, Math.min(H - tagH - 10, tagY))
 
-    g.fillStyle = 'rgba(18, 22, 28, 0.94)'
-    g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#6b7280'
+    g.fillStyle = 'rgba(16, 15, 13, 0.94)'
+    g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#8f8b80'
     g.lineWidth = 1
     drawRoundedRect(g, tagX, tagY, tagW, tagH, 4)
     g.fill()
     g.stroke()
 
     g.font = '600 10px "Public Sans", sans-serif'
-    g.fillStyle = sunElevationDeg >= 0 ? '#f2be5c' : '#9ca3af'
+    g.fillStyle = sunElevationDeg >= 0 ? '#f2be5c' : '#aaa598'
     g.fillText(`☀ SUN DIRECTION`, tagX + 8, tagY + 13)
 
     g.font = '500 9px "IBM Plex Mono", monospace'
@@ -621,7 +621,7 @@ export function IlluminationMap({
       g.fillText('✔ Above horizon (Terrain line-of-sight active)', tagX + 8, tagY + 36)
     }
 
-    g.fillStyle = 'rgba(154, 160, 166, 0.85)'
+    g.fillStyle = 'rgba(162, 160, 156, 0.85)'
     g.fillText('Direction of the Sun relative to lunar surface', tagX + 8, tagY + 46)
     g.restore()
 
@@ -667,7 +667,7 @@ export function IlluminationMap({
       const bX = searchCenter[0] - bW / 2
       const bY = searchCenter[1] - radiusPx - bH - 3
       if (bY > 10 && bX > 10 && bX + bW < W - 10) {
-        g.fillStyle = 'rgba(18, 22, 28, 0.9)'
+        g.fillStyle = 'rgba(16, 15, 13, 0.9)'
         g.strokeStyle = 'rgba(31, 163, 138, 0.7)'
         g.lineWidth = 1
         drawRoundedRect(g, bX, bY, bW, bH, 3)
@@ -721,7 +721,7 @@ export function IlluminationMap({
       if (midWpPx && midWpPx[0] > 40 && midWpPx[0] < W - 40 && midWpPx[1] > 30 && midWpPx[1] < H - 30) {
         const mW = 150
         const mH = 16
-        g.fillStyle = 'rgba(18, 22, 28, 0.9)'
+        g.fillStyle = 'rgba(16, 15, 13, 0.9)'
         g.strokeStyle = routeColor
         g.lineWidth = 1
         drawRoundedRect(g, midWpPx[0] - mW / 2, midWpPx[1] - mH / 2, mW, mH, 3)
@@ -760,7 +760,7 @@ export function IlluminationMap({
           g.fillStyle = '#e0705c'
         }
         g.fill()
-        g.strokeStyle = '#10141a'
+        g.strokeStyle = '#161410'
         g.lineWidth = 1.2
         g.stroke()
 
@@ -804,7 +804,7 @@ export function IlluminationMap({
           sX = Math.max(10, Math.min(W - sW - 10, sX))
           sY = Math.max(10, Math.min(H - sH - 10, sY))
 
-          g.fillStyle = 'rgba(18, 22, 28, 0.92)'
+          g.fillStyle = 'rgba(16, 15, 13, 0.92)'
           g.strokeStyle = '#1fa38a'
           g.lineWidth = 1
           drawRoundedRect(g, sX, sY, sW, sH, 3)
@@ -857,7 +857,7 @@ export function IlluminationMap({
         tX = Math.max(10, Math.min(W - tW - 10, tX))
         tY = Math.max(10, Math.min(H - tH - 10, tY))
 
-        g.fillStyle = 'rgba(18, 22, 28, 0.92)'
+        g.fillStyle = 'rgba(16, 15, 13, 0.92)'
         g.strokeStyle = '#c98419'
         g.lineWidth = 1
         drawRoundedRect(g, tX, tY, tW, tH, 3)
@@ -920,7 +920,7 @@ export function IlluminationMap({
       rX = Math.max(10, Math.min(W - rW - 10, rX))
       rY = Math.max(10, Math.min(H - rH - 10, rY))
 
-      g.fillStyle = 'rgba(18, 22, 28, 0.92)'
+      g.fillStyle = 'rgba(16, 15, 13, 0.92)'
       g.strokeStyle = '#5590d8'
       g.lineWidth = 1
       drawRoundedRect(g, rX, rY, rW, rH, 3)
@@ -942,8 +942,8 @@ export function IlluminationMap({
     const barKm = [0.5, 1, 2, 5, 10, 20, 50, 100].find((b) => b / kmPerPx >= 60) ?? 100
     const barPx = barKm / kmPerPx
 
-    g.fillStyle = '#d9d6cf'
-    g.strokeStyle = '#d9d6cf'
+    g.fillStyle = '#ebe7dd'
+    g.strokeStyle = '#ebe7dd'
     g.lineWidth = 2
     g.beginPath()
     g.moveTo(W - 30 - barPx, H - 20)
@@ -1117,7 +1117,7 @@ export function IlluminationMap({
               onClick={() => setActiveLayer('relief')}
               title="Shaded relief with dynamic solar lighting"
             >
-              Terrain Relief
+              Terrain relief
             </button>
             <button
               type="button"
@@ -1133,7 +1133,7 @@ export function IlluminationMap({
               onClick={() => setActiveLayer('psr')}
               title="NASA permanently shadowed regions (craters)"
             >
-              Permanent Shadow
+              Permanent shadow
             </button>
             <button
               type="button"
@@ -1213,7 +1213,7 @@ export function IlluminationMap({
               onChange={(e) => setShowEarthRay(e.target.checked)}
             />
             <span style={{ fontSize: '0.82rem', color: showEarthRay ? '#5590d8' : 'var(--muted)' }}>
-              Earth Vector
+              Earth vector
             </span>
           </label>
 
@@ -1234,7 +1234,7 @@ export function IlluminationMap({
             onClick={() => setIsHelpModalOpen(true)}
             title="Open comprehensive map reading guide"
           >
-            ℹ How to Read This Map
+            How to read this map
           </button>
         </div>
       </div>
@@ -1302,7 +1302,7 @@ export function IlluminationMap({
                 }}
                 title="Click for explanation"
               >
-                <span className="legend-icon" style={{ background: '#181d24', border: '1px solid #3a434e' }} />
+                <span className="legend-icon" style={{ background: '#1a1916', border: '1px solid #34322d' }} />
                 <span>Shadowed Regions (Charcoal)</span>
               </button>
 
@@ -1405,7 +1405,7 @@ export function IlluminationMap({
                   title="Click for explanation"
                 >
                   <span className="legend-line-icon" style={{ borderTop: '2.5px dashed #1fa38a' }} />
-                  <span>Rover Traversal Route</span>
+                  <span>Rover traversal route</span>
                 </button>
               )}
             </>
@@ -1542,7 +1542,7 @@ export function IlluminationMap({
                 <div className="map-inspector-title" style={{ color: '#5590d8' }}>
                   CURRENT ROVER POSITION
                 </div>
-                <div className="map-inspector-name">Simulated Rover Location</div>
+                <div className="map-inspector-name">Simulated rover location</div>
               </div>
               <button
                 type="button"
@@ -1581,7 +1581,7 @@ export function IlluminationMap({
               <div className="map-inspector-row">
                 <span>Solar Illumination:</span>
                 <span style={{ color: currentSimulationStep?.isDirectSunlit ? 'var(--sun)' : 'var(--muted)' }}>
-                  {currentSimulationStep?.isDirectSunlit ? '☀ Direct Sunlight' : '🌑 In Shadow'}
+                  {currentSimulationStep?.isDirectSunlit ? '☀ Direct Sunlight' : ' In Shadow'}
                 </span>
               </div>
               <div className="map-inspector-row">
@@ -1630,9 +1630,9 @@ export function IlluminationMap({
             </div>
 
             <div className="map-help-section">
-              <h4>Three Quick Questions (Visual Hierarchy)</h4>
+              <h4>Reading the map</h4>
               <div className="map-help-grid">
-                <div className="map-help-card" style={{ borderLeft: '3px solid #5590d8' }}>
+                <div className="map-help-card" style={{ borderTop: '2px solid #5590d8' }}>
                   <div className="map-help-card-title">
                     <span style={{ color: '#5590d8' }}>1. Where is the rover?</span>
                   </div>
@@ -1641,7 +1641,7 @@ export function IlluminationMap({
                   </p>
                 </div>
 
-                <div className="map-help-card" style={{ borderLeft: '3px solid #c98419' }}>
+                <div className="map-help-card" style={{ borderTop: '2px solid #c98419' }}>
                   <div className="map-help-card-title">
                     <span style={{ color: '#c98419' }}>2. Where is the Sun?</span>
                   </div>
@@ -1650,7 +1650,7 @@ export function IlluminationMap({
                   </p>
                 </div>
 
-                <div className="map-help-card" style={{ borderLeft: '3px solid #1fa38a' }}>
+                <div className="map-help-card" style={{ borderTop: '2px solid #1fa38a' }}>
                   <div className="map-help-card-title">
                     <span style={{ color: '#1fa38a' }}>3. Where to recharge?</span>
                   </div>
@@ -1662,7 +1662,7 @@ export function IlluminationMap({
             </div>
 
             <div className="map-help-section">
-              <h4>Colours &amp; Shading Meaning</h4>
+              <h4>Colours and shading</h4>
               <div className="map-help-grid">
                 <div className="map-help-card">
                   <div className="map-help-card-title">
@@ -1676,7 +1676,7 @@ export function IlluminationMap({
 
                 <div className="map-help-card">
                   <div className="map-help-card-title">
-                    <span style={{ width: '10px', height: '10px', background: '#181d24', border: '1px solid #3a434e', borderRadius: '2px' }} />
+                    <span style={{ width: '10px', height: '10px', background: '#1a1916', border: '1px solid #34322d', borderRadius: '2px' }} />
                     Cold Shadow (Charcoal)
                   </div>
                   <p className="map-help-card-desc">
@@ -1707,7 +1707,7 @@ export function IlluminationMap({
             </div>
 
             <div className="map-help-section">
-              <h4>Geometry &amp; Reference Systems</h4>
+              <h4>Geometry and reference</h4>
               <div className="map-help-grid">
                 <div className="map-help-card">
                   <div className="map-help-card-title">Coordinate Grid (Graticule)</div>
@@ -1717,7 +1717,7 @@ export function IlluminationMap({
                 </div>
 
                 <div className="map-help-card">
-                  <div className="map-help-card-title">Candidate Search Boundary</div>
+                  <div className="map-help-card-title">Candidate search boundary</div>
                   <p className="map-help-card-desc">
                     The dashed circle around the rover origin represents the configured search radius ({config.mission.searchRadiusKm.toFixed(1)} km). All ranked recharge candidates lie within this zone.
                   </p>
@@ -1726,7 +1726,7 @@ export function IlluminationMap({
             </div>
 
             <div className="map-help-section">
-              <h4>Interactive Controls</h4>
+              <h4>Interactive controls</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: 0, lineHeight: 1.45 }}>
                 • <strong>Click any marker</strong> on the map to inspect its distance, heading, and sunlight window.<br />
                 • <strong>Click any legend entry</strong> to see a detailed explanation of that map element.<br />

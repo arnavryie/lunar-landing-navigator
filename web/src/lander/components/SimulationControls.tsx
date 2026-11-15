@@ -152,7 +152,7 @@ export function SimulationControls({
           onClick={onReset}
           title="Reset simulation to initial departure hour"
         >
-          Reset Time
+          Reset time
         </button>
       </div>
     </div>

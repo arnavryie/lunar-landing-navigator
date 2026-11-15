@@ -70,7 +70,7 @@ function findNearestPsr(lat: number, lon: number): { psr: PsrZone; distanceKm: n
   return { psr: nearest, distanceKm: minD }
 }
 
-function createTextSprite(text: string, color = '#00e5ff', bg = 'rgba(13, 18, 24, 0.9)') {
+function createTextSprite(text: string, color = '#9fd3cf', bg = 'rgba(16, 15, 13, 0.9)') {
   const canvas = document.createElement('canvas')
   canvas.width = 340
   canvas.height = 70
@@ -86,7 +86,7 @@ function createTextSprite(text: string, color = '#00e5ff', bg = 'rgba(13, 18, 24
   ctx.strokeStyle = color
   ctx.lineWidth = 3
   ctx.stroke()
-  ctx.fillStyle = '#f1f5f9'
+  ctx.fillStyle = '#f2efe8'
   ctx.font = 'bold 22px system-ui, -apple-system, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -103,7 +103,7 @@ function createTextSprite(text: string, color = '#00e5ff', bg = 'rgba(13, 18, 24
 
 const VIS_RES = 1024
 const base = `${import.meta.env.BASE_URL}data/map/`
-const COLORS = { sun: '#c98419', earth: '#5590d8', both: '#1fa38a', none: '#30363e' }
+const COLORS = { sun: '#c98419', earth: '#5590d8', both: '#1fa38a', none: '#383632' }
 
 // Shared GLSL: heightmap lookup and the ray march (same geometry as horizon.py, coarser steps far out).
 const MARCH = /* glsl */ `
@@ -336,7 +336,7 @@ export function Terrain3D({
 
         const renderer = new THREE.WebGLRenderer({ antialias: true })
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        renderer.setClearColor('#111418')
+        renderer.setClearColor('#0f0e0c')
         host.current.appendChild(renderer.domElement)
         const scene = new THREE.Scene()
         const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 5000)
@@ -460,7 +460,7 @@ export function Terrain3D({
     // 1. Base solar & Earth sight rays from site
     if (site && site.lat <= -80.5) {
       const pos = scenePos(w, site.lat, site.lon, curExag)
-      const pin = new THREE.Mesh(new THREE.SphereGeometry(ellipse ? 0.03 * ellipse.focus.km : 0.8), new THREE.MeshBasicMaterial({ color: '#d9d6cf' }))
+      const pin = new THREE.Mesh(new THREE.SphereGeometry(ellipse ? 0.03 * ellipse.focus.km : 0.8), new THREE.MeshBasicMaterial({ color: '#ebe7dd' }))
       pin.position.copy(pos)
       w.marks.add(pin)
       for (const b of ['sun', 'earth'] as const) {
@@ -486,7 +486,7 @@ export function Terrain3D({
       const ringGeo = new THREE.RingGeometry(1.0, 1.4, 24)
       ringGeo.rotateX(-Math.PI / 2)
       const ringMat = new THREE.MeshBasicMaterial({
-        color: isSel ? '#f59e0b' : '#38bdf8',
+        color: isSel ? '#f2efe8' : '#cf86c3',
         side: THREE.DoubleSide,
         transparent: true,
         opacity: isSel ? 0.95 : 0.65,
@@ -498,7 +498,7 @@ export function Terrain3D({
       // Center diamond pin
       const diamondGeo = new THREE.OctahedronGeometry(isSel ? 0.9 : 0.6)
       const diamondMat = new THREE.MeshBasicMaterial({
-        color: isSel ? '#f59e0b' : '#38bdf8',
+        color: isSel ? '#f2efe8' : '#cf86c3',
       })
       const diamond = new THREE.Mesh(diamondGeo, diamondMat)
       diamond.position.set(p.x, p.y + 1.0, p.z)
@@ -516,7 +516,7 @@ export function Terrain3D({
           const discGeo = new THREE.CircleGeometry(p.radiusKm, 32)
           discGeo.rotateX(-Math.PI / 2)
           const discMat = new THREE.MeshBasicMaterial({
-            color: 0x00e5ff,
+            color: 0x9fd3cf,
             transparent: true,
             opacity: 0.25,
             side: THREE.DoubleSide,
@@ -543,14 +543,14 @@ export function Terrain3D({
 
           // Center cryo beacon
           const beaconGeo = new THREE.CylinderGeometry(0.35, 0.35, 4 * curExag, 12)
-          const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.85 })
+          const beaconMat = new THREE.MeshBasicMaterial({ color: 0x9fd3cf, transparent: true, opacity: 0.85 })
           const beacon = new THREE.Mesh(beaconGeo, beaconMat)
           beacon.position.copy(pPos)
           beacon.position.y += 2 * curExag
           w.marks.add(beacon)
 
           // 3D Billboard label for crater cold trap (no emojis)
-          const psrLabel = createTextSprite(`ICE PSR: ${p.name.replace(' Crater PSR', '')} (${p.tempK} K)`, '#00e5ff')
+          const psrLabel = createTextSprite(`ICE PSR: ${p.name.replace(' Crater PSR', '')} (${p.tempK} K)`, '#9fd3cf')
           if (psrLabel) {
             psrLabel.position.copy(pPos)
             psrLabel.position.y += 5.5 * curExag
@@ -609,7 +609,7 @@ export function Terrain3D({
         // Midpoint Traverse Telemetry Badge (no emojis)
         const midIdx = Math.floor(STEPS / 2)
         const midPoint = linePoints[midIdx].clone()
-        const travBadge = createTextSprite(`TRAVERSE: ${distanceKm.toFixed(1)} km (-${psr.depthM} m)`, '#00f5d4', 'rgba(5, 25, 20, 0.9)')
+        const travBadge = createTextSprite(`TRAVERSE: ${distanceKm.toFixed(1)} km (-${psr.depthM} m)`, '#00f5d4', 'rgba(21, 19, 15, 0.9)')
         if (travBadge) {
           travBadge.position.copy(midPoint)
           travBadge.position.y += 3.5 * curExag
@@ -842,7 +842,7 @@ export function Terrain3D({
               onClick={() => setSideTab('artemis')}
               style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
-              Artemis Resources
+              Artemis resources
             </button>
             <button
               type="button"
@@ -850,7 +850,7 @@ export function Terrain3D({
               onClick={() => setSideTab('planner')}
               style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
-              Site Planner
+              Site planner
             </button>
             <button
               type="button"
@@ -865,8 +865,8 @@ export function Terrain3D({
           {/* TAB 1: ARTEMIS III RESOURCES */}
           {sideTab === 'artemis' && (
             <>
-              <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-                <legend style={{ color: '#38bdf8', fontWeight: 600 }}>Artemis III Candidate Landing Sites &amp; Resources</legend>
+              <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(207, 134, 195, 0.4)' }}>
+                <legend style={{ color: '#cf86c3', fontWeight: 600 }}>Artemis III candidate regions</legend>
                 <p className="chart-note" style={{ margin: '0 0 8px' }}>
                   NASA downselected 9 landing zones (Oct 2024). Click any site to fly camera in 3D and view resources:
                 </p>
@@ -879,9 +879,9 @@ export function Terrain3D({
                         fontSize: '0.76rem',
                         padding: '4px 7px',
                         minWidth: 'auto',
-                        borderColor: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
-                        background: selectedArtemis?.id === a.id ? 'rgba(56, 189, 248, 0.22)' : undefined,
-                        color: selectedArtemis?.id === a.id ? '#38bdf8' : undefined,
+                        borderColor: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
+                        background: selectedArtemis?.id === a.id ? 'rgba(207, 134, 195, 0.22)' : undefined,
+                        color: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
                         fontWeight: selectedArtemis?.id === a.id ? 600 : 400,
                       }}
                       onClick={() => selectAndPlanArtemis(a)}
@@ -896,14 +896,14 @@ export function Terrain3D({
                     style={{
                       marginTop: '10px',
                       padding: '10px',
-                      background: 'rgba(15, 23, 42, 0.85)',
-                      border: '1px solid #38bdf8',
+                      background: 'rgba(16, 15, 13, 0.85)',
+                      border: '1px solid #cf86c3',
                       borderRadius: 'var(--radius-s)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                       <div>
-                        <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#38bdf8', fontWeight: 600 }}>{selectedArtemis.name}</h4>
+                        <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#cf86c3', fontWeight: 600 }}>{selectedArtemis.name}</h4>
                         <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
                           {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
                         </span>
@@ -917,8 +917,8 @@ export function Terrain3D({
                           background:
                             selectedArtemis.resources.water_ice_potential === 'Exceptional'
                               ? 'rgba(31, 163, 138, 0.25)'
-                              : 'rgba(56, 189, 248, 0.2)',
-                          color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#38bdf8',
+                              : 'rgba(207, 134, 195, 0.2)',
+                          color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#cf86c3',
                           border: '1px solid currentColor',
                         }}
                       >
@@ -929,7 +929,7 @@ export function Terrain3D({
                     <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
 
                     <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#e2e8f0' }}>Mineral Composition:</strong>
+                      <strong style={{ color: '#e8e4da' }}>Mineral Composition:</strong>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
                         {selectedArtemis.minerals.primary.map((m) => (
                           <span
@@ -949,16 +949,16 @@ export function Terrain3D({
                     </div>
 
                     <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#38bdf8' }}>Water-Ice &amp; Volatiles:</strong>
-                      <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.water_ice_details}</p>
+                      <strong style={{ color: '#cf86c3' }}>Water ice and volatiles</strong>
+                      <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.water_ice_details}</p>
                       <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                         Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
                       </div>
                     </div>
 
                     <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#f59e0b' }}>ISRU Resources:</strong>
-                      <p style={{ margin: '2px 0 4px', color: '#cbd5e1' }}>{selectedArtemis.resources.isru_applications}</p>
+                      <strong style={{ color: '#f2efe8' }}>In-situ resources (ISRU)</strong>
+                      <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.isru_applications}</p>
                       <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                         Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
                       </div>
@@ -970,8 +970,8 @@ export function Terrain3D({
                         style={{
                           padding: '6px 10px',
                           fontSize: '0.78rem',
-                          background: '#0284c7',
-                          color: '#fff',
+                          background: 'var(--ink)',
+                          color: 'var(--sheet)',
                           border: 'none',
                           borderRadius: 'var(--radius-s)',
                           fontWeight: 600,
@@ -979,7 +979,7 @@ export function Terrain3D({
                         }}
                         onClick={() => openPlannerForSite(selectedArtemis)}
                       >
-                        Plan Landing Windows for this Region →
+                        Plan landing windows for this region
                       </button>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
@@ -989,14 +989,14 @@ export function Terrain3D({
                             padding: '5px 8px',
                             fontSize: '0.74rem',
                             background: 'rgba(255, 255, 255, 0.08)',
-                            color: '#e2e8f0',
+                            color: '#e8e4da',
                             border: '1px solid var(--rule)',
                             borderRadius: 'var(--radius-s)',
                             cursor: 'pointer',
                           }}
                           onClick={() => inspectArtemis(selectedArtemis)}
                         >
-                          Fly Camera Here
+                          Fly camera here
                         </button>
                         <a
                           href="#artemis-3d-matrix"
@@ -1004,15 +1004,15 @@ export function Terrain3D({
                             flex: 1,
                             padding: '5px 8px',
                             fontSize: '0.74rem',
-                            background: 'rgba(56, 189, 248, 0.1)',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            background: 'rgba(207, 134, 195, 0.1)',
+                            color: '#cf86c3',
+                            border: '1px solid rgba(207, 134, 195, 0.3)',
                             borderRadius: 'var(--radius-s)',
                             textAlign: 'center',
                             textDecoration: 'none',
                           }}
                         >
-                          Comparison Matrix ↓
+                          Comparison table
                         </a>
                       </div>
                       {onOpenSite && (
@@ -1031,7 +1031,7 @@ export function Terrain3D({
                             }}
                             onClick={onOpenSite}
                           >
-                            Open in Site &amp; Plan Tab (Horizon Dial) ↗
+                            Open in Site and plan
                           </button>
                         </div>
                       )}
@@ -1048,7 +1048,7 @@ export function Terrain3D({
               {site ? (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>Active Site: {site.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#cf86c3', fontWeight: 600 }}>Active Site: {site.name}</span>
                     <button
                       type="button"
                       style={{ fontSize: '0.72rem', padding: '2px 6px', background: 'transparent', color: 'var(--muted)', border: '1px solid var(--rule)', borderRadius: '3px', cursor: 'pointer' }}
@@ -1073,10 +1073,10 @@ export function Terrain3D({
                   <p>Calculating 2027 orbital illumination &amp; terrain horizon for the selected site...</p>
                   <button
                     type="button"
-                    style={{ marginTop: '8px', padding: '6px 10px', fontSize: '0.76rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 'var(--radius-s)' }}
+                    style={{ marginTop: '8px', padding: '6px 10px', fontSize: '0.76rem', background: 'var(--ink)', color: 'var(--sheet)', border: 'none', borderRadius: 'var(--radius-s)' }}
                     onClick={() => setSideTab('artemis')}
                   >
-                    Select an Artemis III Landing Site
+                    Select an Artemis III region
                   </button>
                 </div>
               )}
@@ -1100,7 +1100,7 @@ export function Terrain3D({
                     aria-pressed={showScience}
                     title="Toggle 3D Cryogenic Cold Traps & Traverse Corridors"
                   >
-                    {showScience ? 'SCIENCE ON' : 'SCIENCE OFF'}
+                    {showScience ? 'Science layer on' : 'Science layer off'}
                   </button>
                 </div>
 
@@ -1224,14 +1224,14 @@ export function Terrain3D({
         <section className="panel" aria-label="Interactive 2027 Availability Timeline">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.96rem', color: '#e2e8f0' }}>
-                2027 Sun &amp; Earth Availability Timeline (Interactive 3D Shadow Scrubber)
+              <h3 style={{ margin: 0, fontSize: '0.96rem', color: '#e8e4da' }}>
+                Sun and Earth availability
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--muted)' }}>
                 Click or drag anywhere along the timeline to rotate Sun &amp; Earth vectors and sweep GPU shadows across the 3D terrain.
               </p>
             </div>
-            <span style={{ fontSize: '0.76rem', color: '#38bdf8' }}>
+            <span style={{ fontSize: '0.76rem', color: '#cf86c3' }}>
               Active Site: <strong>{site.name}</strong>
             </span>
           </div>
@@ -1259,13 +1259,13 @@ export function Terrain3D({
       <section
         id="artemis-3d-matrix"
         className="panel"
-        style={{ borderColor: 'rgba(56, 189, 248, 0.35)' }}
+        style={{ borderColor: 'rgba(207, 134, 195, 0.35)' }}
         aria-label="Artemis III Comparative Resource Matrix"
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', color: '#f8fafc', fontWeight: 600 }}>
-              Artemis III Candidate Landing Regions: Complete Resource &amp; Mineral Matrix
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', color: '#f2efe8', fontWeight: 600 }}>
+              Artemis III candidate regions: resources and minerals
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
               Comprehensive on-site mineralogy, water-ice cold trap depth, cryogenic volatiles, and lander ISRU utility across all 9 regions.
@@ -1276,16 +1276,16 @@ export function Terrain3D({
             style={{
               padding: '5px 10px',
               fontSize: '0.74rem',
-              background: 'rgba(56, 189, 248, 0.15)',
-              color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
+              background: 'rgba(207, 134, 195, 0.15)',
+              color: '#cf86c3',
+              border: '1px solid rgba(207, 134, 195, 0.4)',
               borderRadius: 'var(--radius-s)',
               cursor: 'pointer',
               fontWeight: 600,
             }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            Back to 3D Viewport ↑
+            Back to the 3D view
           </button>
         </div>
 
@@ -1295,19 +1295,19 @@ export function Terrain3D({
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '0.78rem',
-              color: '#cbd5e1',
+              color: '#c9c4b8',
               textAlign: 'left',
             }}
           >
             <thead>
               <tr style={{ borderBottom: '1px solid var(--rule)', color: 'var(--muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>
-                <th style={{ padding: '8px 10px' }}>Region Name</th>
-                <th style={{ padding: '8px 10px' }}>Lat / Lon</th>
+                <th style={{ padding: '8px 10px' }}>Region name</th>
+                <th style={{ padding: '8px 10px' }}>Lat / lon</th>
                 <th style={{ padding: '8px 10px' }}>Elev.</th>
-                <th style={{ padding: '8px 10px' }}>Water Ice Potential</th>
-                <th style={{ padding: '8px 10px' }}>Depth Estimate</th>
-                <th style={{ padding: '8px 10px' }}>Primary Minerals</th>
-                <th style={{ padding: '8px 10px' }}>Lander ISRU Utility</th>
+                <th style={{ padding: '8px 10px' }}>Water ice potential</th>
+                <th style={{ padding: '8px 10px' }}>Depth estimate</th>
+                <th style={{ padding: '8px 10px' }}>Primary minerals</th>
+                <th style={{ padding: '8px 10px' }}>Lander ISRU utility</th>
                 <th style={{ padding: '8px 10px' }}>3D Action</th>
               </tr>
             </thead>
@@ -1319,10 +1319,10 @@ export function Terrain3D({
                     key={a.id}
                     style={{
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                      background: isSelected ? 'rgba(56, 189, 248, 0.08)' : undefined,
+                      background: isSelected ? 'rgba(207, 134, 195, 0.08)' : undefined,
                     }}
                   >
-                    <td style={{ padding: '10px 10px', fontWeight: 600, color: isSelected ? '#38bdf8' : '#f8fafc' }}>
+                    <td style={{ padding: '10px 10px', fontWeight: 600, color: isSelected ? '#cf86c3' : '#f2efe8' }}>
                       {a.name}
                     </td>
                     <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
@@ -1342,17 +1342,17 @@ export function Terrain3D({
                             a.resources.water_ice_potential === 'Exceptional'
                               ? 'rgba(34, 197, 94, 0.2)'
                               : a.resources.water_ice_potential === 'Very High'
-                              ? 'rgba(56, 189, 248, 0.2)'
+                              ? 'rgba(207, 134, 195, 0.2)'
                               : a.resources.water_ice_potential === 'Strategic'
-                              ? 'rgba(245, 158, 11, 0.2)'
+                              ? 'rgba(242, 239, 232, 0.2)'
                               : 'rgba(168, 85, 247, 0.2)',
                           color:
                             a.resources.water_ice_potential === 'Exceptional'
                               ? '#4ade80'
                               : a.resources.water_ice_potential === 'Very High'
-                              ? '#38bdf8'
+                              ? '#cf86c3'
                               : a.resources.water_ice_potential === 'Strategic'
-                              ? '#fbbf24'
+                              ? '#f2efe8'
                               : '#c084fc',
                         }}
                       >
@@ -1368,8 +1368,8 @@ export function Terrain3D({
                         style={{
                           padding: '4px 8px',
                           fontSize: '0.72rem',
-                          background: isSelected ? '#0284c7' : 'rgba(255,255,255,0.06)',
-                          color: '#fff',
+                          background: isSelected ? 'var(--ink)' : 'rgba(255,255,255,0.06)',
+                          color: isSelected ? 'var(--sheet)' : 'var(--ink)',
                           border: isSelected ? 'none' : '1px solid var(--rule)',
                           borderRadius: 'var(--radius-s)',
                           cursor: 'pointer',
@@ -1380,7 +1380,7 @@ export function Terrain3D({
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
                       >
-                        Fly in 3D →
+                        Fly there in 3D
                       </button>
                     </td>
                   </tr>

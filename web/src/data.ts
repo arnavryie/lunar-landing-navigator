@@ -341,7 +341,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 94,
     engineeringScore: 86,
     zone: 'sweet_spot',
-    zoneLabel: 'Sweet Spot ⭐ (High Sun + Ice < 2 km)',
+    zoneLabel: 'Sweet Spot (High Sun + Ice < 2 km)',
     iceTrapped: false,
   },
   'shackleton': {
@@ -352,7 +352,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 100,
     engineeringScore: 0,
     zone: 'cryo_danger',
-    zoneLabel: 'Cryo Hazard ⚠️ (In PSR: 40 K, 0% Sunlight)',
+    zoneLabel: 'Cryo Hazard (In PSR: 40 K, 0% Sunlight)',
     iceTrapped: true,
   },
   'mons-mouton': {
@@ -363,7 +363,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 46,
     engineeringScore: 65,
     zone: 'safe_dry',
-    zoneLabel: 'Safe Ridge 🛡️ (Sunlit, but 12 km from Ice)',
+    zoneLabel: 'Safe Ridge (Sunlit, but 12 km from Ice)',
     iceTrapped: false,
   },
   'im2-athena': {
@@ -374,7 +374,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 74,
     engineeringScore: 78,
     zone: 'sweet_spot',
-    zoneLabel: 'Viable Rim ⭐ (Good Sun & Moderate Distance)',
+    zoneLabel: 'Viable Rim (Good Sun & Moderate Distance)',
     iceTrapped: false,
   },
   'im1-odysseus': {
@@ -385,7 +385,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 22,
     engineeringScore: 64,
     zone: 'safe_dry',
-    zoneLabel: 'Sub-Polar 🛡️ (>100 km from Polar Ice)',
+    zoneLabel: 'Sub-Polar (>100 km from Polar Ice)',
     iceTrapped: false,
   },
   'chandrayaan-3': {
@@ -396,7 +396,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 28,
     engineeringScore: 72,
     zone: 'safe_dry',
-    zoneLabel: 'Highland Explorer 🛡️ (Far from PSR Cold Traps)',
+    zoneLabel: 'Highland Explorer (Far from PSR Cold Traps)',
     iceTrapped: false,
   },
   'replay-chandrayaan-3': {
@@ -407,7 +407,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 28,
     engineeringScore: 72,
     zone: 'safe_dry',
-    zoneLabel: 'Highland Explorer 🛡️ (Far from PSR Cold Traps)',
+    zoneLabel: 'Highland Explorer (Far from PSR Cold Traps)',
     iceTrapped: false,
   },
   'replay-im1-odysseus': {
@@ -418,7 +418,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 22,
     engineeringScore: 64,
     zone: 'safe_dry',
-    zoneLabel: 'Sub-Polar 🛡️ (>100 km from Polar Ice)',
+    zoneLabel: 'Sub-Polar (>100 km from Polar Ice)',
     iceTrapped: false,
   },
   'change-4': {
@@ -429,7 +429,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 30,
     engineeringScore: 25,
     zone: 'non_viable',
-    zoneLabel: 'Far Side 🚫 (Requires Relay Satellite)',
+    zoneLabel: 'Far Side (Requires Relay Satellite)',
     iceTrapped: false,
   },
   'apollo-11': {
@@ -440,7 +440,7 @@ const PRECOMPUTED_SCIENCE: Record<string, ScienceTradeoff> = {
     scienceScore: 10,
     engineeringScore: 68,
     zone: 'safe_dry',
-    zoneLabel: 'Equatorial Baseline 🛡️ (Zero Water Ice)',
+    zoneLabel: 'Equatorial Baseline (Zero Water Ice)',
     iceTrapped: false,
   },
 }
@@ -482,16 +482,16 @@ export function getSiteScienceStats(site: { id?: string; lat: number; lon: numbe
   let zoneLabel: string
   if (sunPct >= 50 && distKm <= 5.0) {
     zone = 'sweet_spot'
-    zoneLabel = 'Sweet Spot ⭐ (High Sun + Accessible Ice)'
+    zoneLabel = 'Sweet Spot (High Sun + Accessible Ice)'
   } else if (sunPct >= 50) {
     zone = 'safe_dry'
-    zoneLabel = `Safe Ridge 🛡️ (Sunlit, ${distKm} km from Ice)`
+    zoneLabel = `Safe Ridge (Sunlit, ${distKm} km from Ice)`
   } else if (distKm <= 2.0 || inPsr) {
     zone = 'cryo_danger'
-    zoneLabel = 'Cryo Hazard ⚠️ (Near Ice, Low Sun / Freeze Risk)'
+    zoneLabel = 'Cryo Hazard (Near Ice, Low Sun / Freeze Risk)'
   } else {
     zone = 'non_viable'
-    zoneLabel = 'Non-Viable 🚫 (Low Sun & Distant from Ice)'
+    zoneLabel = 'Non-Viable (Low Sun & Distant from Ice)'
   }
 
   return {

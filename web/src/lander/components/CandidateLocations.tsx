@@ -19,7 +19,7 @@ export function CandidateLocations({
     <div className="candidates-panel" aria-label="Candidate Recharge Destinations Ranking">
       <div className="card-header" style={{ marginBottom: '8px' }}>
         <h3>
-          <span style={{ color: 'var(--both)' }}>📍</span> Candidate Recharge Locations Ranking
+          Candidate recharge locations, ranked
         </h3>
         <span className="pill">{candidates.length} evaluated within search radius</span>
       </div>
@@ -34,13 +34,13 @@ export function CandidateLocations({
             <tr>
               <th>Rank</th>
               <th>Destination</th>
-              <th>Distance / Transit</th>
+              <th>Distance / transit</th>
               <th>Direction</th>
-              <th>Sunlit Window</th>
-              <th>Max Slope</th>
+              <th>Sunlit window</th>
+              <th>Max slope</th>
               <th>Arrival SoC</th>
-              <th>Solar Gen</th>
-              <th>Net Benefit</th>
+              <th>Solar gen</th>
+              <th>Net benefit</th>
               <th>Feasibility</th>
               <th>Action</th>
             </tr>
