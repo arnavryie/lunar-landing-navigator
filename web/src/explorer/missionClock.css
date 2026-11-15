@@ -1,0 +1,234 @@
+/* MissionClock — dark "mission control" 24 h dial. All classes prefixed mc-. */
+
+.mc-root {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mc-dial {
+  position: relative;
+  border-radius: 50%;
+  outline: none;
+  max-width: 100%;
+}
+
+.mc-dial:focus-visible {
+  box-shadow: 0 0 0 2px #0b0f14, 0 0 0 4px #38e1ff;
+}
+
+.mc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- outer lunar-day ring ---- */
+.mc-ring {
+  fill: none;
+  stroke: rgba(148, 170, 196, 0.22);
+  stroke-width: 1.4;
+}
+
+.mc-ring-arc {
+  fill: none;
+  stroke: #38e1ff;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+/* ---- face ---- */
+.mc-glow {
+  fill: none;
+  stroke: #38e1ff;
+  stroke-width: 3;
+  opacity: 0.55;
+}
+
+.mc-face-edge {
+  fill: none;
+  stroke: rgba(56, 225, 255, 0.45);
+  stroke-width: 1.2;
+}
+
+/* ---- ticks + numerals ---- */
+.mc-tick-minor {
+  stroke: rgba(200, 214, 230, 0.28);
+  stroke-width: 0.8;
+}
+
+.mc-tick-hour {
+  stroke: rgba(230, 238, 248, 0.7);
+  stroke-width: 1.4;
+}
+
+.mc-tick-major {
+  stroke: #38e1ff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.mc-num {
+  fill: rgba(255, 255, 255, 0.82);
+  font-size: 10.5px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.mc-num-major {
+  fill: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ---- Sun / Earth markers ---- */
+.mc-marker {
+  pointer-events: none;
+}
+
+.mc-marker text {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.mc-marker-sun circle {
+  fill: #f5b041;
+}
+
+.mc-marker-sun text {
+  fill: #f5b041;
+}
+
+.mc-marker-earth circle {
+  fill: #4f9dff;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.8;
+}
+
+.mc-marker-earth text {
+  fill: #4f9dff;
+}
+
+/* ---- readout ---- */
+.mc-readout {
+  pointer-events: none;
+}
+
+.mc-readout-time {
+  fill: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.mc-readout-date {
+  fill: rgba(220, 230, 242, 0.85);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.mc-readout-utc {
+  fill: #38e1ff;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.mc-readout-ist {
+  fill: rgba(190, 204, 222, 0.7);
+  font-size: 8.5px;
+  font-weight: 500;
+}
+
+.mc-readout-sun {
+  fill: #f5b041;
+  font-size: 8.5px;
+  font-weight: 600;
+}
+
+/* ---- hands ---- */
+.mc-hand {
+  cursor: grab;
+  transition: transform 120ms ease-out;
+}
+
+.mc-dragging .mc-hand {
+  transition: none;
+}
+
+.mc-dragging,
+.mc-dragging .mc-svg,
+.mc-dragging .mc-hand {
+  cursor: grabbing;
+}
+
+.mc-hand-line {
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.mc-hand-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  pointer-events: stroke;
+}
+
+.mc-hand-hour .mc-hand-line {
+  stroke: #ffffff;
+  stroke-width: 7;
+}
+
+.mc-hand-minute .mc-hand-line {
+  stroke: #c9d3df;
+  stroke-width: 4;
+}
+
+.mc-hand-second .mc-hand-line {
+  stroke: #ffb547;
+  stroke-width: 1.6;
+}
+
+.mc-second-tip {
+  fill: #ffb547;
+  pointer-events: none;
+}
+
+.mc-hand-active .mc-hand-line {
+  filter: drop-shadow(0 0 3px rgba(56, 225, 255, 0.85));
+}
+
+.mc-hub {
+  fill: #0b0f14;
+  stroke: #ffffff;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.mc-hub-dot {
+  fill: #ffb547;
+  pointer-events: none;
+}
+
+/* ---- caption ---- */
+.mc-caption {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(170, 186, 206, 0.7);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-hand {
+    transition: none;
+  }
+}

@@ -327,6 +327,9 @@ export default function App() {
           <button aria-pressed={view === 'lander'} onClick={() => setView('lander')}>
             Lander systems
           </button>
+          <button onClick={() => { location.search = '?view=explorer' }}>
+            Explorer 3D/2D
+          </button>
         </nav>
         <div className="controls-row">
         {view !== 'compare' && (
