@@ -450,8 +450,41 @@ button.link:hover:not(:disabled) { background: none; text-decoration-color: var(
 /* F6a map */
 .map-screen { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px 36px; align-items: start; }
 @media (max-width: 1000px) { .map-screen, .three-screen { grid-template-columns: 1fr !important; } }
-.map-wrap { width: min(100%, calc(100vh - 190px)); position: relative; }
+.map-wrap { width: min(100%, calc(100vh - 190px)); position: relative; overflow: hidden; }
 .map-canvas { width: 100%; aspect-ratio: 1; cursor: crosshair; border-radius: 0; background: var(--plate); border: 1px solid var(--line); }
+.map-canvas.is-dragging { cursor: grabbing !important; }
+.map-zoom-controls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 5;
+}
+.map-zoom-controls button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 23, 21, 0.88);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.map-zoom-controls button:hover {
+  background: var(--raise);
+  border-color: var(--line-2);
+  color: var(--sun);
+}
 .map-side { display: grid; gap: 16px; }
 .radio { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .ramp { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 0.8rem; color: var(--ink-2); }

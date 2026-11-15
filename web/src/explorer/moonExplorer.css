@@ -187,13 +187,59 @@
   border: 0;
 }
 
-.mx-map2d-canvas {
+.mx-map2d-viewport {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+}
+
+.mx-map2d-canvas {
+  width: 100%;
+  height: 100%;
   display: block;
   cursor: crosshair;
+}
+
+.mx-map2d-canvas.is-dragging {
+  cursor: grabbing !important;
+}
+
+.mx-map2d-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 6;
+}
+
+.mx-map2d-controls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 23, 21, 0.88);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.mx-map2d-controls button:hover {
+  background: var(--raise);
+  border-color: var(--line-2);
+  color: var(--sun);
 }
 
 .mx-map2d-foot {
