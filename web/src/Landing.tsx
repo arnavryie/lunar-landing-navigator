@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatDuration, loadSite, loadValidation, stateAt, type Site, type Validation } from './data'
 import { DEFAULT_YEAR, loadVectors } from './years'
+import { Moon3DHero } from './Moon3DHero'
 import './styles/landing.css'
 
 // Front page, set as a short technical note. Every figure is real data: Fig. 1 is NASA's long-term
@@ -52,7 +53,8 @@ const REFS = [
   { n: 2, text: 'NASA LRO Lunar Orbiter Laser Altimeter, gridded topography LDEM_60S_240M and LDEM_16 (PDS Geosciences Node).', url: 'https://pds-geosciences.wustl.edu/missions/lro/lola.htm' },
   { n: 3, text: 'JPL DE421 planetary ephemeris and NAIF lunar frame kernels, computed with Skyfield.', url: 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/' },
   { n: 4, text: 'JPL Horizons System, used as the independent reference for Sun and Earth directions.', url: 'https://ssd.jpl.nasa.gov/horizons/' },
-  { n: 5, text: 'NASA, Artemis III candidate landing regions (October 2024).', url: 'https://www.nasa.gov/mission/artemis-iii/' },
+  { n: 5, text: 'NASA SVS #14959: Moon 3D Models for Web, AR, and Animation (LRO LROC & LOLA teams, Scientific Visualization Studio).', url: 'https://svs.gsfc.nasa.gov/14959/' },
+  { n: 6, text: 'NASA, Artemis III candidate landing regions (October 2024).', url: 'https://www.nasa.gov/mission/artemis-iii/' },
 ]
 
 export function Landing() {
@@ -60,6 +62,7 @@ export function Landing() {
   const [hour, setHour] = useState(0)
   const [playing, setPlaying] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [validation, setValidation] = useState<Validation | null>(null)
+  const [figMode, setFigMode] = useState<'3d' | '2d'>('3d')
 
   useEffect(() => {
     loadVectors(DEFAULT_YEAR).then(setVec, () => setVec(null))
@@ -110,11 +113,51 @@ export function Landing() {
 
       <section className="l-hero" aria-labelledby="l-title">
         <figure className="l-fig1">
-          <PolarPlate sun={sun} earth={earth} />
+          <div className="l-fig1-head">
+            <span className="l-fig-designation">Fig. 1 · {figMode === '3d' ? '3D Lunar Globe' : 'Polar Map Plate'}</span>
+            <div className="l-fig1-tabs" role="tablist" aria-label="Figure 1 visualization mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={figMode === '3d'}
+                className={`l-fig1-tab ${figMode === '3d' ? 'is-active' : ''}`}
+                onClick={() => setFigMode('3d')}
+              >
+                3D Moon (NASA LRO)
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={figMode === '2d'}
+                className={`l-fig1-tab ${figMode === '2d' ? 'is-active' : ''}`}
+                onClick={() => setFigMode('2d')}
+              >
+                2D Polar Map
+              </button>
+            </div>
+          </div>
+
+          {figMode === '3d' ? (
+            <Moon3DHero vec={vec} hour={hour} sun={sun} earth={earth} />
+          ) : (
+            <PolarPlate sun={sun} earth={earth} />
+          )}
+
           <figcaption>
-            <b>Fig. 1.</b> Long-term sunlight, 85°–90° S, polar stereographic, 0° E at top [1]. Brighter ground is lit more of the
-            time; the black crater floors never see the Sun. Rim markers show where the Sun and Earth stand, seen from the pole, at the
-            hour shown [3].
+            {figMode === '3d' ? (
+              <>
+                <b>Fig. 1.</b> Interactive 3D Moon model rendered from NASA Lunar Reconnaissance Orbiter (LRO) data [SVS #14959] with
+                LOLA laser altimetry elevation topography and LROC color mapping [1][2]. The Moon is dynamically lit in real time by the
+                hourly JPL DE421 solar ephemeris vector [3]. Drag to inspect south-polar ridges; scrub the timeline below to sweep the
+                calculated solar shadow line across candidate Artemis landing zones.
+              </>
+            ) : (
+              <>
+                <b>Fig. 1.</b> Long-term sunlight, 85°–90° S, polar stereographic, 0° E at top [1]. Brighter ground is lit more of the
+                time; the black crater floors never see the Sun. Rim markers show where the Sun and Earth stand, seen from the pole, at the
+                hour shown [3].
+              </>
+            )}
           </figcaption>
         </figure>
 
@@ -135,10 +178,22 @@ export function Landing() {
 
           <table className="l-titleblock" aria-label="About Fig. 1">
             <tbody>
-              <tr><th scope="row">Region</th><td>South polar, 85°–90° S</td></tr>
-              <tr><th scope="row">Terrain</th><td>LOLA, 240 m per pixel [2]</td></tr>
-              <tr><th scope="row">Ephemeris</th><td>JPL DE421, hourly [3]</td></tr>
-              <tr><th scope="row">Hour shown</th><td>{vec ? `${fmtDate(DEFAULT_YEAR, h)} ${DEFAULT_YEAR} UTC` : 'Loading ephemeris'}</td></tr>
+              <tr>
+                <th scope="row">Source</th>
+                <td>{figMode === '3d' ? 'NASA LRO SVS #14959 (LROC / LOLA)' : 'NASA PGDA Polar Illumination [1]'}</td>
+              </tr>
+              <tr>
+                <th scope="row">Terrain</th>
+                <td>{figMode === '3d' ? 'LOLA LDEM relief normals (1× / 2.5×)' : 'LOLA LDEM, 240 m per pixel [2]'}</td>
+              </tr>
+              <tr>
+                <th scope="row">Ephemeris</th>
+                <td>JPL DE421, hourly Sun &amp; Earth vectors [3]</td>
+              </tr>
+              <tr>
+                <th scope="row">Hour shown</th>
+                <td>{vec ? `${fmtDate(DEFAULT_YEAR, h)} ${DEFAULT_YEAR} UTC` : 'Loading ephemeris'}</td>
+              </tr>
             </tbody>
           </table>
         </div>
