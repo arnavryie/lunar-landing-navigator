@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, getSiteScienceStats, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
   loadValidation, stateAt,
@@ -72,6 +72,19 @@ export default function App() {
   const [ellipse, setEllipse] = useState<EllipseOverlay | null>(null)
   // The ellipse overlay belongs to the site it was drawn for (it stays when switching between Map and 3D).
   const ell = ellipse && site && ellipse.focus.lat === site.lat && ellipse.focus.lon === site.lon ? ellipse : null
+
+  // Artemis III candidate matching site
+  const artemisMatch = useMemo(() => {
+    if (!site) return null
+    return (
+      ARTEMIS_3_SITES.find((a) => {
+        if (site.id === `artemis-${a.id}`) return true
+        if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
+        const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
+        return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
+      }) ?? null
+    )
+  }, [site])
   const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(
@@ -260,40 +273,40 @@ export default function App() {
           <span aria-hidden="true">✓</span> Validated against JPL Horizons{validation ? `, max error ${validation.horizons.worst_deg.toFixed(5)}°` : ''} • See proofs →
         </button>
         {view !== 'compare' && (
-        <label className="site-pick">
-          <span>Site</span>
-          <select
-            value={siteId}
-            onChange={(e) => {
-              const val = e.target.value
-              if (val.startsWith('artemis-')) {
-                const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
-                if (a) pickArtemisSite(a)
-              } else {
-                setSiteId(val)
-              }
-            }}
-          >
-            <optgroup label="Artemis III Candidate Landing Sites">
-              {ARTEMIS_3_SITES.map((a) => (
-                <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
-                  {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})
-                </option>
-              ))}
-            </optgroup>
-            {[...new Set(sites.map((s) => s.group))].map((g) => (
-              <optgroup key={g} label={g}>
-                {sites
-                  .filter((s) => s.group === g)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
+          <label className="site-pick">
+            <span>Site</span>
+            <select
+              value={siteId}
+              onChange={(e) => {
+                const val = e.target.value
+                if (val.startsWith('artemis-')) {
+                  const a = ARTEMIS_3_SITES.find((x) => `artemis-${x.id}` === val)
+                  if (a) pickArtemisSite(a)
+                } else {
+                  setSiteId(val)
+                }
+              }}
+            >
+              <optgroup label="Artemis III Candidate Landing Sites">
+                {ARTEMIS_3_SITES.map((a) => (
+                  <option key={`artemis-${a.id}`} value={`artemis-${a.id}`}>
+                    {a.name} ({a.lat}° S, {Math.abs(a.lon)}° {a.lon < 0 ? 'W' : 'E'})
+                  </option>
+                ))}
               </optgroup>
-            ))}
-          </select>
-        </label>
+              {[...new Set(sites.map((s) => s.group))].map((g) => (
+                <optgroup key={g} label={g}>
+                  {sites
+                    .filter((s) => s.group === g)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
         )}
       </header>
 
@@ -439,51 +452,42 @@ export default function App() {
 
       {site && view === 'site' && (
         <>
-          {(() => {
-            const artemisMatch = ARTEMIS_3_SITES.find((a) => {
-              if (site.id === `artemis-${a.id}`) return true
-              if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
-              const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
-              return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
-            })
-            if (!artemisMatch) return null
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'rgba(56, 189, 248, 0.1)',
-                  border: '1px solid rgba(56, 189, 248, 0.4)',
-                  borderRadius: 'var(--radius-s)',
-                  padding: '8px 14px',
-                  marginBottom: '12px',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                }}
-              >
-                <div style={{ fontSize: '0.84rem', color: '#e2e8f0' }}>
-                  <strong style={{ color: '#38bdf8' }}>NASA Artemis III Candidate Region Active:</strong> {artemisMatch.name} ({Math.abs(artemisMatch.lat).toFixed(2)}° S, {Math.abs(artemisMatch.lon).toFixed(1)}° {artemisMatch.lon < 0 ? 'W' : 'E'}) · {artemisMatch.resources.water_ice_potential} Water Ice · {artemisMatch.minerals.crust_type}
-                </div>
-                <button
-                  type="button"
-                  style={{
-                    fontSize: '0.74rem',
-                    padding: '3px 9px',
-                    background: '#0284c7',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 'var(--radius-s)',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                  onClick={() => setView('3d')}
-                >
-                  View Minerals &amp; Resources in 3D Tab →
-                </button>
+          {artemisMatch && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                borderRadius: 'var(--radius-s)',
+                padding: '8px 14px',
+                marginBottom: '12px',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ fontSize: '0.84rem', color: '#e2e8f0' }}>
+                <strong style={{ color: '#38bdf8' }}>NASA Artemis III Candidate Region Active:</strong> {artemisMatch.name} ({Math.abs(artemisMatch.lat).toFixed(2)}° S, {Math.abs(artemisMatch.lon).toFixed(1)}° {artemisMatch.lon < 0 ? 'W' : 'E'}) · {artemisMatch.resources.water_ice_potential} Water Ice · {artemisMatch.minerals.crust_type}
               </div>
-            )
-          })()}
+              <button
+                type="button"
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '3px 9px',
+                  background: '#0284c7',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-s)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+                onClick={() => setView('3d')}
+              >
+                View Minerals &amp; Resources in 3D Tab →
+              </button>
+            </div>
+          )}
           <main className="layout">
             <section className="dial-wrap" aria-label="Horizon dial">
               <HorizonDial site={site} i={i} />
@@ -515,78 +519,69 @@ export default function App() {
             </section>
           </main>
 
-                    {/* Artemis III Candidate Region Mineral & Resource Panel */}
-          {(() => {
-            const artemisMatch = ARTEMIS_3_SITES.find((a) => {
-              if (site.id === `artemis-${a.id}`) return true
-              if (site.name.toLowerCase().includes(a.name.toLowerCase())) return true
-              const dLon = Math.abs((((a.lon - site.lon) % 360) + 540) % 360 - 180)
-              return Math.hypot(a.lat - site.lat, dLon * Math.cos(((a.lat + site.lat) * 0.5 * Math.PI) / 180)) < 0.5
-            })
-            if (!artemisMatch) return null
-            return (
-              <section className="panel" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', marginTop: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1rem' }}>
-                      Artemis III Candidate Region: On-Site Minerals &amp; Resources
-                    </h3>
-                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
-                      {artemisMatch.resources.water_ice_potential} Water Ice Potential
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    style={{
-                      fontSize: '0.74rem',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-s)',
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      color: '#38bdf8',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                    }}
-                    onClick={() => setView('3d')}
-                  >
-                    View in 3D Tab (Terrain &amp; Resources Matrix) →
-                  </button>
+          {/* Artemis III Candidate Region Mineral & Resource Panel */}
+          {artemisMatch && (
+            <section className="panel" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', marginTop: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1rem' }}>
+                    Artemis III Candidate Region: On-Site Minerals &amp; Resources
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid currentColor' }}>
+                    {artemisMatch.resources.water_ice_potential} Water Ice Potential
+                  </span>
                 </div>
-                <p style={{ margin: '8px 0', fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5 }}>
-                  {artemisMatch.geology}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', marginTop: '10px' }}>
-                  <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
-                    <strong style={{ color: '#e2e8f0', fontSize: '0.82rem' }}>Mineral Composition:</strong>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '6px 0' }}>
-                      {artemisMatch.minerals.primary.map((m) => (
-                        <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '3px', fontSize: '0.74rem' }}>
-                          {m}
-                        </span>
-                      ))}
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--muted)' }}>{artemisMatch.minerals.details}</p>
+                <button
+                  type="button"
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-s)',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38bdf8',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                  onClick={() => setView('3d')}
+                >
+                  View in 3D Tab (Terrain &amp; Resources Matrix) →
+                </button>
+              </div>
+              <p style={{ margin: '8px 0', fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                {artemisMatch.geology}
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', marginTop: '10px' }}>
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
+                  <strong style={{ color: '#e2e8f0', fontSize: '0.82rem' }}>Mineral Composition:</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '6px 0' }}>
+                    {artemisMatch.minerals.primary.map((m) => (
+                      <span key={m} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '3px', fontSize: '0.74rem' }}>
+                        {m}
+                      </span>
+                    ))}
                   </div>
-
-                  <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
-                    <strong style={{ color: '#38bdf8', fontSize: '0.82rem' }}>Water Ice &amp; Cryogenic Volatiles:</strong>
-                    <p style={{ margin: '6px 0', fontSize: '0.78rem', color: '#cbd5e1' }}>{artemisMatch.resources.water_ice_details}</p>
-                    <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--muted)' }}>
-                      Depth: <strong>{artemisMatch.resources.depth_estimate}</strong> · Volatiles: {artemisMatch.resources.volatiles.join(', ')}
-                    </p>
-                  </div>
-
-                  <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
-                    <strong style={{ color: '#f59e0b', fontSize: '0.82rem' }}>Lander In-Situ Resource Utilization (ISRU):</strong>
-                    <p style={{ margin: '6px 0', fontSize: '0.78rem', color: '#cbd5e1' }}>{artemisMatch.resources.isru_applications}</p>
-                    <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--muted)' }}>
-                      Extractable Elements: {artemisMatch.resources.isru_elements.join(' · ')}
-                    </p>
-                  </div>
+                  <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--muted)' }}>{artemisMatch.minerals.details}</p>
                 </div>
-              </section>
-            )
-          })()}
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
+                  <strong style={{ color: '#38bdf8', fontSize: '0.82rem' }}>Water Ice &amp; Cryogenic Volatiles:</strong>
+                  <p style={{ margin: '6px 0', fontSize: '0.78rem', color: '#cbd5e1' }}>{artemisMatch.resources.water_ice_details}</p>
+                  <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--muted)' }}>
+                    Depth: <strong>{artemisMatch.resources.depth_estimate}</strong> · Volatiles: {artemisMatch.resources.volatiles.join(', ')}
+                  </p>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--rule)' }}>
+                  <strong style={{ color: '#f59e0b', fontSize: '0.82rem' }}>Lander In-Situ Resource Utilization (ISRU):</strong>
+                  <p style={{ margin: '6px 0', fontSize: '0.78rem', color: '#cbd5e1' }}>{artemisMatch.resources.isru_applications}</p>
+                  <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--muted)' }}>
+                    Extractable Elements: {artemisMatch.resources.isru_elements.join(' · ')}
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="panel" aria-label="Landing date planner">
             <Planner
