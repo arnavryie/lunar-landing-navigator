@@ -297,7 +297,8 @@ export interface EngineCheck {
 }
 export const loadEngineCheck = () => getJson<EngineCheck>('engine_check.json')
 
-export const inAnalysisYear = (s: Site) => s.start_utc.startsWith('2027-01-01') && s.samples === 8760
+/** A whole calendar year of data (any year, see years.ts), as opposed to a mission replay's real-date window. */
+export const inAnalysisYear = (s: Site) => !s.replay
 
 // --- NASA south-pole candidate landing regions (pipeline/artemis_regions.py) ---
 export interface Region {
@@ -506,3 +507,24 @@ export function getSiteScienceStats(site: { id?: string; lat: number; lon: numbe
   }
 }
 
+
+// --- Solar array output: the power index turned into watts for a given array ---
+// The power index (pipeline/timeline.py power_index) is the visible Sun-disc fraction x cos(Sun elevation): the share
+// of full sunlight falling on a vertical panel turned to face the Sun. Watts = index x solar constant x area x efficiency.
+// ponytail: fixed 1 AU sunlight (the Sun-Moon distance moves it about +-3.4% over a year), no temperature,
+// dust or lander self-shadowing; the Lander Systems tab has the detailed panel model.
+export const SOLAR_CONSTANT_W_M2 = 1361 // total solar irradiance at 1 AU (Kopp & Lean 2011, GRL 38, L01706)
+export interface SolarArray {
+  areaM2: number
+  effPct: number
+}
+export const DEFAULT_ARRAY: SolarArray = { areaM2: 1, effPct: 30 } // example values, editable in the survival panel
+export const peakWatts = (a: SolarArray) => SOLAR_CONSTANT_W_M2 * a.areaM2 * (a.effPct / 100)
+/** Energy (Wh) the array collects over hours [start, start + hours) (1 h steps). */
+export function arrayEnergyWh(site: Site, start: number, hours: number, a: SolarArray): number {
+  const p = site.sun.power
+  if (!p) return 0
+  let sum = 0
+  for (let j = Math.max(0, start); j < Math.min(start + hours, p.length); j++) sum += p[j]
+  return sum * peakWatts(a) * site.step_h
+}

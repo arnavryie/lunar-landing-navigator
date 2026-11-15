@@ -11,7 +11,26 @@
   "file": "vectors_2027.f32",
   "hours": 8760,
   "start_utc": "2027-01-01T00:00:00Z",
-  "source": "JPL DE421 + MOON_ME_DE421 via Skyfield, apparent, from the Moon's centre"
+  "source": "JPL DE421 + MOON_ME_DE421 via Skyfield, apparent, from the Moon's centre",
+  "years": [
+   2024,
+   2025,
+   2026,
+   2027,
+   2028,
+   2029,
+   2030,
+   2031,
+   2032,
+   2033,
+   2034,
+   2035,
+   2036,
+   2037,
+   2038,
+   2039,
+   2040
+  ]
  },
  "layers": {
   "n": 1266,

@@ -55,7 +55,7 @@ export function Sources({ v }: { v: Validation | null }) {
             <li>Terrain at 240 m per pixel (1.9 km for non-polar sites), so nearby boulders and small craters are smoothed out. This tends to overestimate light slightly on sharp peaks.</li>
             <li>Hourly time steps, so times are to the nearest hour.</li>
             <li>Panels and antenna 2 m above the ground; the horizon is treated as straight across the Sun's and Earth's discs.</li>
-            <li>The power index is simplified: a vertical panel that turns to face the Sun, no efficiency or temperature effects.</li>
+            <li>Solar array output = power index × 1361 W/m² × array area × efficiency. The power index is the visible part of the Sun's disc × cos(Sun elevation): a vertical panel turned to face the Sun. Not included: the Sun's distance changing over the year (about ±3.4%), temperature, dust and the lander's own shadow. Lander Systems has the detailed panel model.</li>
           </ul>
         </div>
         <div>

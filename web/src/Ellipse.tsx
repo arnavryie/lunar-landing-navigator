@@ -6,6 +6,7 @@ import {
 import { ellipseOutline, ellipseSamples, type EllipseSpec, type LatLon } from './ellipseGeometry'
 import type { Dot } from './MapView'
 import { Field } from './Planner'
+import { yearOf } from './years'
 import { VIABILITY_LABEL, formatDuration, formatUtc, inAnalysisYear, timeAt, type Site, type Thresholds, type Viability, type WindowStats } from './data'
 
 // F1 landing-ellipse dispersion: the lander comes down somewhere inside the ellipse, not exactly on the target.
@@ -40,7 +41,8 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
 
   const e: EllipseSpec = circle ? { lengthKm: spec.lengthKm, widthKm: spec.lengthKm, headingDeg: 0 } : spec
   const centre = { lat: site.lat, lon: site.lon }
-  const key = `${site.lat},${site.lon}|${e.lengthKm},${e.widthKm},${e.headingDeg}`
+  const year = yearOf(site)
+  const key = `${year}|${site.lat},${site.lon}|${e.lengthKm},${e.widthKm},${e.headingDeg}`
   const usable = site.lat <= -85 && inAnalysisYear(site)
   const current = run?.key === key ? run : null
   const hours = th.missionDays * 24
@@ -53,7 +55,7 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
     await computeSamples(points, () => id === runId.current, (j, p) => {
       out[j] = p
       setRun({ key, points: out.slice(), total: points.length, spacingM, weights, cells })
-    })
+    }, year)
   }
 
   // Opened from Find sites ("See its landing area on the Map"), or left mid-run: analyse right away.
@@ -112,7 +114,7 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
         <p className="muted">
           {site.lat > -85
             ? 'Available for points from 85° S to the pole (the range the browser engine covers). Click a point on the map.'
-            : 'Mission replays are outside the 2027 analysis year; pick a 2027 site or click the map.'}
+            : 'Mission replays use their real dates; pick another site or click the map.'}
         </p>
       </div>
     )
@@ -127,7 +129,7 @@ export function Ellipse({ site, th, i, onOverlay }: Props) {
     why.sun && `${why.sun} too little sunlight`,
     why.dark && `${why.dark} night too long`,
     why.earth && `${why.earth} Earth hidden too often`,
-    why.data && `${why.data} past the 2027 data`,
+    why.data && `${why.data} past the end of ${year}`,
   ].filter(Boolean)
   const pct = (x: number) => `${(100 * x).toFixed(0)}%`
   const target = judged.find((p) => p.j === 0)

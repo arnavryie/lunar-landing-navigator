@@ -7,6 +7,7 @@ import type {
   SimulationStepTelemetry,
 } from '../types.ts'
 import { calculateSolarOutputWatts } from './solarModel.ts'
+import { yearStartMs } from '../types.ts'
 
 export interface CandidateSimulationInput {
   id: string
@@ -54,7 +55,7 @@ export function simulateMissionLedger(
   const travelDurationH = Math.max(0.01, route.estimatedTravelTimeH)
   const totalHoursAvailable = Math.floor(vectors.length / 6)
   const totalSimHours = Math.min(horizonHours, totalHoursAvailable - startHourIndex - 1)
-  const startUtcMs = Date.parse('2027-01-01T00:00:00Z') + startHourIndex * 3600000
+  const startUtcMs = yearStartMs(config.mission) + startHourIndex * 3600000
 
   // Power draws (Watts)
   const hotelStandbyWatts =

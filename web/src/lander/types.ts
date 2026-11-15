@@ -33,7 +33,8 @@ export interface RoverMobilityConfig {
 export interface MissionLocationConfig {
   startLat: number             // Rover starting latitude (deg S), e.g. -89.475
   startLon: number             // Rover starting east longitude (deg), e.g. 222.56
-  startHourIndex: number       // Simulation start hour index in 2027 (0 - 8759)
+  startHourIndex: number       // Simulation start hour index into the calendar year below (0 - 8759/8783)
+  yearStartUtc?: string        // Any landing year: 1 Jan 00:00 UTC of that year (default 2027)
   searchRadiusKm: number       // Radius to discover candidate recharge sites (km), e.g. 3.0
   planningHorizonH: number     // Forward simulation planning window (hours), e.g. 96
 }
@@ -261,3 +262,6 @@ export const DEFAULT_ROVER_CONFIG: RoverMissionConfig = {
     planningHorizonH: 96,
   },
 }
+
+/** Any landing year: epoch of startHourIndex. */
+export const yearStartMs = (m: Pick<MissionLocationConfig, 'yearStartUtc'>) => Date.parse(m.yearStartUtc ?? '2027-01-01T00:00:00Z')

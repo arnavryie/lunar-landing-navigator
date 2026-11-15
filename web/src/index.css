@@ -442,3 +442,12 @@ button.link { background: none; border: none; padding: 0; min-width: 0; color: v
 .land-badge.lb-ok { color: #3fb27f; }
 .land-badge.lb-caution { color: #e6c15a; }
 .land-badge.lb-fail { color: #e8776f; }
+
+/* Typed coordinates (CoordInput.tsx) */
+.coord-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); }
+.coord-pick label { display: flex; gap: 6px; align-items: center; }
+.coord-pick input {
+  width: 6.5em; font: inherit; font-variant-numeric: tabular-nums; color: var(--text); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: var(--radius-s); padding: 6px 8px;
+}
+.coord-msg { flex-basis: 100%; margin: 0; font-size: 0.85rem; color: #f08a7a; max-width: 46ch; }

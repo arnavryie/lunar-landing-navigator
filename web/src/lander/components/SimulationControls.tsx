@@ -12,6 +12,7 @@ interface SimulationControlsProps {
   onSpeedChange: (speed: number) => void
   onStepChange: (hourOffset: number) => void
   onReset: () => void
+  yearStartUtc?: string // Any landing year
 }
 
 export function SimulationControls({
@@ -25,13 +26,14 @@ export function SimulationControls({
   onSpeedChange,
   onStepChange,
   onReset,
+  yearStartUtc = '2027-01-01T00:00:00Z',
 }: SimulationControlsProps) {
   const currentOffset = Math.max(0, currentHourIndex - startHourIndex)
   const maxOffset = Math.max(1, totalSimulationHours)
 
   const utcDateStr = currentStepTelemetry
     ? currentStepTelemetry.utcDateStr.replace('T', ' ').replace(':00.000Z', ' UTC')
-    : new Date(Date.parse('2027-01-01T00:00:00Z') + currentHourIndex * 3600000)
+    : new Date(Date.parse(yearStartUtc) + currentHourIndex * 3600000)
         .toISOString()
         .replace('T', ' ')
         .replace(':00.000Z', ' UTC')

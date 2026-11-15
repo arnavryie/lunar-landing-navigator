@@ -129,6 +129,7 @@ export function Globe({
   onOpenSite,
   onOpenArtemis,
   onPickPoint,
+  vectors: yearVectors,
 }: {
   site: Site | null
   sites: SiteSummary[]
@@ -139,6 +140,7 @@ export function Globe({
   onOpenSite?: () => void
   onOpenArtemis?: () => void
   onPickPoint?: (lat: number, lon: number) => void
+  vectors?: Float32Array | null // Any landing year: that year's Sun/Earth vectors (else the 2027 file)
 }) {
   const [selectedArtemis, setSelectedArtemis] = useState<ArtemisSiteData | null>(() => {
     if (site) {
@@ -550,7 +552,7 @@ export function Globe({
   useEffect(() => {
     const w = world.current
     if (!w || !ready) return
-    const v = w.vectors
+    const v = yearVectors ?? w.vectors
     const k = 6 * Math.min(i, v.length / 6 - 1)
     const sunDir = meToScene(v[k], v[k + 1], v[k + 2]).normalize()
     const earthDir = meToScene(v[k + 3], v[k + 4], v[k + 5]).normalize()
@@ -784,12 +786,12 @@ export function Globe({
     }
 
     w.draw()
-  }, [i, site, sites, relief, ready, selectedArtemis, labelMode])
+  }, [i, site, sites, relief, ready, selectedArtemis, labelMode, yearVectors])
 
   const fly = (k: 'earth' | 'sun' | 'south' | 'site' | 'system') => {
     const w = world.current
     if (!w) return
-    const v = w.vectors
+    const v = yearVectors ?? w.vectors
     if (k === 'earth') {
       startFlight(meToScene(v[o + 3], v[o + 4], v[o + 5]).normalize().multiplyScalar(3.2), new THREE.Vector3(0, 0, 0), 750)
     } else if (k === 'sun') {
@@ -817,8 +819,9 @@ export function Globe({
     flyArtemis(ARTEMIS_3_SITES[nextIdx])
   }
 
-  const subSun = vectors && ready ? subPoint(vectors, o) : null
-  const subEarth = vectors && ready ? subPoint(vectors, o + 3) : null
+  const shown = yearVectors ?? vectors
+  const subSun = shown && ready ? subPoint(shown, o) : null
+  const subEarth = shown && ready ? subPoint(shown, o + 3) : null
   const st = site ? stateAt(site, i) : null
 
   return (

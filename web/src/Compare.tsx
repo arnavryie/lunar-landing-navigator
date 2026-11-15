@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
-  VIABILITY_LABEL, formatDeg, formatDuration, getSiteScienceStats, hoursToChange, loadSite, timeAt, viability, windowStats,
+  DEFAULT_ARRAY, VIABILITY_LABEL, arrayEnergyWh, formatDeg, peakWatts, type SolarArray, formatDuration, getSiteScienceStats, hoursToChange, loadSite, timeAt, viability, windowStats,
   type Site, type SiteSummary, type Thresholds, type Viability, type WindowStats,
 } from './data'
 import './styles/analysis.css'
+import { DEFAULT_YEAR, loadYears, siteForYear } from './years'
 
 export interface Scenario {
   siteId: string
   t: number // landing time, hour index into the data year
+  y?: number // Any landing year: the scenario's calendar year (default: the year picked at the top)
 }
 
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -19,6 +21,8 @@ interface Eval {
   site: Site
   w: WindowStats | null
   v: Viability
+  kwh: number // solar array energy over the mission window
+  meanW: number // average array output over the whole period
 }
 
 interface Row {
@@ -37,6 +41,7 @@ const ROWS: Row[] = [
   { group: 'Mission', label: 'Sunlit', get: (e) => e.w?.sunPct ?? null, fmt: pct, best: 'high' },
   { group: 'Mission', label: 'Longest darkness', get: (e) => e.w?.longestDarkH ?? null, fmt: formatDuration, best: 'low' },
   { group: 'Mission', label: 'Earth in view', get: (e) => e.w?.earthPct ?? null, fmt: pct, best: 'high' },
+  { group: 'Mission', label: 'Solar energy', get: (e) => (e.w ? e.kwh : null), fmt: (n) => `${n.toFixed(1)} kWh`, best: 'high' },
   { group: 'Mission', label: 'Longest without Earth', get: (e) => e.w?.longestNoEarthH ?? null, fmt: formatDuration, best: 'low' },
   { group: 'At landing', label: 'Sun elevation', get: (e) => e.site.sun.el[e.sc.t], fmt: formatDeg },
   {
@@ -57,7 +62,7 @@ const ROWS: Row[] = [
   { group: 'Whole year', label: 'Sunlit', get: (e) => e.site.metrics.sunlit_pct, fmt: pct, best: 'high' },
   { group: 'Whole year', label: 'Earth in view', get: (e) => e.site.metrics.earth_visible_pct, fmt: pct, best: 'high' },
   { group: 'Whole year', label: 'Longest darkness', get: (e) => e.site.metrics.longest_dark_h, fmt: formatDuration, best: 'low' },
-  { group: 'Whole year', label: 'Mean power index', get: (e) => e.site.metrics.mean_power_index_pct, fmt: pct, best: 'high' },
+  { group: 'Whole year', label: 'Mean array output', get: (e) => e.meanW, fmt: (n) => `${n.toFixed(0)} W`, best: 'high' },
 ]
 
 const utcInput = (d: Date) => d.toISOString().slice(0, 13) + ':00'
@@ -68,41 +73,59 @@ export function Compare(p: {
   scenarios: Scenario[]
   setScenarios: (s: Scenario[]) => void
   th: Thresholds
+  year?: number
+  arr?: SolarArray
 }) {
+  const arr = p.arr ?? DEFAULT_ARRAY
   const { sites, scenarios, setScenarios, th } = p
+  const yr = (sc: Scenario) => sc.y ?? p.year ?? DEFAULT_YEAR
+  const keyOf = (sc: Scenario) => `${sc.siteId}@${yr(sc)}`
+  const [years, setYears] = useState<number[]>([DEFAULT_YEAR])
+  useEffect(() => {
+    loadYears().then(setYears, () => {})
+  }, [])
   const [loaded, setLoaded] = useState<Record<string, Site>>({})
   const [hover, setHover] = useState<number | null>(null)
   const hours = th.missionDays * 24
 
   useEffect(() => {
     for (const s of scenarios)
-      if (!loaded[s.siteId]) loadSite(s.siteId).then((site) => setLoaded((m) => ({ ...m, [site.id]: site })))
+      if (!loaded[keyOf(s)])
+        loadSite(s.siteId)
+          .then((site) => siteForYear(site, yr(s)))
+          .then((site) => setLoaded((m) => ({ ...m, [keyOf(s)]: site })))
   }, [scenarios, loaded])
 
   const evals: (Eval | null)[] = scenarios.map((sc) => {
-    const site = loaded[sc.siteId]
+    const site = loaded[keyOf(sc)]
     if (!site) return null
     const w = windowStats(site, sc.t, hours)
-    return { sc, site, w, v: viability(w, th) }
+    return { sc, site, w, v: viability(w, th), kwh: arrayEnergyWh(site, sc.t, hours, arr) / 1000, meanW: (site.metrics.mean_power_index_pct / 100) * peakWatts(arr) }
   })
   const ready = evals.every(Boolean) ? (evals as Eval[]) : null
 
   const update = (k: number, patch: Partial<Scenario>) => setScenarios(scenarios.map((s, j) => (j === k ? { ...s, ...patch } : s)))
   const last = scenarios[scenarios.length - 1]
   const unusedSite = sites.find((s) => !scenarios.some((x) => x.siteId === s.id))?.id ?? last.siteId
-  const samples = ready?.[0]?.site.samples ?? 8760
+  const samples = ready?.at(-1)?.site.samples ?? 8760 // the last scenario's data length
 
   return (
     <div className="chart compare">
       <div className="chart-head">
         <h2>Compare scenarios</h2>
         <div className="compare-actions">
-          <button disabled={scenarios.length >= MAX} onClick={() => setScenarios([...scenarios, { siteId: unusedSite, t: last.t }])}>
+          <button disabled={scenarios.length >= MAX} onClick={() => setScenarios([...scenarios, { siteId: unusedSite, t: last.t, y: yr(last) }])}>
             Add another site, same time
           </button>
           <button
             disabled={scenarios.length >= MAX}
-            onClick={() => setScenarios([...scenarios, { siteId: last.siteId, t: Math.min(last.t + 14 * 24, samples - 1) }])}
+            onClick={() => {
+              // Past the end of the year: roll into the next year when it is available.
+              const t = last.t + 14 * 24
+              const y = yr(last)
+              const next = t >= samples && years.includes(y + 1) && !ready?.at(-1)?.site.replay
+              setScenarios([...scenarios, next ? { siteId: last.siteId, t: t - samples, y: y + 1 } : { siteId: last.siteId, t: Math.min(t, samples - 1), y }])
+            }}
           >
             Add same site, 14 days later
           </button>
@@ -116,7 +139,7 @@ export function Compare(p: {
       </div>
       <p className="chart-note">
         Mission window: {th.missionDays} days from each landing time. Thresholds come from the landing date planner (sunlit at least{' '}
-        {th.minSunPct}%, darkness at most {th.maxDarkH} h, Earth in view at least {th.minEarthPct}%). Best value per row is marked.
+        {th.minSunPct}%, darkness at most {th.maxDarkH} h, Earth in view at least {th.minEarthPct}%). Solar energy is for a {arr.areaM2} m², {arr.effPct}% array (vertical, turned to the Sun), set in Lander survival. Best value per row is marked.
       </p>
 
       <div className="cmp-grid" style={{ gridTemplateColumns: `200px repeat(${scenarios.length}, minmax(0, 1fr))` }}>
@@ -144,11 +167,17 @@ export function Compare(p: {
                 step={3600}
                 aria-label={`Scenario ${LETTERS[k]} landing time, UTC`}
                 value={utcInput(timeAt(ready[k].site, sc.t))}
-                min={utcInput(timeAt(ready[k].site, 0))}
-                max={utcInput(timeAt(ready[k].site, samples - 1))}
+                min={ready[k].site.replay ? utcInput(timeAt(ready[k].site, 0)) : `${years[0]}-01-01T00:00`}
+                max={ready[k].site.replay ? utcInput(timeAt(ready[k].site, ready[k].site.samples - 1)) : `${years.at(-1)}-12-31T23:00`}
                 onChange={(e) => {
-                  const h = Math.round((Date.parse(e.target.value + ':00Z') - Date.parse(ready[k].site.start_utc)) / 3_600_000)
-                  if (Number.isFinite(h)) update(k, { t: Math.min(Math.max(h, 0), samples - 1) })
+                  const ms = Date.parse(e.target.value + ':00Z')
+                  if (!Number.isFinite(ms)) return
+                  const site = ready[k].site
+                  // Any landing year: a date in another year switches this scenario to that year.
+                  const y = new Date(ms).getUTCFullYear()
+                  if (!site.replay && y !== yr(sc) && years.includes(y)) return update(k, { y, t: Math.round((ms - Date.UTC(y, 0, 1)) / 3_600_000) })
+                  const h = Math.round((ms - Date.parse(site.start_utc)) / 3_600_000)
+                  update(k, { t: Math.min(Math.max(h, 0), site.samples - 1) })
                 }}
               />
             )}

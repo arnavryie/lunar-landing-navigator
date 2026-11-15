@@ -1,4 +1,5 @@
 import type { RechargeCandidate, RoverMissionConfig } from '../types.ts'
+import { yearStartMs } from '../types.ts'
 
 interface RechargeRecommendationProps {
   candidate: RechargeCandidate | null
@@ -41,14 +42,14 @@ export function RechargeRecommendation({
   const isPositiveBenefit = sim.netMissionEnergyBenefitKwh > 0
 
   const departureDateStr = new Date(
-    Date.parse('2027-01-01T00:00:00Z') + config.mission.startHourIndex * 3600000,
+    yearStartMs(config.mission) + config.mission.startHourIndex * 3600000,
   )
     .toISOString()
     .replace('T', ' ')
     .replace(':00.000Z', ' UTC')
 
   const arrivalDateStr = new Date(
-    Date.parse('2027-01-01T00:00:00Z') + (config.mission.startHourIndex + Math.ceil(sim.transitDurationH)) * 3600000,
+    yearStartMs(config.mission) + (config.mission.startHourIndex + Math.ceil(sim.transitDurationH)) * 3600000,
   )
     .toISOString()
     .replace('T', ' ')

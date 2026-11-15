@@ -19,10 +19,12 @@ import { MethodologySection } from './lander/components/MethodologySection.tsx'
 interface LanderSystemsProps {
   site?: Site | null
   i?: number
+  year?: number // Any landing year
+  vectors?: Float32Array | null // that year's Sun/Earth vectors
 }
 
-export function LanderSystems({ site, i }: LanderSystemsProps) {
-  const [config, setConfig] = useState<RoverMissionConfig>(() => {
+export function LanderSystems({ site, i, year = 2027, vectors }: LanderSystemsProps) {
+  const [baseConfig, setConfig] = useState<RoverMissionConfig>(() => {
     // If a site is active from App, use its coordinates
     if (site && site.lat <= -84) {
       return {
@@ -38,7 +40,11 @@ export function LanderSystems({ site, i }: LanderSystemsProps) {
     return DEFAULT_ROVER_CONFIG
   })
 
-  const [dataset, setDataset] = useState<PlannerDataset | null>(null)
+  const [baseDataset, setDataset] = useState<PlannerDataset | null>(null)
+  // Any landing year: the simulation runs on the chosen year's vectors and dates.
+  const yearStartUtc = `${year}-01-01T00:00:00Z`
+  const config = useMemo(() => ({ ...baseConfig, mission: { ...baseConfig.mission, yearStartUtc } }), [baseConfig, yearStartUtc])
+  const dataset = useMemo(() => (baseDataset && vectors ? { ...baseDataset, vectors } : baseDataset), [baseDataset, vectors])
   const [dataError, setDataError] = useState<string>('')
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
 
@@ -272,6 +278,7 @@ export function LanderSystems({ site, i }: LanderSystemsProps) {
           <SimulationControls
             currentHourIndex={currentAbsoluteHourIndex}
             startHourIndex={config.mission.startHourIndex}
+            yearStartUtc={yearStartUtc}
             totalSimulationHours={simulationResult?.totalDurationH ?? 96}
             isPlaying={isPlaying}
             playbackSpeed={playbackSpeed}

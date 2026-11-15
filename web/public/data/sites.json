@@ -187,6 +187,57 @@
   }
  },
  {
+  "id": "griffin1-nobile",
+  "group": "Upcoming CLPS targets",
+  "name": "Nobile crater (centre), Griffin Mission One target region",
+  "lat": -85.28,
+  "lon": 53.27,
+  "kind": "feature",
+  "metrics": {
+   "sunlit_pct": 35.62,
+   "mean_sun_disc_pct": 34.51,
+   "mean_power_index_pct": 34.45,
+   "earth_visible_pct": 27.47,
+   "sun_and_earth_pct": 9.38,
+   "longest_dark_h": 507.0,
+   "longest_no_earth_h": 475.0
+  }
+ },
+ {
+  "id": "im3-reiner-gamma",
+  "group": "Upcoming CLPS targets",
+  "name": "Reiner Gamma (centre), IM-3 target",
+  "lat": 7.39,
+  "lon": 301.04,
+  "kind": "feature",
+  "metrics": {
+   "sunlit_pct": 49.87,
+   "mean_sun_disc_pct": 49.71,
+   "mean_power_index_pct": 32.66,
+   "earth_visible_pct": 100.0,
+   "sun_and_earth_pct": 49.87,
+   "longest_dark_h": 355.0,
+   "longest_no_earth_h": 0.0
+  }
+ },
+ {
+  "id": "blue-ghost-1",
+  "group": "Contrast",
+  "name": "Blue Ghost Mission 1 landing site (CLPS, Mare Crisium)",
+  "lat": 18.56,
+  "lon": 61.81,
+  "kind": "landing",
+  "metrics": {
+   "sunlit_pct": 49.05,
+   "mean_sun_disc_pct": 48.89,
+   "mean_power_index_pct": 34.51,
+   "earth_visible_pct": 100.0,
+   "sun_and_earth_pct": 49.05,
+   "longest_dark_h": 356.0,
+   "longest_no_earth_h": 0.0
+  }
+ },
+ {
   "id": "replay-chandrayaan-3",
   "group": "Mission replays",
   "name": "Replay: Chandrayaan-3 Vikram (Aug 2023)",

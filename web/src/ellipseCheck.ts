@@ -1,6 +1,7 @@
 // Landing-ellipse sample points: exact computation in the worker pool and the planner's viability rule.
 // Shared by the Map panel (Ellipse.tsx) and the Find sites check (Finder.tsx).
 import { computeCustomPoint } from './customPoint'
+import { DEFAULT_YEAR, siteForYear } from './years'
 import type { EllipseSpec, LatLon } from './ellipseGeometry'
 import { formatDuration, viability, windowStats, type Thresholds, type Viability } from './data'
 
@@ -21,12 +22,12 @@ export const saved: { spec: EllipseSpec; circle: boolean; maxSlope: number; run:
 }
 
 /** Compute sample points exactly, 8 at a time so a cancelled run (alive() = false) stops queuing work. */
-export async function computeSamples(points: LatLon[], alive: () => boolean, onPoint: (j: number, p: Sample | null) => void) {
+export async function computeSamples(points: LatLon[], alive: () => boolean, onPoint: (j: number, p: Sample | null) => void, year = DEFAULT_YEAR) {
   let next = 0
   const lane = async () => {
     while (next < points.length && alive()) {
       const j = next++
-      const s = await computeCustomPoint(points[j].lat, points[j].lon, false).catch(() => null)
+      const s = await computeCustomPoint(points[j].lat, points[j].lon, false).then((x) => siteForYear(x, year)).catch(() => null)
       if (!alive()) return
       onPoint(j, s && {
         ...points[j],
@@ -63,7 +64,7 @@ export function reasons(p: Sample, r: ReturnType<typeof judge>, th: Thresholds, 
   const out: { k: 'steep' | 'sun' | 'dark' | 'earth' | 'data'; text: string }[] = []
   if (r.steep) out.push({ k: 'steep', text: `too steep (${p.slope.toFixed(1)}° > ${maxSlope}°)` })
   const s = r.stats
-  if (!s) return [...out, { k: 'data' as const, text: 'mission runs past the 2027 data' }]
+  if (!s) return [...out, { k: 'data' as const, text: 'mission runs past the end of the year' }]
   if (s.sunPct < th.minSunPct) out.push({ k: 'sun', text: `sunlit only ${s.sunPct.toFixed(0)}%` })
   if (s.longestDarkH > th.maxDarkH) out.push({ k: 'dark', text: `dark for ${formatDuration(s.longestDarkH)}` })
   if (s.earthPct < th.minEarthPct) out.push({ k: 'earth', text: `Earth in view only ${s.earthPct.toFixed(0)}%` })

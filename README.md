@@ -86,6 +86,8 @@ npm run check:engine
 # Expect:
 # worst direction 3.49e-7 deg, sunlit 0.00 pp, earth 0.00 pp, horizon 0.000 deg -> PASS
 # finder: coarse vs exact worst 0.28 pp over a year (limit 3), windowed tracks match -> PASS
+npm run check:years
+# Expect: ... visible/hidden differs 21 of 245280 hours, metrics 0.050 pp -> PASS, then coords: parser -> PASS
 ```
 
 ### Production Build
@@ -104,7 +106,10 @@ pip install -r requirements.txt
 python ephemeris.py   # verifies ephemeris calculations
 python export_sites.py    # 2027 site data (needs the LOLA files in pipeline/data/lola/)
 python export_replays.py  # mission replays; run after export_sites.py
+python export_vectors.py 2041        # add another landing year (any of 1900-2049); also 2041-2045 for a range
 ```
+
+The app ships Sun/Earth vectors for 2024–2040. Each site's terrain horizon is stored once; the browser recomputes the site for whichever year is picked, with the same engine as a map click (`npm run check:years` checks it reproduces the pipeline's 2027 files).
 
 ---
 
@@ -123,9 +128,11 @@ python export_replays.py  # mission replays; run after export_sites.py
 
 ## 8. Operational Assumptions & Limitations
 
-- **Analysis Period:** Primary forward analysis covers the full calendar year 2027 (8,760 hourly samples). Historical mission replays cover their respective operational epochs.
+- **Analysis Period:** Any calendar year, hourly (2024–2040 shipped; `pipeline/export_vectors.py` adds any year 1900–2049). A mission window that crosses 31 December stops at the year end; pick the next year. Historical mission replays cover their real dates.
 - **Topographic Resolution:** 240 m per pixel polar DEM (1.9 km for equatorial sites). Boulders and features smaller than a pixel aren't seen, so results on sharp crater rims can be off.
 - **Mast Height:** Fixed at 2.0 metres above local terrain for solar arrays and communications antennas.
+- **Solar power:** Watts = power index (visible Sun disc × cos elevation, a vertical panel turned to the Sun) × 1361 W/m² × array area × efficiency, for an array the user enters. Sun–Moon distance (±3.4%), temperature, dust and self-shadowing are not modelled on the Site tab.
+- **Typed and clicked points:** 85–90° S only (the browser terrain map); other places are added through `pipeline/sites.json`.
 - **Disc Calculation:** Solar and terrestrial discs are treated with spherical geometry against terrain silhouettes; any non-zero fraction of the disc above the horizon is registered as illuminated/visible.
 - **Atmosphere:** Airless celestial bodies (no atmospheric refraction or twilight).
 - **Scale:** 3D models and horizon dial elevations are visually scaled for clarity in the low polar sky (explicitly labeled on-screen).

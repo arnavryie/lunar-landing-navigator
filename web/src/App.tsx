@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import {
-  DEFAULT_THRESHOLDS, KIND_LABEL, STATE_LABEL, formatDeg, formatDuration, getSiteScienceStats, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
+  DEFAULT_ARRAY, DEFAULT_THRESHOLDS, KIND_LABEL, peakWatts, type SolarArray, STATE_LABEL, formatDeg, formatDuration, getSiteScienceStats, horizonAt, hoursSinceChange, hoursToChange, inAnalysisYear, loadSite, loadSites,
   loadValidation, stateAt,
   type Site, type SiteSummary, type Thresholds, type Validation as ValidationData,
 } from './data'
@@ -28,6 +28,10 @@ import { ARTEMIS_3_SITES, type ArtemisSiteData } from './data/artemisData'
 import './styles/analysis.css'
 // Lander Systems
 import { LanderSystems } from './LanderSystems'
+// Any landing year
+import { DEFAULT_YEAR, loadVectors, loadYears, siteForYear } from './years'
+// Typed coordinates
+import { CoordInput } from './CoordInput'
 
 // three.js is large: load the 3D view only when it's opened.
 const Terrain3D = lazy(() => import('./Terrain3D').then((m) => ({ default: m.Terrain3D })))
@@ -51,6 +55,12 @@ export default function App() {
   const [sites, setSites] = useState<SiteSummary[]>([])
   const [siteId, setSiteId] = useState('')
   const [site, setSite] = useState<Site | null>(null)
+  // Any landing year: baseSite is the site as loaded or computed; site is it recomputed for the chosen year.
+  const [baseSite, setBaseSite] = useState<Site | null>(null)
+  const [year, setYear] = useState(num('y', DEFAULT_YEAR))
+  const [years, setYears] = useState<number[]>([DEFAULT_YEAR])
+  const [yearVectors, setYearVectors] = useState<Float32Array | null>(null)
+  const [arr, setArr] = useState<SolarArray>(DEFAULT_ARRAY) // solar array for the watts readouts
   const [i, setI] = useState(num('t', 0))
   const [planned, setPlanned] = useState(num('plan', 0))
   const [th, setTh] = useState<Thresholds>({
@@ -79,14 +89,14 @@ export default function App() {
       .split(',')
       .map((x) => x.split('@'))
       .filter(([id, t]) => id && Number.isFinite(Number(t)))
-      .map(([id, t]) => ({ siteId: id, t: Number(t) })),
+      .map(([id, t, y]) => ({ siteId: id, t: Number(t), ...(Number(y) ? { y: Number(y) } : {}) })),
   )
 
   // Entering Compare with nothing set up: current site and time vs the next site at the same time.
   const openCompare = () => {
     if (scenarios.length < 2 && site) {
       const other = sites.find((x) => x.id !== site.id)?.id ?? site.id
-      setScenarios([{ siteId: site.id, t: i }, { siteId: other, t: i }])
+      setScenarios([{ siteId: site.id, t: i, y: year }, { siteId: other, t: i, y: year }])
     }
     setView('compare')
   }
@@ -115,7 +125,7 @@ export default function App() {
             lon: customSite.lon,
           },
         ])
-        setSite(customSite)
+        setBaseSite(customSite)
         setSiteId(`artemis-${a.id}`)
       })
       .catch((e) => setPickError(`Couldn't compute that point: ${e.message}`))
@@ -138,7 +148,7 @@ export default function App() {
       .then((c) => {
         const { id, group, name, kind, metrics } = c
         setSites((prev) => [...prev.filter((x) => x.id !== 'custom'), { id, group, name, kind, metrics, lat: c.lat, lon: c.lon }])
-        setSite(c)
+        setBaseSite(c)
         setSiteId('custom')
       })
       .catch((e) => setPickError(`Couldn't compute that point: ${e.message}`))
@@ -148,8 +158,8 @@ export default function App() {
   const addToCompare = () => {
     if (!site) return
     const other = sites.find((x) => x.id !== site.id)?.id ?? site.id
-    const mine = { siteId: site.id, t: i }
-    setScenarios(scenarios.length < 2 ? [mine, { siteId: other, t: i }] : scenarios.length < 4 ? [...scenarios, mine] : [...scenarios.slice(0, 3), mine])
+    const mine = { siteId: site.id, t: i, y: year }
+    setScenarios(scenarios.length < 2 ? [mine, { siteId: other, t: i, y: year }] : scenarios.length < 4 ? [...scenarios, mine] : [...scenarios.slice(0, 3), mine])
     setView('compare')
   }
 
@@ -193,19 +203,45 @@ export default function App() {
   useEffect(() => {
     if (!siteId) return
     const q = new URLSearchParams({
-      site: siteId, t: String(i), plan: String(planned),
+      site: siteId, y: String(year), t: String(i), plan: String(planned),
       m: String(th.missionDays), sun: String(th.minSunPct), dark: String(th.maxDarkH), earth: String(th.minEarthPct),
     })
     if (view !== 'site') q.set('view', view)
     if (siteId === 'custom' && site?.kind === 'custom') q.set('pin', `${site.lat},${site.lon}`)
-    if (scenarios.length) q.set('cmp', scenarios.map((x) => `${x.siteId}@${x.t}`).join(','))
+    if (scenarios.length) q.set('cmp', scenarios.map((x) => `${x.siteId}@${x.t}${x.y ? `@${x.y}` : ''}`).join(','))
     history.replaceState(null, '', `?${q}`)
-  }, [siteId, i, planned, th, view, scenarios, site])
+  }, [siteId, year, i, planned, th, view, scenarios, site])
 
   useEffect(() => {
     if (!siteId || siteId === 'custom' || siteId.startsWith('artemis-')) return
-    loadSite(siteId).then(setSite).catch((e) => setError(String(e.message ?? e)))
+    loadSite(siteId).then(setBaseSite).catch((e) => setError(String(e.message ?? e)))
   }, [siteId])
+
+  // Any landing year: recompute the site for the chosen year (replays keep their real dates).
+  useEffect(() => {
+    loadYears().then(setYears, () => setYears([DEFAULT_YEAR]))
+  }, [])
+  useEffect(() => {
+    if (!baseSite) return
+    let live = true
+    siteForYear(baseSite, year)
+      .then((s) => {
+        if (!live) return
+        setSite(s)
+        setI((n) => Math.min(n, s.samples - 1))
+      })
+      .catch((e) => setError(String(e.message ?? e)))
+    return () => {
+      live = false
+    }
+  }, [baseSite, year])
+  useEffect(() => {
+    let live = true
+    loadVectors(year).then((v) => live && setYearVectors(v), () => live && setYearVectors(null))
+    return () => {
+      live = false
+    }
+  }, [year])
 
   const clampI = (n: number) => Math.min(Math.max(n, 0), (site?.samples ?? 1) - 1)
 
@@ -295,6 +331,22 @@ export default function App() {
           </select>
         </label>
         )}
+        {/* Any landing year */}
+        {view !== 'compare' && (
+          <label className="site-pick year-pick" title={site?.replay ? 'Mission replays use their real dates' : 'Landing year: every site is recomputed for it'}>
+            <span>Year</span>
+            <select value={site?.replay ? '' : year} disabled={!!site?.replay} onChange={(e) => setYear(Number(e.target.value))}>
+              {site?.replay && <option value="">{new Date(site.start_utc).getUTCFullYear()} (replay)</option>}
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {/* Typed coordinates: same browser computation as a map click */}
+        {view !== 'compare' && <CoordInput onGo={pickPoint} busy={busy} error={pickError} />}
       </header>
 
       {error && <p className="error">{error}</p>}
@@ -305,7 +357,7 @@ export default function App() {
           {/* WS3 */}
           {site && !inAnalysisYear(site) ? (
             <div className="replay-notice-card">
-              <p>The site finder is calibrated for the 2027 analysis year. Historical mission replays are shown on the Site and plan tab.</p>
+              <p>The site finder works on whole calendar years (pick the year at the top). Mission replays use their real dates and are shown on the Site and plan tab.</p>
               <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
             </div>
           ) : (
@@ -334,7 +386,7 @@ export default function App() {
           {/* WS3 */}
           {site && !inAnalysisYear(site) ? (
             <div className="replay-notice-card">
-              <p>The whole-Moon globe covers the 2027 orbital model. Historical mission replays are shown on the Site and plan tab.</p>
+              <p>The whole-Moon globe works on whole calendar years (pick the year at the top). Mission replays are shown on the Site and plan tab.</p>
               <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
             </div>
           ) : (
@@ -349,6 +401,7 @@ export default function App() {
                 onOpenSite={() => setView('site')}
                 onOpenArtemis={() => setView('3d')}
                 onPickPoint={pickPoint}
+                vectors={yearVectors}
               />
             </Suspense>
           )}
@@ -360,7 +413,7 @@ export default function App() {
           {/* WS3 */}
           {site && !inAnalysisYear(site) ? (
             <div className="replay-notice-card">
-              <p>3D GPU shadow maps cover the 2027 analysis year. Historical mission replays are shown on the Site and plan tab.</p>
+              <p>3D GPU shadows work on whole calendar years (pick the year at the top). Mission replays are shown on the Site and plan tab.</p>
               <button type="button" className="primary" onClick={() => setView('site')}>Return to Site &amp; Plan</button>
             </div>
           ) : (
@@ -386,6 +439,7 @@ export default function App() {
                     : undefined
                 }
                 ellipse={ell}
+                vectors={yearVectors}
               />
             </Suspense>
           )}
@@ -402,7 +456,7 @@ export default function App() {
       {/* Lander Systems */}
       {view === 'lander' && (
         <section className="panel" aria-label="Lander systems engineering simulator">
-          <LanderSystems site={site} i={i} />
+          <LanderSystems site={site} i={i} year={year} vectors={yearVectors} />
         </section>
       )}
 
@@ -432,7 +486,7 @@ export default function App() {
 
       {site && view === 'compare' && scenarios.length >= 2 && (
         <section className="panel" aria-label="Compare scenarios">
-          <Compare sites={sites} scenarios={scenarios} setScenarios={setScenarios} th={th} />
+          <Compare sites={sites} scenarios={scenarios} setScenarios={setScenarios} th={th} year={year} arr={arr} />
           <footer className="foot">{site.provenance} Times are to the nearest hour.</footer>
         </section>
       )}
@@ -497,10 +551,10 @@ export default function App() {
             <section className="readout" aria-live="polite">
               <Status site={site} i={i} />
               <div className="bodies">
-                <Body site={site} i={i} b="sun" />
+                <Body site={site} i={i} b="sun" arr={arr} />
                 <Body site={site} i={i} b="earth" />
               </div>
-              <SiteFacts site={site} />
+              <SiteFacts site={site} arr={arr} />
               {/* WS2 */}
               <Contrast site={site} i={i} />
               {/* WS3 */}
@@ -617,7 +671,7 @@ export default function App() {
               <Seasons site={site} i={i} />
             </section>
             <section className="panel" aria-label="Lander survival calculator">
-              <Survival site={site} i={i} />
+              <Survival site={site} i={i} arr={arr} setArr={setArr} />
             </section>
           </div>
 
@@ -682,7 +736,7 @@ function Status({ site, i }: { site: Site; i: number }) {
   )
 }
 
-function Body({ site, i, b }: { site: Site; i: number; b: 'sun' | 'earth' }) {
+function Body({ site, i, b, arr = DEFAULT_ARRAY }: { site: Site; i: number; b: 'sun' | 'earth'; arr?: SolarArray }) {
   const t = site[b]
   const name = b === 'sun' ? 'Sun' : 'Earth'
   const visible = t.frac[i] > 0
@@ -718,8 +772,10 @@ function Body({ site, i, b }: { site: Site; i: number; b: 'sun' | 'earth' }) {
         </dd>
         {t.power && (
           <>
-            <dt>Power index (simplified)</dt>
-            <dd>{Math.round(t.power[i] * 100)}%</dd>
+            <dt title="Visible Sun disc x cos(elevation), for a vertical panel turned to the Sun; array set in Lander survival">Solar array output</dt>
+            <dd>
+              {Math.round(t.power[i] * peakWatts(arr))} W ({Math.round(t.power[i] * 100)}% of full sunlight)
+            </dd>
           </>
         )}
         <dt>Azimuth</dt>
@@ -729,7 +785,7 @@ function Body({ site, i, b }: { site: Site; i: number; b: 'sun' | 'earth' }) {
   )
 }
 
-function SiteFacts({ site }: { site: Site }) {
+function SiteFacts({ site, arr = DEFAULT_ARRAY }: { site: Site; arr?: SolarArray }) {
   const m = site.metrics
   const lon = site.lon > 180 ? site.lon - 360 : site.lon
   const sc = getSiteScienceStats(site)
@@ -746,8 +802,10 @@ function SiteFacts({ site }: { site: Site }) {
         <dd>{m.earth_visible_pct.toFixed(1)}%</dd>
         <dt>Both</dt>
         <dd>{m.sun_and_earth_pct.toFixed(1)}%</dd>
-        <dt>Mean power index</dt>
-        <dd>{m.mean_power_index_pct.toFixed(1)}%</dd>
+        <dt title="Average over the period, including darkness; array set in Lander survival">Mean array output</dt>
+        <dd>
+          {Math.round((m.mean_power_index_pct / 100) * peakWatts(arr))} W ({m.mean_power_index_pct.toFixed(1)}% of full sunlight)
+        </dd>
         {/* WS5: Science & Water Ice */}
         <dt>Distance to Water Ice</dt>
         <dd style={{ color: sc.distToPsrKm <= 5 ? '#38bdf8' : 'inherit', fontWeight: 600 }}>

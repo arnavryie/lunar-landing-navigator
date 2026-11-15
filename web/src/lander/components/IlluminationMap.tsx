@@ -1,11 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import type { RechargeCandidate, RoverMissionConfig, SimulationStepTelemetry } from '../types.ts'
 import {
   type PlannerDataset,
   terrainAtCoord,
   rowColToLatLon,
-  R_M,
+  polarRowCol,
 } from '../engine/mapLoader.ts'
+
+/** Map view: centre (cx, cy) in grid cells from the grid's top-left edge, zoom 1 = whole 85–90°S grid fits the canvas's shorter side. */
+interface MapView {
+  cx: number
+  cy: number
+  zoom: number
+}
+const MIN_ZOOM = 1
+const MAX_ZOOM = 16 // ~6–7 screen px per 240 m cell; more only magnifies blocks
+const DRAG_THRESHOLD_PX = 4 // smaller moves count as a click (clicking open ground moves the rover)
+
+function clampView(v: MapView, n: number): MapView {
+  return {
+    zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.zoom)),
+    cx: Math.min(n, Math.max(0, v.cx)),
+    cy: Math.min(n, Math.max(0, v.cy)),
+  }
+}
 
 export type MapDisplayLayer = 'sunlight' | 'relief' | 'sun_avg' | 'psr' | 'slope'
 
@@ -159,7 +177,13 @@ export function IlluminationMap({
   onPickRoverLocation,
 }: IlluminationMapProps) {
   const [activeLayer, setActiveLayer] = useState<MapDisplayLayer>('sunlight')
-  const [zoomLevel, setZoomLevel] = useState<number>(2) // 1 = 85-90S, 2 = 87.5-90S, 4 = 88.7-90S
+  // Presets: zoom 1 = 85–90°S, 2 = 87.5–90°S, 4 = 88.7–90°S, all centred on the pole
+  const presetView = (zoom: number): MapView => ({ cx: dataset.layersN / 2, cy: dataset.layersN / 2, zoom })
+  const [view, setView] = useState<MapView>(() => presetView(2))
+  const isPreset = (zoom: number) => view.zoom === zoom && view.cx === dataset.layersN / 2 && view.cy === dataset.layersN / 2
+  const zoomLevel = view.zoom
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 })
+  const dragRef = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | null>(null)
   const [timePreviewOffsetH, setTimePreviewOffsetH] = useState<number>(0) // 0, +1, +6, +12 hours
   const [hoverInfo, setHoverInfo] = useState<{
     lat: number
@@ -324,51 +348,89 @@ export function IlluminationMap({
     return oc
   }, [dataset, activeLayer, sunAzimuthDeg, sunElevationDeg])
 
-  // Viewport bounds
-  const viewWindow = useMemo(() => {
-    const sw = dataset.layersN / zoomLevel
-    return { sx: (dataset.layersN - sw) / 2, sw }
-  }, [dataset.layersN, zoomLevel])
+  // Track the canvas's CSS size so the bitmap always matches it (no stretching)
+  useEffect(() => {
+    const cv = canvasRef.current
+    if (!cv) return
+    const ro = new ResizeObserver(() => setCanvasSize({ w: cv.clientWidth, h: cv.clientHeight }))
+    ro.observe(cv)
+    return () => ro.disconnect()
+  }, [])
 
-  // Coordinate mapper from lat/lon to current canvas pixel coordinates
+  // Wheel zoom around the cursor (native listener: React's onWheel is passive and can't stop page scroll)
+  useEffect(() => {
+    const cv = canvasRef.current
+    if (!cv) return
+    const n = dataset.layersN
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect = cv.getBoundingClientRect()
+      const dx = e.clientX - rect.left - rect.width / 2
+      const dy = e.clientY - rect.top - rect.height / 2
+      const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY // Firefox scrolls in lines
+      setView((v) => {
+        const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.zoom * Math.exp(-delta * 0.002)))
+        const k0 = (Math.min(rect.width, rect.height) * v.zoom) / n
+        const k1 = (Math.min(rect.width, rect.height) * zoom) / n
+        // keep the grid point under the cursor fixed
+        return clampView({ zoom, cx: v.cx + dx / k0 - dx / k1, cy: v.cy + dy / k0 - dy / k1 }, n)
+      })
+    }
+    cv.addEventListener('wheel', onWheel, { passive: false })
+    return () => cv.removeEventListener('wheel', onWheel)
+  }, [dataset.layersN])
+
+  // Screen pixels per grid cell
+  const k = (Math.min(canvasSize.w, canvasSize.h) * view.zoom) / dataset.layersN
+
+  // lat/lon -> canvas CSS px, and back. Every drawing, click and hover goes through these two.
   const toCanvasPx = useCallback(
-    (lat: number, lon: number, canvasSize: number): [number, number] | null => {
-      const rr = 2 * R_M * Math.tan(((90 + lat) * Math.PI) / 360)
-      const c = dataset.layersN / 2 - 0.5
-      const row = c - (rr * Math.cos((lon * Math.PI) / 180)) / dataset.scaleM
-      const col = c + (rr * Math.sin((lon * Math.PI) / 180)) / dataset.scaleM
-      return [
-        ((col + 0.5 - viewWindow.sx) / viewWindow.sw) * canvasSize,
-        ((row + 0.5 - viewWindow.sx) / viewWindow.sw) * canvasSize,
-      ]
+    (lat: number, lon: number): [number, number] | null => {
+      const [row, col] = polarRowCol(lat, lon, dataset.layersN, dataset.scaleM)
+      return [canvasSize.w / 2 + (col + 0.5 - view.cx) * k, canvasSize.h / 2 + (row + 0.5 - view.cy) * k]
     },
-    [dataset.layersN, dataset.scaleM, viewWindow],
+    [dataset.layersN, dataset.scaleM, canvasSize, view, k],
+  )
+  const fromCanvasPx = useCallback(
+    (x: number, y: number): [number, number] =>
+      rowColToLatLon(
+        view.cy + (y - canvasSize.h / 2) / k - 0.5,
+        view.cx + (x - canvasSize.w / 2) / k - 0.5,
+        dataset.layersN,
+        dataset.scaleM,
+      ),
+    [dataset.layersN, dataset.scaleM, canvasSize, view, k],
   )
 
   // Draw full composite scene on canvas
   useEffect(() => {
     const cv = canvasRef.current
-    if (!cv || !renderedLayerCanvas || !viewWindow) return
-    const size = cv.clientWidth
+    const W = canvasSize.w
+    const H = canvasSize.h
+    if (!cv || !renderedLayerCanvas || !W || !H) return
     const dpr = window.devicePixelRatio || 1
-    cv.width = size * dpr
-    cv.height = size * dpr
+    cv.width = W * dpr
+    cv.height = H * dpr
 
     const g = cv.getContext('2d')!
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
     g.imageSmoothingEnabled = zoomLevel < 4
 
-    // 1. Draw raster layer
-    g.drawImage(renderedLayerCanvas, viewWindow.sx, viewWindow.sx, viewWindow.sw, viewWindow.sw, 0, 0, size, size)
+    // 1. Draw raster layer (source rect may extend past the grid; the browser clips it)
+    g.drawImage(renderedLayerCanvas, view.cx - W / 2 / k, view.cy - H / 2 / k, W / k, H / k, 0, 0, W, H)
 
     // 2. Graticule (Polar circles & meridians)
-    const polePx = toCanvasPx(-90, 0, size)!
+    const polePx = toCanvasPx(-90, 0)!
     g.strokeStyle = 'rgba(255, 255, 255, 0.16)'
     g.lineWidth = 1
 
-    const latRings = zoomLevel === 1 ? [-89, -88, -87, -86] : zoomLevel === 2 ? [-89.5, -89, -88.5, -88] : [-89.75, -89.5, -89.25, -89]
+    // Ring spacing follows the zoom (1°, 0.5°, 0.25°, 0.1°, 0.05°) out to the 85°S data edge
+    const ringStep = zoomLevel < 1.5 ? 1 : zoomLevel < 3 ? 0.5 : zoomLevel < 6 ? 0.25 : zoomLevel < 12 ? 0.1 : 0.05
+    const ringDecimals = ringStep >= 0.5 ? 1 : 2
+    const latRings: number[] = []
+    for (let i = 1; i * ringStep <= 5 + 1e-9; i++) latRings.push(-90 + i * ringStep)
     for (const lat of latRings) {
-      const pt = toCanvasPx(lat, 0, size)!
+      const pt = toCanvasPx(lat, 0)!
       const rad = Math.hypot(pt[0] - polePx[0], pt[1] - polePx[1])
       g.beginPath()
       g.arc(polePx[0], polePx[1], rad, 0, 2 * Math.PI)
@@ -378,7 +440,7 @@ export function IlluminationMap({
       const diagAngle = (45 * Math.PI) / 180
       const lx = polePx[0] + rad * Math.sin(diagAngle)
       const ly = polePx[1] - rad * Math.cos(diagAngle)
-      if (lx > 20 && lx < size - 50 && ly > 20 && ly < size - 20) {
+      if (lx > 20 && lx < W - 50 && ly > 20 && ly < H - 20) {
         g.fillStyle = 'rgba(18, 22, 28, 0.82)'
         g.strokeStyle = 'rgba(255, 255, 255, 0.2)'
         drawRoundedRect(g, lx - 22, ly - 7, 44, 14, 3)
@@ -388,7 +450,7 @@ export function IlluminationMap({
         g.font = '500 8.5px "IBM Plex Mono", monospace'
         g.textAlign = 'center'
         g.textBaseline = 'middle'
-        g.fillText(`${Math.abs(lat).toFixed(1)}°S Lat`, lx, ly)
+        g.fillText(`${Math.abs(lat).toFixed(ringDecimals)}°S Lat`, lx, ly)
         g.textAlign = 'left'
         g.textBaseline = 'alphabetic'
       }
@@ -396,16 +458,21 @@ export function IlluminationMap({
 
     // Longitude radial lines
     for (let lon = 0; lon < 360; lon += 30) {
-      const edgeLat = zoomLevel === 1 ? -85 : zoomLevel === 2 ? -87.5 : -88.8
-      const edge = toCanvasPx(edgeLat, lon, size)!
+      const dataEdge = toCanvasPx(-85, lon)!
       g.strokeStyle = lon % 90 === 0 ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)'
       g.lineWidth = lon % 90 === 0 ? 1.2 : 0.8
       g.beginPath()
       g.moveTo(polePx[0], polePx[1])
-      g.lineTo(edge[0], edge[1])
+      g.lineTo(dataEdge[0], dataEdge[1])
       g.stroke()
 
-      // Cardinal longitude labels
+      // Cardinal longitude labels: at the data edge or half the view's shorter side from the pole, whichever is nearer
+      const edgeR = Math.hypot(dataEdge[0] - polePx[0], dataEdge[1] - polePx[1])
+      const labelR = Math.min(edgeR, Math.min(W, H) / 2)
+      const edge = [
+        polePx[0] + ((dataEdge[0] - polePx[0]) / edgeR) * labelR,
+        polePx[1] + ((dataEdge[1] - polePx[1]) / edgeR) * labelR,
+      ]
       if (lon % 90 === 0) {
         const labelText = lon === 0 ? '0°E (Prime / N)' : lon === 90 ? '90°E (East)' : lon === 180 ? '180°E (South)' : '270°E (West)'
         const pad = 14
@@ -443,23 +510,25 @@ export function IlluminationMap({
     g.fillStyle = 'rgba(154, 160, 166, 0.75)'
     g.font = '400 9px "Public Sans", sans-serif'
     g.textAlign = 'right'
-    g.fillText('Concentric rings: latitude • Radial lines: longitude', size - 24, size - 38)
+    g.fillText('Concentric rings: latitude • Radial lines: longitude', W - 24, H - 38)
     g.textAlign = 'left'
 
     // 3. Solar Ray Direction Indicator (Sun vector bearing & directional icon)
+    // Drawn from the view centre (= the pole in the preset views) so it stays visible while panning.
+    const rayOrigin = [W / 2, H / 2]
     const sunAngleRad = (sunAzimuthDeg * Math.PI) / 180
     const sunDirX = Math.sin(sunAngleRad)
     const sunDirY = -Math.cos(sunAngleRad)
-    const sunDist = size * 0.43
-    const sunEndpointX = polePx[0] + sunDirX * sunDist
-    const sunEndpointY = polePx[1] + sunDirY * sunDist
+    const sunDist = Math.min(W, H) * 0.43
+    const sunEndpointX = rayOrigin[0] + sunDirX * sunDist
+    const sunEndpointY = rayOrigin[1] + sunDirY * sunDist
 
     g.save()
     g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#6b7280'
     g.lineWidth = 1.6
     g.setLineDash([5, 4])
     g.beginPath()
-    g.moveTo(polePx[0], polePx[1])
+    g.moveTo(rayOrigin[0], rayOrigin[1])
     g.lineTo(sunEndpointX, sunEndpointY)
     g.stroke()
     g.setLineDash([])
@@ -520,8 +589,8 @@ export function IlluminationMap({
     const tagH = 50
     let tagX = sunEndpointX + (sunDirX >= 0 ? -tagW - 16 : 16)
     let tagY = sunEndpointY + (sunDirY >= 0 ? -tagH - 8 : 8)
-    tagX = Math.max(10, Math.min(size - tagW - 10, tagX))
-    tagY = Math.max(10, Math.min(size - tagH - 10, tagY))
+    tagX = Math.max(10, Math.min(W - tagW - 10, tagX))
+    tagY = Math.max(10, Math.min(H - tagH - 10, tagY))
 
     g.fillStyle = 'rgba(18, 22, 28, 0.94)'
     g.strokeStyle = sunElevationDeg >= 0 ? '#c98419' : '#6b7280'
@@ -559,15 +628,15 @@ export function IlluminationMap({
     // 4. Earth Direction Indicator (Optional)
     if (showEarthRay) {
       const earthAngleRad = (earthAzimuthDeg * Math.PI) / 180
-      const eRayX = polePx[0] - Math.sin(earthAngleRad) * (size * 0.44 * 0.8)
-      const eRayY = polePx[1] + Math.cos(earthAngleRad) * (size * 0.44 * 0.8)
+      const eRayX = rayOrigin[0] - Math.sin(earthAngleRad) * (Math.min(W, H) * 0.44 * 0.8)
+      const eRayY = rayOrigin[1] + Math.cos(earthAngleRad) * (Math.min(W, H) * 0.44 * 0.8)
 
       g.save()
       g.strokeStyle = '#5590d8'
       g.lineWidth = 1.5
       g.setLineDash([4, 4])
       g.beginPath()
-      g.moveTo(polePx[0], polePx[1])
+      g.moveTo(rayOrigin[0], rayOrigin[1])
       g.lineTo(eRayX, eRayY)
       g.stroke()
       g.fillStyle = '#5590d8'
@@ -578,9 +647,9 @@ export function IlluminationMap({
 
     // 5. Search Radius Overlay Circle
     const searchRadKm = config.mission.searchRadiusKm
-    const searchCenter = toCanvasPx(config.mission.startLat, config.mission.startLon, size)
+    const searchCenter = toCanvasPx(config.mission.startLat, config.mission.startLon)
     if (searchCenter) {
-      const kmPerPx = (dataset.scaleM * (viewWindow.sw / size)) / 1000
+      const kmPerPx = dataset.scaleM / k / 1000
       const radiusPx = searchRadKm / kmPerPx
 
       g.save()
@@ -597,7 +666,7 @@ export function IlluminationMap({
       const bH = 18
       const bX = searchCenter[0] - bW / 2
       const bY = searchCenter[1] - radiusPx - bH - 3
-      if (bY > 10 && bX > 10 && bX + bW < size - 10) {
+      if (bY > 10 && bX > 10 && bX + bW < W - 10) {
         g.fillStyle = 'rgba(18, 22, 28, 0.9)'
         g.strokeStyle = 'rgba(31, 163, 138, 0.7)'
         g.lineWidth = 1
@@ -636,7 +705,7 @@ export function IlluminationMap({
 
       for (let i = 0; i < targetCandidate.route.waypoints.length; i++) {
         const wp = targetCandidate.route.waypoints[i]
-        const wpPx = toCanvasPx(wp.lat, wp.lon, size)
+        const wpPx = toCanvasPx(wp.lat, wp.lon)
         if (!wpPx) continue
         if (firstWp) {
           g.moveTo(wpPx[0], wpPx[1])
@@ -649,7 +718,7 @@ export function IlluminationMap({
       g.stroke()
       g.setLineDash([])
 
-      if (midWpPx && midWpPx[0] > 40 && midWpPx[0] < size - 40 && midWpPx[1] > 30 && midWpPx[1] < size - 30) {
+      if (midWpPx && midWpPx[0] > 40 && midWpPx[0] < W - 40 && midWpPx[1] > 30 && midWpPx[1] < H - 30) {
         const mW = 150
         const mH = 16
         g.fillStyle = 'rgba(18, 22, 28, 0.9)'
@@ -678,7 +747,7 @@ export function IlluminationMap({
     if (showAllCandidates) {
       for (const cand of candidateList) {
         if (cand.id === recommendedCandidate?.id || cand.id === selectedCandidateId) continue
-        const pt = toCanvasPx(cand.lat, cand.lon, size)
+        const pt = toCanvasPx(cand.lat, cand.lon)
         if (!pt) continue
 
         g.beginPath()
@@ -713,7 +782,7 @@ export function IlluminationMap({
     if (selectedCandidateId && selectedCandidateId !== recommendedCandidate?.id) {
       const selCand = candidateList.find((c) => c.id === selectedCandidateId)
       if (selCand) {
-        const selPx = toCanvasPx(selCand.lat, selCand.lon, size)
+        const selPx = toCanvasPx(selCand.lat, selCand.lon)
         if (selPx) {
           g.beginPath()
           g.arc(selPx[0], selPx[1], 12, 0, 2 * Math.PI)
@@ -732,8 +801,8 @@ export function IlluminationMap({
           const sH = 36
           let sX = selPx[0] + 12
           let sY = selPx[1] - sH - 4
-          sX = Math.max(10, Math.min(size - sW - 10, sX))
-          sY = Math.max(10, Math.min(size - sH - 10, sY))
+          sX = Math.max(10, Math.min(W - sW - 10, sX))
+          sY = Math.max(10, Math.min(H - sH - 10, sY))
 
           g.fillStyle = 'rgba(18, 22, 28, 0.92)'
           g.strokeStyle = '#1fa38a'
@@ -764,7 +833,7 @@ export function IlluminationMap({
     // 9. Recommended Candidate Highlight Beacon
     let targetPx: [number, number] | null = null
     if (recommendedCandidate) {
-      targetPx = toCanvasPx(recommendedCandidate.lat, recommendedCandidate.lon, size)
+      targetPx = toCanvasPx(recommendedCandidate.lat, recommendedCandidate.lon)
       if (targetPx) {
         // Glowing Halo
         g.beginPath()
@@ -785,8 +854,8 @@ export function IlluminationMap({
         const tH = 38
         let tX = targetPx[0] + 14
         let tY = targetPx[1] - tH - 6
-        tX = Math.max(10, Math.min(size - tW - 10, tX))
-        tY = Math.max(10, Math.min(size - tH - 10, tY))
+        tX = Math.max(10, Math.min(W - tW - 10, tX))
+        tY = Math.max(10, Math.min(H - tH - 10, tY))
 
         g.fillStyle = 'rgba(18, 22, 28, 0.92)'
         g.strokeStyle = '#c98419'
@@ -816,7 +885,7 @@ export function IlluminationMap({
     // 10. Rover Position Marker (Animated or Static)
     const activeRoverLat = currentSimulationStep ? currentSimulationStep.roverLat : config.mission.startLat
     const activeRoverLon = currentSimulationStep ? currentSimulationStep.roverLon : config.mission.startLon
-    const roverPx = toCanvasPx(activeRoverLat, activeRoverLon, size)
+    const roverPx = toCanvasPx(activeRoverLat, activeRoverLon)
 
     if (roverPx) {
       // Outer pulse ring
@@ -848,8 +917,8 @@ export function IlluminationMap({
           rX = roverPx[0] + 14
         }
       }
-      rX = Math.max(10, Math.min(size - rW - 10, rX))
-      rY = Math.max(10, Math.min(size - rH - 10, rY))
+      rX = Math.max(10, Math.min(W - rW - 10, rX))
+      rY = Math.max(10, Math.min(H - rH - 10, rY))
 
       g.fillStyle = 'rgba(18, 22, 28, 0.92)'
       g.strokeStyle = '#5590d8'
@@ -869,25 +938,27 @@ export function IlluminationMap({
     }
 
     // 11. Scale Bar
-    const kmPerPx = (dataset.scaleM * (viewWindow.sw / size)) / 1000
-    const barKm = zoomLevel === 1 ? 50 : zoomLevel === 2 ? 20 : 5
+    const kmPerPx = dataset.scaleM / k / 1000
+    const barKm = [0.5, 1, 2, 5, 10, 20, 50, 100].find((b) => b / kmPerPx >= 60) ?? 100
     const barPx = barKm / kmPerPx
 
     g.fillStyle = '#d9d6cf'
     g.strokeStyle = '#d9d6cf'
     g.lineWidth = 2
     g.beginPath()
-    g.moveTo(size - 30 - barPx, size - 20)
-    g.lineTo(size - 30, size - 20)
+    g.moveTo(W - 30 - barPx, H - 20)
+    g.lineTo(W - 30, H - 20)
     g.stroke()
     g.font = '10px "Public Sans", sans-serif'
     g.textAlign = 'center'
-    g.fillText(`${barKm} km`, size - 30 - barPx / 2, size - 26)
+    g.fillText(`${barKm} km`, W - 30 - barPx / 2, H - 26)
     g.textAlign = 'left'
   }, [
     dataset,
     renderedLayerCanvas,
-    viewWindow,
+    canvasSize,
+    view,
+    k,
     zoomLevel,
     sunElevationDeg,
     sunAzimuthDeg,
@@ -905,20 +976,18 @@ export function IlluminationMap({
   // Click on canvas to inspect elements or relocate rover
   const handleCanvasClick = (e: MouseEvent<HTMLCanvasElement>) => {
     const cv = canvasRef.current
-    if (!cv || !viewWindow) return
+    const drag = dragRef.current
+    dragRef.current = null
+    if (!cv || drag?.moved) return // the pointer was dragging the map, not clicking
     const rect = cv.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    const size = rect.width
-
-    const col = viewWindow.sx + (x / size) * viewWindow.sw
-    const row = viewWindow.sx + (y / size) * viewWindow.sw
-    const [lat, lon] = rowColToLatLon(row, col, dataset.layersN, dataset.scaleM)
+    const [lat, lon] = fromCanvasPx(x, y)
 
     // 1. Check if clicked near Rover
     const activeRoverLat = currentSimulationStep ? currentSimulationStep.roverLat : config.mission.startLat
     const activeRoverLon = currentSimulationStep ? currentSimulationStep.roverLon : config.mission.startLon
-    const roverPt = toCanvasPx(activeRoverLat, activeRoverLon, size)
+    const roverPt = toCanvasPx(activeRoverLat, activeRoverLon)
     if (roverPt && Math.hypot(roverPt[0] - x, roverPt[1] - y) < 18) {
       setIsInspectingRover(true)
       setInspectedCandidateId(null)
@@ -929,7 +998,7 @@ export function IlluminationMap({
     // 2. Check if clicked near any Candidate marker
     let clickedCandidate: RechargeCandidate | null = null
     for (const cand of candidateList) {
-      const pt = toCanvasPx(cand.lat, cand.lon, size)
+      const pt = toCanvasPx(cand.lat, cand.lon)
       if (pt && Math.hypot(pt[0] - x, pt[1] - y) < 16) {
         clickedCandidate = cand
         break
@@ -943,13 +1012,12 @@ export function IlluminationMap({
       return
     }
 
-    // 3. Check if clicked near Sun Icon
-    const polePx = toCanvasPx(-90, 0, size)
-    if (polePx) {
+    // 3. Check if clicked near Sun Icon (drawn from the view centre)
+    {
       const sunAngleRad = (sunAzimuthDeg * Math.PI) / 180
-      const sunDist = size * 0.43
-      const sunX = polePx[0] + Math.sin(sunAngleRad) * sunDist
-      const sunY = polePx[1] - Math.cos(sunAngleRad) * sunDist
+      const sunDist = Math.min(rect.width, rect.height) * 0.43
+      const sunX = rect.width / 2 + Math.sin(sunAngleRad) * sunDist
+      const sunY = rect.height / 2 - Math.cos(sunAngleRad) * sunDist
       if (Math.hypot(sunX - x, sunY - y) < 26) {
         setActiveExplanationKey('sun_azimuth')
         setInspectedCandidateId(null)
@@ -958,9 +1026,9 @@ export function IlluminationMap({
       }
 
       // 4. Check if clicked near Search Boundary radius
-      const searchCenter = toCanvasPx(config.mission.startLat, config.mission.startLon, size)
+      const searchCenter = toCanvasPx(config.mission.startLat, config.mission.startLon)
       if (searchCenter) {
-        const kmPerPx = (dataset.scaleM * (viewWindow.sw / size)) / 1000
+        const kmPerPx = dataset.scaleM / k / 1000
         const radiusPx = config.mission.searchRadiusKm / kmPerPx
         const distFromSearchCenter = Math.hypot(x - searchCenter[0], y - searchCenter[1])
         if (Math.abs(distFromSearchCenter - radiusPx) < 14) {
@@ -979,18 +1047,38 @@ export function IlluminationMap({
     onPickRoverLocation(Number(lat.toFixed(4)), Number(lon.toFixed(4)))
   }
 
-  // Hover tracking
-  const handleMouseMove = (e: MouseEvent<HTMLCanvasElement>) => {
+  // Drag to pan
+  const handlePointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return
+    dragRef.current = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const handlePointerUp = (e: PointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.style.cursor = ''
+    // dragRef stays set until the click handler reads it, so a drag never becomes a click
+  }
+
+  // Hover tracking (and panning while the button is held)
+  const handleMouseMove = (e: PointerEvent<HTMLCanvasElement>) => {
     const cv = canvasRef.current
-    if (!cv || !viewWindow) return
+    if (!cv) return
+    const drag = dragRef.current
+    if (drag && e.buttons & 1) {
+      const dx = e.clientX - drag.x
+      const dy = e.clientY - drag.y
+      if (drag.moved || Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
+        drag.moved = true
+        cv.style.cursor = 'grabbing'
+        setHoverInfo(null)
+        setView((v) => clampView({ ...v, cx: drag.cx - dx / k, cy: drag.cy - dy / k }, dataset.layersN))
+        return
+      }
+    }
     const rect = cv.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    const size = rect.width
 
-    const col = viewWindow.sx + (x / size) * viewWindow.sw
-    const row = viewWindow.sx + (y / size) * viewWindow.sw
-    const [lat, lon] = rowColToLatLon(row, col, dataset.layersN, dataset.scaleM)
+    const [lat, lon] = fromCanvasPx(x, y)
     const { elevationM, slopeDeg } = terrainAtCoord(dataset.demGrid, lat, lon)
 
     setHoverInfo({
@@ -1104,16 +1192,19 @@ export function IlluminationMap({
             Zoom:
           </span>
           <div className="seg">
-            <button type="button" aria-pressed={zoomLevel === 1} onClick={() => setZoomLevel(1)}>
+            <button type="button" aria-pressed={isPreset(1)} onClick={() => setView(presetView(1))}>
               85–90°S
             </button>
-            <button type="button" aria-pressed={zoomLevel === 2} onClick={() => setZoomLevel(2)}>
+            <button type="button" aria-pressed={isPreset(2)} onClick={() => setView(presetView(2))}>
               87.5–90°S
             </button>
-            <button type="button" aria-pressed={zoomLevel === 4} onClick={() => setZoomLevel(4)}>
+            <button type="button" aria-pressed={isPreset(4)} onClick={() => setView(presetView(4))}>
               88.7–90°S
             </button>
           </div>
+          <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+            Drag to move · scroll to zoom (×{view.zoom.toFixed(1)})
+          </span>
 
           <label className="toggle-switch" style={{ marginLeft: '6px' }}>
             <input
@@ -1153,9 +1244,11 @@ export function IlluminationMap({
           ref={canvasRef}
           className="map-canvas"
           onClick={handleCanvasClick}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoverInfo(null)}
-          title="Click candidate marker to inspect • Click open terrain to place rover"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handleMouseMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={() => setHoverInfo(null)}
+          title="Drag to move • Scroll to zoom • Click a marker to inspect • Click open terrain to place the rover"
           role="img"
           aria-label="Lunar South Pole terrain map showing real-time solar illumination angle, rover position, and recharge destinations"
         />

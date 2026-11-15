@@ -10,6 +10,7 @@ import { polarRowCol, siteTracks } from './engine'
 import { loadMapData, slopeGrid, type MapData } from './mapData'
 import { MapView, type Dot } from './MapView'
 import { Field } from './Planner'
+import { DEFAULT_YEAR, loadVectors, siteForYear, yearOf } from './years'
 
 // F7 alternatives finder. Coarse stage: ~5,500 precomputed candidate spots (best spot per 2.9 km tile, coarse
 // 1 deg horizons, pipeline/export_candidates.py), evaluated in the browser for the user's own mission window.
@@ -29,7 +30,7 @@ type Part = keyof typeof W_BASE
 const PARTS = Object.keys(W_BASE) as Part[]
 const VRANK = { ok: 3, caution: 2, fail: 1 } as const
 const RANK: Record<Viability, number> = { viable: 3, marginal: 2, not: 1, nodata: 0 }
-/** "Year-round ideal" preset: whole 2027 data year as the mission. Example thresholds: only a handful of the
+/** "Year-round ideal" preset: whole data year as the mission. Example thresholds: only a handful of the
  *  5,487 candidates pass (coarse check: 7 viable, 22 viable or marginal at slope <= 8 deg). */
 const YEAR_ROUND: Thresholds = { missionDays: 365, minSunPct: 70, maxDarkH: 168, minEarthPct: 50 }
 /** Saved spots that passed the landing check (pipeline/sites.json group). */
@@ -148,6 +149,7 @@ interface Props {
 
 export function Finder(p: Props) {
   const { site, i, th } = p
+  const year = site && !site.replay ? yearOf(site) : DEFAULT_YEAR
   const [data, setData] = useState<Cands | null>(null)
   const [err, setErr] = useState('')
   const [maxSlope, setMaxSlope] = useState(Math.min(15, ellipseSaved.maxSlope)) // shared with the Map's landing ellipse
@@ -169,15 +171,25 @@ export function Finder(p: Props) {
   }, [maxSlope, ellKm])
 
   useEffect(() => {
-    ;(cached ??= load()).then(setData, (e) => setErr(String(e.message ?? e)))
     loadArtemis().then(setRegions, () => setRegions([]))
     loadMapData().then(setMap, () => setMap(null))
   }, [])
+  // Candidates load once; the Sun/Earth vectors follow the selected year.
+  useEffect(() => {
+    let live = true // a slower earlier year must not overwrite the current one
+    Promise.all([(cached ??= load()), loadVectors(year)]).then(
+      ([c, v]) => live && setData({ ...c, vectors: v, hours: v.length / 6, start: `${year}-01-01T00:00:00Z` }),
+      (e) => live && setErr(String(e.message ?? e)),
+    )
+    return () => {
+      live = false
+    }
+  }, [year])
 
   const hours = th.missionDays * 24
   const origin = polar
   const centre = radius && !nearRegions ? anchor : null
-  const key = `${i}|${hours}|${th.minSunPct}|${th.maxDarkH}|${th.minEarthPct}|${maxSlope}|${radius}|${nearRegions}|${centre?.lat},${centre?.lon}`
+  const key = `${year}|${i}|${hours}|${th.minSunPct}|${th.maxDarkH}|${th.minEarthPct}|${maxSlope}|${radius}|${nearRegions}|${centre?.lat},${centre?.lon}`
 
   // Coarse stage: every candidate within the slope and area limits, for this exact mission window.
   const coarse = useMemo(() => {
@@ -236,7 +248,7 @@ export function Finder(p: Props) {
     setExact({ key, hits, done: 0 })
     ;(async () => {
       for (const h of top) {
-        const s = await computeCustomPoint(h.lat, h.lon, false).catch(() => null)
+        const s = await computeCustomPoint(h.lat, h.lon, false).then((x) => siteForYear(x, year)).catch(() => null)
         if (cancelled) return
         hits.set(h.k, s ? windowStats(s, i, hours) : null)
         setExact({ key, hits, done: hits.size })
@@ -272,7 +284,7 @@ export function Finder(p: Props) {
             if (stats) [c.worstSun, c.worstDark] = [Math.min(c.worstSun, stats.sunPct), Math.max(c.worstDark, stats.longestDarkH)]
           }
           setEll({ key: ellKey, res: new Map(res) })
-        })
+        }, year)
         if (!alive) return
       }
     })()
@@ -340,7 +352,7 @@ export function Finder(p: Props) {
       {coarse && (
         <p className="finder-count" aria-live="polite">
           <strong>{counts.viable}</strong> viable, <strong>{counts.marginal}</strong> marginal of {coarse.hits.length.toLocaleString('en')} spots
-          {counts.nodata ? ' (mission runs past the 2027 data)' : ''}.
+          {counts.nodata ? ` (mission runs past the end of ${year})` : ''}.
         </p>
       )}
 
@@ -451,9 +463,9 @@ export function Finder(p: Props) {
               p.setI(0)
               p.setTh(YEAR_ROUND)
             }}
-            title="Land 1 Jan 2027 and stay the whole year: finds spots that keep power, Earth contact and a safe landing area whatever the launch date"
+            title={`Land 1 Jan ${year} and stay the whole year: finds spots that keep power, Earth contact and a safe landing area whatever the launch date`}
           >
-            Year-round ideal sites (all of 2027)
+            Year-round ideal sites (all of {year})
           </button>
         </div>
         {th.missionDays * 24 >= (data?.hours ?? Infinity) && (

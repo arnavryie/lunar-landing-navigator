@@ -234,12 +234,12 @@ function scenePos(w: World, lat: number, lon: number, exag: number) {
 /** Moon ME frame direction -> scene direction (proper rotation; scene up = away from the Moon at the pole). */
 const meToScene = (d: number[]) => new THREE.Vector3(d[1], -d[2], -d[0]).normalize()
 
-function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, lon: number) {
+function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, lon: number, v: Float32Array = w.vectors) {
   const o = 6 * i + (body === 'sun' ? 0 : 3)
   const p = (lat * Math.PI) / 180
   const l = (lon * Math.PI) / 180
   const P = [R_KM * Math.cos(p) * Math.cos(l), R_KM * Math.cos(p) * Math.sin(l), R_KM * Math.sin(p)]
-  return meToScene([w.vectors[o] - P[0], w.vectors[o + 1] - P[1], w.vectors[o + 2] - P[2]])
+  return meToScene([v[o] - P[0], v[o + 1] - P[1], v[o + 2] - P[2]])
 }
 
 export interface Terrain3DProps {
@@ -256,6 +256,7 @@ export interface Terrain3DProps {
   onOpenSite?: () => void
   onFindAlternatives?: () => void
   ellipse?: EllipseOverlay | null // landing ellipse analysed on the Map
+  vectors?: Float32Array | null // Any landing year: that year's Sun/Earth vectors (else the 2027 file)
 }
 
 export function Terrain3D({
@@ -272,6 +273,7 @@ export function Terrain3D({
   onOpenSite,
   onFindAlternatives,
   ellipse,
+  vectors,
 }: Terrain3DProps) {
   const host = useRef<HTMLDivElement>(null)
   const world = useRef<World | null>(null)
@@ -462,7 +464,7 @@ export function Terrain3D({
       pin.position.copy(pos)
       w.marks.add(pin)
       for (const b of ['sun', 'earth'] as const) {
-        const dir = directionFrom(w, i, b, site.lat, site.lon)
+        const dir = directionFrom(w, i, b, site.lat, site.lon, vectors ?? w.vectors)
         const visible = site[b].frac[i] > 0
         const geo = new THREE.BufferGeometry().setFromPoints([pos, pos.clone().addScaledVector(dir, 60)])
         const mat = visible
@@ -641,7 +643,7 @@ export function Terrain3D({
   useEffect(() => {
     const w = world.current
     if (!w || !ready) return
-    const v = w.vectors
+    const v = vectors ?? w.vectors // Any landing year; the self-check below stays on the 2027 file it checks against
     const o = 6 * Math.min(i, v.length / 6 - 1)
     const u = w.visMat.uniforms
     u.uSun.value.set(v[o], v[o + 1], v[o + 2])
@@ -652,7 +654,7 @@ export function Terrain3D({
     w.renderer.setRenderTarget(null)
 
     drawMarksAndRender(w, currentExagRef.current)
-  }, [i, site, ready])
+  }, [i, site, ready, vectors])
 
   // Instant update when science lens toggles without triggering expensive GPU shadow raymarches
   useEffect(() => {
@@ -771,7 +773,7 @@ export function Terrain3D({
     } else if ((k === 'sun' || k === 'earth') && site && site.lat <= -80.5) {
       const p = scenePos(w, site.lat, site.lon, currentExagRef.current).add(new THREE.Vector3(0, 0.05, 0))
       camera.position.copy(p)
-      controls.target.copy(p.clone().addScaledVector(directionFrom(w, i, k, site.lat, site.lon), 30))
+      controls.target.copy(p.clone().addScaledVector(directionFrom(w, i, k, site.lat, site.lon, vectors ?? w.vectors), 30))
     }
     controls.update()
     w.renderer.render(w.scene, w.camera)

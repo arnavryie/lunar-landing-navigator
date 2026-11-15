@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check:engine": "node scripts/check-engine.ts",
-    "check:ellipse": "node scripts/check-ellipse.ts"
+    "check:ellipse": "node scripts/check-ellipse.ts",
+    "check:years": "node scripts/check-years.ts && node scripts/check-coords.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
