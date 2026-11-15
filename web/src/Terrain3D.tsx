@@ -1177,6 +1177,26 @@ export function Terrain3D({
                       </div>
                     </div>
 
+                    {/* Find Alternatives / Other Spots Button */}
+                    {onFindAlternatives && (
+                      <button
+                        type="button"
+                        className={curV !== 'viable' ? 'hud-jump-btn is-needed' : 'hud-jump-btn'}
+                        style={
+                          curV !== 'viable'
+                            ? {
+                                background: 'color-mix(in srgb, var(--both) 18%, var(--raise))',
+                                borderColor: 'var(--both)',
+                                color: 'var(--ink)',
+                              }
+                            : undefined
+                        }
+                        onClick={onFindAlternatives}
+                      >
+                        Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))} &rarr;
+                      </button>
+                    )}
+
                     {/* Jump to Full Calendar Button */}
                     <button
                       type="button"

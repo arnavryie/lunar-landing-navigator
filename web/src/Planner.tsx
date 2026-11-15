@@ -148,36 +148,15 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh, onFindA
           </p>
 
           {onFindAlternatives && (
-            <button className={today && today.status !== 'viable' ? 'find-alt is-needed' : 'find-alt'} onClick={onFindAlternatives}>
-              Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))}
+            <button
+              type="button"
+              className={today && today.status !== 'viable' ? 'find-alt is-needed' : 'find-alt'}
+              onClick={onFindAlternatives}
+            >
+              <span>Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))}</span>
+              <span aria-hidden="true">&rarr;</span>
             </button>
           )}
-
-          <div className="best-dates">
-            <h3>Best 3 landing windows after the planned date</h3>
-            {best.length ? (
-              <ol>
-                {best.map((w) => (
-                  <li key={w.day}>
-                    <button className="link" onClick={() => setI(w.day * 24)}>
-                      {formatDate(timeAt(site, w.day * 24))}
-                    </button>{' '}
-                    <span className={`v-tag v-${w.status}`}>{VIABILITY_LABEL[w.status]}</span>{' '}
-                    <span className="muted">
-                      sunlit {w.stats.sunPct.toFixed(0)}%, longest darkness {formatDuration(w.stats.longestDarkH)}, Earth{' '}
-                      {w.stats.earthPct.toFixed(0)}%
-                      {w.len > 1 && ` (best day of a ${w.len}-day window from ${formatDate(timeAt(site, w.from * 24))})`}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="muted">No viable or marginal landing date after the planned date in the data.</p>
-            )}
-            <p className="chart-note">
-              One date per run of good days, picked by verdict, then shortest longest-darkness, then most sunlight and Earth view; listed by date. Click a date to compare it with the plan.
-            </p>
-          </div>
         </div>
 
         <div className="planner-cal">
@@ -228,6 +207,80 @@ export function Planner({ site, i, setI, planned, setPlanned, th, setTh, onFindA
               Selected time
             </li>
           </ul>
+
+          {/* Horizontal section filling the blank space below the calendar */}
+          <div className="cal-bottom-section">
+            {onFindAlternatives && (
+              <div className="find-alt-horizontal-banner">
+                <div className="find-alt-info">
+                  <span className="find-alt-title">Alternative landing spots</span>
+                  <span className="find-alt-desc">
+                    Search nearby terrain within a 25 km radius for viable sites on {formatDate(timeAt(site, Math.floor(i / 24) * 24))} matching your mission limits.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={today && today.status !== 'viable' ? 'find-alt-btn is-needed' : 'find-alt-btn'}
+                  onClick={onFindAlternatives}
+                >
+                  Find other spots for {formatDate(timeAt(site, Math.floor(i / 24) * 24))} &rarr;
+                </button>
+              </div>
+            )}
+
+            <div className="best-windows-horizontal">
+              <div className="best-windows-head">
+                <h4>Best 3 landing windows after the planned date</h4>
+                <span className="chart-note" style={{ margin: 0 }}>
+                  Top opportunities ranked by sunlight, darkness, and Earth contact. Click any card to slip to that date.
+                </span>
+              </div>
+
+              {best.length ? (
+                <div className="best-windows-grid">
+                  {best.map((w, idx) => (
+                    <div
+                      key={w.day}
+                      className={`best-window-card ${w.status}`}
+                      onClick={() => setI(w.day * 24)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setI(w.day * 24) }}
+                    >
+                      <div className="best-window-top">
+                        <span className="best-window-rank">Option #{idx + 1}</span>
+                        <span className={`hud-status-badge ${w.status}`}>{VIABILITY_LABEL[w.status]}</span>
+                      </div>
+                      <div className="best-window-date">
+                        {formatDate(timeAt(site, w.day * 24))}
+                      </div>
+                      <div className="best-window-metrics">
+                        <div className="best-window-metric">
+                          <span className="metric-lbl">Sunlit:</span>
+                          <span className="metric-val">{w.stats.sunPct.toFixed(0)}%</span>
+                        </div>
+                        <div className="best-window-metric">
+                          <span className="metric-lbl">Max Dark:</span>
+                          <span className="metric-val">{formatDuration(w.stats.longestDarkH)}</span>
+                        </div>
+                        <div className="best-window-metric">
+                          <span className="metric-lbl">Earth LoS:</span>
+                          <span className="metric-val">{w.stats.earthPct.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <div className="best-window-duration">
+                        {w.len > 1 ? `${w.len}-day window from ${formatDate(timeAt(site, w.from * 24))}` : 'Single-day window'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted" style={{ margin: '8px 0', fontSize: '0.82rem' }}>
+                  No viable or marginal landing date after the planned date in the dataset.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
