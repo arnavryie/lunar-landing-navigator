@@ -30,16 +30,16 @@ export interface LunarMap2DProps {
 
 const STATE_COLOR: Record<State, string> = {
   both: '#1fa38a',
-  sun: '#f5b041',
-  earth: '#4f9dff',
-  none: '#6b7280',
+  sun: '#c98419',
+  earth: '#5590d8',
+  none: '#4a515a',
 }
 
 const V_COLOR = {
-  viable: '#3fb27f',
+  viable: '#6fcf9f',
   marginal: '#e6c15a',
-  not: '#f05a50',
-  nodata: '#64748b',
+  not: '#f08a7a',
+  nodata: '#4a515a',
 }
 
 type PolarBg = 'sun' | 'earth' | 'psr' | 'slope'
@@ -61,7 +61,8 @@ export function LunarMap2D({
   const [polarBg, setPolarBg] = useState<PolarBg>('sun')
   const [mapData, setMapData] = useState<MapData | null>(null)
   const [globalImg, setGlobalImg] = useState<HTMLImageElement | null>(null)
-  const polarImgRef = useRef<{ key: PolarBg; canvas: HTMLCanvasElement } | null>(null)
+  const polarCacheRef = useRef<Partial<Record<PolarBg, HTMLCanvasElement>>>({})
+  const slopesRef = useRef<Float32Array | null>(null)
   const [hoverInfo, setHoverInfo] = useState<string>('')
 
   // Load local LRO 2k global mosaic and polar MapData once
@@ -85,50 +86,52 @@ export function LunarMap2D({
     }
   }, [])
 
-  // Build offscreen raster canvas for selected polar background layer
+  // Build & cache offscreen raster canvas for selected polar background layer
   const getPolarRaster = (d: MapData, bg: PolarBg): HTMLCanvasElement => {
-    if (polarImgRef.current?.key === bg) return polarImgRef.current.canvas
+    const cached = polarCacheRef.current[bg]
+    if (cached) return cached
     const c = document.createElement('canvas')
     c.width = d.n
     c.height = d.n
     const ctx = c.getContext('2d')!
     const img = ctx.createImageData(d.n, d.n)
-    const slopes = bg === 'slope' ? slopeGrid(d) : null
+    if (bg === 'slope' && !slopesRef.current) slopesRef.current = slopeGrid(d)
+    const slopes = bg === 'slope' ? slopesRef.current : null
     const off = (d.demN - d.n) / 2
     for (let k = 0; k < d.n * d.n; k++) {
-      let r = 20, g = 24, b = 30
+      let r = 20, g = 20, b = 18
       if (bg === 'sun') {
         const v = d.sun[k]
         r = Math.round(18 + v * 0.85)
-        g = Math.round(20 + v * 0.62)
-        b = Math.round(24 + v * 0.16)
+        g = Math.round(17 + v * 0.62)
+        b = Math.round(15 + v * 0.16)
       } else if (bg === 'earth') {
         const v = d.earth[k]
         r = Math.round(16 + v * 0.28)
-        g = Math.round(22 + v * 0.56)
-        b = Math.round(30 + v * 0.86)
+        g = Math.round(20 + v * 0.56)
+        b = Math.round(26 + v * 0.84)
       } else if (bg === 'psr') {
         const isPsr = d.psr[k] > 128
         const rIdx = Math.floor(k / d.n), cIdx = k % d.n
         const h = d.dem[(rIdx + off) * d.demN + (cIdx + off)] * 0.5
-        const base = Math.max(18, Math.min(110, Math.round(58 + h / 140)))
+        const base = Math.max(18, Math.min(108, Math.round(56 + h / 140)))
         if (isPsr) {
-          r = 20; g = 185; b = 215
+          r = 112; g = 186; b = 182
         } else {
-          r = base; g = base + 2; b = base + 6
+          r = base; g = base; b = Math.max(15, base - 3)
         }
       } else if (bg === 'slope' && slopes) {
         const s = slopes[k]
         if (!Number.isFinite(s)) {
-          r = 24; g = 26; b = 30
+          r = 22; g = 21; b = 19
         } else if (s <= 5) {
-          r = 44; g = 148; b = 104
+          r = 68; g = 152; b = 108
         } else if (s <= 8) {
-          r = 140; g = 165; b = 74
+          r = 165; g = 156; b = 78
         } else if (s <= 15) {
-          r = 210; g = 152; b = 55
+          r = 201; g = 132; b = 25
         } else {
-          r = 198; g = 68; b = 62
+          r = 210; g = 96; b = 86
         }
       }
       const p = 4 * k
@@ -138,7 +141,7 @@ export function LunarMap2D({
       img.data[p + 3] = 255
     }
     ctx.putImageData(img, 0, 0)
-    polarImgRef.current = { key: bg, canvas: c }
+    polarCacheRef.current[bg] = c
     return c
   }
 
@@ -156,7 +159,7 @@ export function LunarMap2D({
     }
     const ctx = canvas.getContext('2d')!
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.fillStyle = '#070b10'
+    ctx.fillStyle = '#0f0e0c'
     ctx.fillRect(0, 0, w, h)
 
     if (projection === 'global') {
@@ -249,7 +252,7 @@ export function LunarMap2D({
 
       // 85 S South Pole region band highlight
       const [, y85] = toXY(-85, 0)
-      ctx.strokeStyle = 'rgba(56, 225, 255, 0.5)'
+      ctx.strokeStyle = 'rgba(235, 231, 221, 0.45)'
       ctx.setLineDash([4, 4])
       ctx.beginPath(); ctx.moveTo(ox, y85); ctx.lineTo(ox + boxW, y85); ctx.stroke()
       ctx.setLineDash([])
@@ -257,14 +260,14 @@ export function LunarMap2D({
       // Sub-solar & Sub-Earth markers
       if (ephemeris) {
         const [sxPx, syPx] = toXY(ephemeris.subSolar.lat, ephemeris.subSolar.lon)
-        ctx.fillStyle = '#f5b041'
+        ctx.fillStyle = '#c98419'
         ctx.beginPath(); ctx.arc(sxPx, syPx, 5, 0, Math.PI * 2); ctx.fill()
-        ctx.strokeStyle = '#070b10'; ctx.lineWidth = 1.5; ctx.stroke()
-        ctx.fillStyle = '#fde68a'; ctx.font = '600 10px Archivo, sans-serif'
+        ctx.strokeStyle = '#0f0e0c'; ctx.lineWidth = 1.5; ctx.stroke()
+        ctx.fillStyle = '#e6c15a'; ctx.font = '600 10px Archivo, sans-serif'
         ctx.fillText('SUN', sxPx + 7, syPx + 3)
 
         const [exPx, eyPx] = toXY(ephemeris.subEarth.lat, ephemeris.subEarth.lon)
-        ctx.strokeStyle = '#4f9dff'; ctx.lineWidth = 1.6
+        ctx.strokeStyle = '#5590d8'; ctx.lineWidth = 1.6
         ctx.beginPath(); ctx.arc(exPx, eyPx, 5, 0, Math.PI * 2); ctx.stroke()
       }
 
@@ -272,9 +275,9 @@ export function LunarMap2D({
       if (layers.landmarks) {
         for (const lm of GLOBAL_LANDMARKS) {
           const [px, py] = toXY(lm.lat, lm.lon)
-          ctx.fillStyle = '#94a3b8'
+          ctx.fillStyle = '#aaa598'
           ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill()
-          ctx.fillStyle = '#cbd5e1'; ctx.font = '500 10px Archivo, sans-serif'
+          ctx.fillStyle = '#ebe7dd'; ctx.font = '500 10px Archivo, sans-serif'
           ctx.fillText(lm.name, px + 5, py + 3)
         }
       }
@@ -283,14 +286,14 @@ export function LunarMap2D({
           const [px, py] = toXY(s.lat, s.lon)
           ctx.fillStyle = STATE_COLOR[siteStates[s.id] ?? 'none']
           ctx.beginPath(); ctx.arc(px, py, 3.8, 0, Math.PI * 2); ctx.fill()
-          ctx.strokeStyle = '#070b10'; ctx.lineWidth = 1; ctx.stroke()
+          ctx.strokeStyle = '#0f0e0c'; ctx.lineWidth = 1; ctx.stroke()
         }
       }
 
       // 3D Camera reticle
       if (cameraCenter) {
         const [cx, cy] = toXY(cameraCenter.lat, cameraCenter.lon)
-        ctx.strokeStyle = 'rgba(56, 225, 255, 0.85)'
+        ctx.strokeStyle = 'rgba(235, 231, 221, 0.75)'
         ctx.lineWidth = 1.3
         ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke()
       }
@@ -341,11 +344,11 @@ export function LunarMap2D({
           if (p.lat > -84.2) continue
           const [px, py] = toXY(p.lat, p.lon)
           const rPx = kmToPx(p.radiusKm)
-          ctx.fillStyle = 'rgba(56, 225, 255, 0.14)'
-          ctx.strokeStyle = 'rgba(56, 225, 255, 0.85)'
-          ctx.lineWidth = 1.4
+          ctx.fillStyle = 'rgba(159, 211, 207, 0.14)'
+          ctx.strokeStyle = 'rgba(159, 211, 207, 0.8)'
+          ctx.lineWidth = 1.3
           ctx.beginPath(); ctx.arc(px, py, rPx, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
-          ctx.fillStyle = '#a5f3fc'; ctx.font = '600 9px Archivo, sans-serif'
+          ctx.fillStyle = '#9fd3cf'; ctx.font = '600 9px Archivo, sans-serif'
           ctx.fillText(`${p.name.replace(' PSR', '')} ${p.tempK}K`, px + 4, py - 2)
         }
       }
@@ -355,12 +358,12 @@ export function LunarMap2D({
         for (const r of artemis) {
           if (r.lat > -84.2) continue
           const [px, py] = toXY(r.lat, r.lon)
-          ctx.strokeStyle = '#e879f9'; ctx.lineWidth = 1.6
+          ctx.strokeStyle = '#cf86c3'; ctx.lineWidth = 1.4
           ctx.beginPath()
           ctx.moveTo(px, py - 6); ctx.lineTo(px + 6, py)
           ctx.lineTo(px, py + 6); ctx.lineTo(px - 6, py); ctx.closePath()
           ctx.stroke()
-          ctx.fillStyle = '#f5d0fe'; ctx.font = '500 9px Archivo, sans-serif'
+          ctx.fillStyle = '#ebe7dd'; ctx.font = '500 9px Archivo, sans-serif'
           ctx.fillText(r.name, px + 8, py + 3)
         }
       }
@@ -372,7 +375,7 @@ export function LunarMap2D({
           const [px, py] = toXY(s.lat, s.lon)
           ctx.fillStyle = STATE_COLOR[siteStates[s.id] ?? 'none']
           ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill()
-          ctx.strokeStyle = '#070b10'; ctx.lineWidth = 1.2; ctx.stroke()
+          ctx.strokeStyle = '#0f0e0c'; ctx.lineWidth = 1.2; ctx.stroke()
         }
       }
 
@@ -390,7 +393,7 @@ export function LunarMap2D({
           ctx.closePath(); ctx.fill()
         })
         const ring = ellipseOutline(ellipse.center, ellipse.spec, 64)
-        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8
+        ctx.strokeStyle = '#ebe7dd'; ctx.lineWidth = 1.8
         ctx.beginPath()
         ring.forEach((pt, k) => {
           const [rx, ry] = toXY(pt.lat, pt.lon)
@@ -406,7 +409,7 @@ export function LunarMap2D({
         if (layers.psrs) {
           const { psr } = nearestPsr(selected.lat, selected.lon)
           const [tx, ty] = toXY(psr.lat, psr.lon)
-          ctx.strokeStyle = '#00f5d4'; ctx.lineWidth = 1.6; ctx.setLineDash([4, 3])
+          ctx.strokeStyle = '#9fd3cf'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3])
           ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke()
           ctx.setLineDash([])
         }
@@ -420,10 +423,10 @@ export function LunarMap2D({
             ctx.fillStyle = color; ctx.font = '700 9px Archivo, sans-serif'
             ctx.fillText(label, ex + 4, ey + 3)
           }
-          drawArrow(ephemeris.sunPoleBearingDeg, '#f5b041', 'SUN')
-          drawArrow(ephemeris.earthPoleBearingDeg, '#4f9dff', 'EARTH')
+          drawArrow(ephemeris.sunPoleBearingDeg, '#c98419', 'SUN')
+          drawArrow(ephemeris.earthPoleBearingDeg, '#5590d8', 'EARTH')
         }
-        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2
+        ctx.strokeStyle = '#ebe7dd'; ctx.lineWidth = 2.2
         ctx.beginPath(); ctx.arc(sx, sy, 6.5, 0, Math.PI * 2); ctx.stroke()
       }
 

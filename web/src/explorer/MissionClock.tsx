@@ -39,7 +39,6 @@ const MS_PER_DEG: Record<Hand, number> = {
 /* ---- geometry (viewBox centred on 0,0) ---- */
 const VB = 175
 const R_FACE = 130
-const R_GLOW = 133
 const R_RING = 146
 const R_LABEL = 159
 const R_NUM = 105
@@ -272,8 +271,6 @@ export function MissionClock(props: MissionClockProps): JSX.Element {
   const earthLabel = showEarth ? polar(R_LABEL, earthBearingDeg) : null
 
   const gradId = `mc-face-${uid}`
-  const glowId = `mc-glow-${uid}`
-  const sunGlowId = `mc-sunglow-${uid}`
 
   const renderHand = (hand: Hand, deg: number): JSX.Element => (
     <g
@@ -315,28 +312,17 @@ export function MissionClock(props: MissionClockProps): JSX.Element {
           aria-hidden="true"
         >
           <defs>
-            <radialGradient id={gradId} cx="50%" cy="42%" r="62%">
-              <stop offset="0%" stopColor="#111823" />
-              <stop offset="100%" stopColor="#0b0f14" />
+            <radialGradient id={gradId} cx="50%" cy="46%" r="58%">
+              <stop offset="0%" stopColor="#161513" />
+              <stop offset="100%" stopColor="#0f0e0c" />
             </radialGradient>
-            <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3.5" />
-            </filter>
-            <filter id={sunGlowId} x="-150%" y="-150%" width="400%" height="400%">
-              <feGaussianBlur stdDeviation="3" result="b" />
-              <feMerge>
-                <feMergeNode in="b" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
 
           {/* outer "lunar day" ring */}
           <circle className="mc-ring" r={R_RING} />
           {showArc && <path className="mc-ring-arc" d={arcPath(R_RING, lunarDayFrac)} />}
 
-          {/* face + cyan glow */}
-          <circle className="mc-glow" r={R_GLOW} filter={`url(#${glowId})`} />
+          {/* dial plate */}
           <circle className="mc-face" r={R_FACE} fill={`url(#${gradId})`} />
           <circle className="mc-face-edge" r={R_FACE} />
 
@@ -391,7 +377,7 @@ export function MissionClock(props: MissionClockProps): JSX.Element {
           )}
           {sunPos && sunLabel && (
             <g className="mc-marker mc-marker-sun">
-              <circle cx={sunPos[0]} cy={sunPos[1]} r={5.5} filter={`url(#${sunGlowId})`} />
+              <circle cx={sunPos[0]} cy={sunPos[1]} r={5} />
               <text x={sunLabel[0]} y={sunLabel[1]} textAnchor="middle" dominantBaseline="central">
                 Sun
               </text>
