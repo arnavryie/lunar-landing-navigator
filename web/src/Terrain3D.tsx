@@ -3,10 +3,18 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import {
   DEFAULT_THRESHOLDS,
+  VIABILITY_LABEL,
+  dailyViability,
+  formatDate,
+  formatDuration,
   formatUtc,
   getSiteScienceStats,
+  hoursToChange,
   loadSite,
+  slipBudget,
   timeAt,
+  viability,
+  windowStats,
   type Site,
   type SiteSummary,
   type Thresholds,
@@ -240,6 +248,12 @@ function directionFrom(w: World, i: number, body: 'sun' | 'earth', lat: number, 
   const l = (lon * Math.PI) / 180
   const P = [R_KM * Math.cos(p) * Math.cos(l), R_KM * Math.cos(p) * Math.sin(l), R_KM * Math.sin(p)]
   return meToScene([v[o] - P[0], v[o + 1] - P[1], v[o + 2] - P[2]])
+}
+
+function atLanding(frac: number[], i: number, up: string, down: string, rise: string) {
+  const h = hoursToChange(frac, i)
+  const when = h === null ? 'not before data ends' : `in ${formatDuration(h)}`
+  return frac[i] > 0 ? `${up}, ${down} ${when}` : `Hidden, ${rise} ${when}`
 }
 
 export interface Terrain3DProps {
@@ -486,7 +500,7 @@ export function Terrain3D({
       const ringGeo = new THREE.RingGeometry(1.0, 1.4, 24)
       ringGeo.rotateX(-Math.PI / 2)
       const ringMat = new THREE.MeshBasicMaterial({
-        color: isSel ? '#f2efe8' : '#cf86c3',
+        color: isSel ? '#f2efe8' : '#9fd3cf',
         side: THREE.DoubleSide,
         transparent: true,
         opacity: isSel ? 0.95 : 0.65,
@@ -498,7 +512,7 @@ export function Terrain3D({
       // Center diamond pin
       const diamondGeo = new THREE.OctahedronGeometry(isSel ? 0.9 : 0.6)
       const diamondMat = new THREE.MeshBasicMaterial({
-        color: isSel ? '#f2efe8' : '#cf86c3',
+        color: isSel ? '#f2efe8' : '#9fd3cf',
       })
       const diamond = new THREE.Mesh(diamondGeo, diamondMat)
       diamond.position.set(p.x, p.y + 1.0, p.z)
@@ -835,28 +849,28 @@ export function Terrain3D({
 
         <aside className="map-side">
           {/* Sub-tab navigation inside the 3D sidebar */}
-          <div className="seg views" style={{ width: '100%', marginBottom: '8px', display: 'flex' }}>
+          <div className="sidebar-tabs" role="tablist" aria-label="3D Sidebar Sections">
             <button
               type="button"
+              className="sidebar-tab-btn"
               aria-pressed={sideTab === 'artemis'}
               onClick={() => setSideTab('artemis')}
-              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
               Artemis resources
             </button>
             <button
               type="button"
+              className="sidebar-tab-btn"
               aria-pressed={sideTab === 'planner'}
               onClick={() => setSideTab('planner')}
-              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
               Site planner
             </button>
             <button
               type="button"
+              className="sidebar-tab-btn"
               aria-pressed={sideTab === 'controls'}
               onClick={() => setSideTab('controls')}
-              style={{ fontSize: '0.74rem', padding: '5px 4px', flex: 1 }}
             >
               3D &amp; Lighting
             </button>
@@ -864,211 +878,319 @@ export function Terrain3D({
 
           {/* TAB 1: ARTEMIS III RESOURCES */}
           {sideTab === 'artemis' && (
-            <>
-              <fieldset className="thresholds artemis-section" style={{ borderColor: 'rgba(207, 134, 195, 0.4)' }}>
-                <legend style={{ color: '#cf86c3', fontWeight: 600 }}>Artemis III candidate regions</legend>
-                <p className="chart-note" style={{ margin: '0 0 8px' }}>
-                  NASA downselected 9 landing zones (Oct 2024). Click any site to fly camera in 3D and view resources:
-                </p>
-                <div className="slips" style={{ gap: '6px' }}>
-                  {ARTEMIS_3_SITES.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      style={{
-                        fontSize: '0.76rem',
-                        padding: '4px 7px',
-                        minWidth: 'auto',
-                        borderColor: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
-                        background: selectedArtemis?.id === a.id ? 'rgba(207, 134, 195, 0.22)' : undefined,
-                        color: selectedArtemis?.id === a.id ? '#cf86c3' : undefined,
-                        fontWeight: selectedArtemis?.id === a.id ? 600 : 400,
-                      }}
-                      onClick={() => selectAndPlanArtemis(a)}
-                    >
-                      {a.name}
-                    </button>
-                  ))}
-                </div>
-
-                {selectedArtemis && (
-                  <div
-                    style={{
-                      marginTop: '10px',
-                      padding: '10px',
-                      background: 'rgba(16, 15, 13, 0.85)',
-                      border: '1px solid #cf86c3',
-                      borderRadius: 'var(--radius-s)',
-                    }}
+            <fieldset className="thresholds artemis-section" style={{ borderColor: 'var(--line)' }}>
+              <legend style={{ color: 'var(--ink)', fontWeight: 600 }}>Artemis III candidate regions</legend>
+              <p className="chart-note" style={{ margin: '0 0 8px' }}>
+                NASA downselected 9 landing zones (Oct 2024). Click any site to fly camera in 3D and view resources:
+              </p>
+              <div className="artemis-chips-grid">
+                {ARTEMIS_3_SITES.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={`artemis-chip-btn ${selectedArtemis?.id === a.id ? 'active' : ''}`}
+                    onClick={() => selectAndPlanArtemis(a)}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 2px', fontSize: '0.92rem', color: '#cf86c3', fontWeight: 600 }}>{selectedArtemis.name}</h4>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-                          {selectedArtemis.lat.toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
-                        </span>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: '0.68rem',
-                          padding: '2px 5px',
-                          borderRadius: '3px',
-                          fontWeight: 600,
-                          background:
-                            selectedArtemis.resources.water_ice_potential === 'Exceptional'
-                              ? 'rgba(31, 163, 138, 0.25)'
-                              : 'rgba(207, 134, 195, 0.2)',
-                          color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#34d399' : '#cf86c3',
-                          border: '1px solid currentColor',
-                        }}
-                      >
-                        {selectedArtemis.resources.water_ice_potential} Ice
+                    {a.name}
+                  </button>
+                ))}
+              </div>
+
+              {selectedArtemis && (
+                <div className="artemis-detail-card">
+                  <div className="artemis-detail-header">
+                    <div>
+                      <h4 className="artemis-detail-title">{selectedArtemis.name}</h4>
+                      <span className="artemis-detail-coords">
+                        {Math.abs(selectedArtemis.lat).toFixed(2)}° S, {Math.abs(selectedArtemis.lon).toFixed(1)}° {selectedArtemis.lon < 0 ? 'W' : 'E'} · Elev: ~+{selectedArtemis.elevation_km} km
                       </span>
                     </div>
+                    <span
+                      className={`artemis-ice-badge ${
+                        selectedArtemis.resources.water_ice_potential === 'Exceptional'
+                          ? 'exceptional'
+                          : selectedArtemis.resources.water_ice_potential === 'Very High'
+                          ? 'very-high'
+                          : selectedArtemis.resources.water_ice_potential === 'Strategic'
+                          ? 'strategic'
+                          : 'high'
+                      }`}
+                    >
+                      {selectedArtemis.resources.water_ice_potential} Ice
+                    </span>
+                  </div>
 
-                    <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4 }}>{selectedArtemis.geology}</p>
+                  <p style={{ fontSize: '0.78rem', margin: '6px 0', lineHeight: 1.4, color: 'var(--ink)' }}>{selectedArtemis.geology}</p>
 
-                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#e8e4da' }}>Mineral Composition:</strong>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '3px 0 4px' }}>
-                        {selectedArtemis.minerals.primary.map((m) => (
-                          <span
-                            key={m}
-                            style={{
-                              background: 'rgba(255,255,255,0.08)',
-                              padding: '2px 5px',
-                              borderRadius: '3px',
-                              fontSize: '0.7rem',
-                            }}
-                          >
-                            {m}
-                          </span>
-                        ))}
-                      </div>
-                      <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
+                  <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                    <strong style={{ color: 'var(--ink)' }}>Mineral Composition:</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '4px 0' }}>
+                      {selectedArtemis.minerals.primary.map((m) => (
+                        <span key={m} className="mineral-tag">
+                          {m}
+                        </span>
+                      ))}
                     </div>
+                    <div style={{ color: 'var(--ink-2)', fontSize: '0.72rem' }}>{selectedArtemis.minerals.details}</div>
+                  </div>
 
-                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#cf86c3' }}>Water ice and volatiles</strong>
-                      <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.water_ice_details}</p>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
-                        Depth: <strong>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
-                      </div>
+                  <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                    <strong style={{ color: 'var(--ink)' }}>Water ice and volatiles</strong>
+                    <p style={{ margin: '2px 0 4px', color: 'var(--ink-2)' }}>{selectedArtemis.resources.water_ice_details}</p>
+                    <div style={{ fontSize: '0.70rem', color: 'var(--ink-2)' }}>
+                      Depth: <strong style={{ color: 'var(--ink)' }}>{selectedArtemis.resources.depth_estimate}</strong> · Volatiles: {selectedArtemis.resources.volatiles.join(', ')}
                     </div>
+                  </div>
 
-                    <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
-                      <strong style={{ color: '#f2efe8' }}>In-situ resources (ISRU)</strong>
-                      <p style={{ margin: '2px 0 4px', color: '#c9c4b8' }}>{selectedArtemis.resources.isru_applications}</p>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
-                        Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
-                      </div>
+                  <div style={{ margin: '6px 0', fontSize: '0.76rem' }}>
+                    <strong style={{ color: 'var(--ink)' }}>In-situ resources (ISRU)</strong>
+                    <p style={{ margin: '2px 0 4px', color: 'var(--ink-2)' }}>{selectedArtemis.resources.isru_applications}</p>
+                    <div style={{ fontSize: '0.70rem', color: 'var(--ink-2)' }}>
+                      Elements: {selectedArtemis.resources.isru_elements.join(' · ')}
                     </div>
+                  </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '0.78rem',
+                        background: 'var(--ink)',
+                        color: 'var(--sheet)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-s)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => openPlannerForSite(selectedArtemis)}
+                    >
+                      Plan landing windows for this region
+                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         type="button"
                         style={{
-                          padding: '6px 10px',
-                          fontSize: '0.78rem',
-                          background: 'var(--ink)',
-                          color: 'var(--sheet)',
-                          border: 'none',
+                          flex: 1,
+                          padding: '5px 8px',
+                          fontSize: '0.74rem',
+                          background: 'var(--raise)',
+                          color: 'var(--ink)',
+                          border: '1px solid var(--line)',
                           borderRadius: 'var(--radius-s)',
-                          fontWeight: 600,
                           cursor: 'pointer',
                         }}
-                        onClick={() => openPlannerForSite(selectedArtemis)}
+                        onClick={() => inspectArtemis(selectedArtemis)}
                       >
-                        Plan landing windows for this region
+                        Fly camera here
                       </button>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <a
+                        href="#artemis-3d-matrix"
+                        style={{
+                          flex: 1,
+                          padding: '5px 8px',
+                          fontSize: '0.74rem',
+                          background: 'var(--raise)',
+                          color: 'var(--ink)',
+                          border: '1px solid var(--line)',
+                          borderRadius: 'var(--radius-s)',
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Comparison table
+                      </a>
+                    </div>
+                    {onOpenSite && (
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
                         <button
                           type="button"
                           style={{
                             flex: 1,
-                            padding: '5px 8px',
-                            fontSize: '0.74rem',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: '#e8e4da',
-                            border: '1px solid var(--rule)',
+                            padding: '4px 6px',
+                            fontSize: '0.70rem',
+                            background: 'transparent',
+                            color: 'var(--ink-2)',
+                            border: '1px solid var(--line)',
                             borderRadius: 'var(--radius-s)',
                             cursor: 'pointer',
                           }}
-                          onClick={() => inspectArtemis(selectedArtemis)}
+                          onClick={onOpenSite}
                         >
-                          Fly camera here
+                          Open in Site and plan
                         </button>
-                        <a
-                          href="#artemis-3d-matrix"
-                          style={{
-                            flex: 1,
-                            padding: '5px 8px',
-                            fontSize: '0.74rem',
-                            background: 'rgba(207, 134, 195, 0.1)',
-                            color: '#cf86c3',
-                            border: '1px solid rgba(207, 134, 195, 0.3)',
-                            borderRadius: 'var(--radius-s)',
-                            textAlign: 'center',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Comparison table
-                        </a>
                       </div>
-                      {onOpenSite && (
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                          <button
-                            type="button"
-                            style={{
-                              flex: 1,
-                              padding: '4px 6px',
-                              fontSize: '0.7rem',
-                              background: 'transparent',
-                              color: 'var(--muted)',
-                              border: '1px solid var(--rule)',
-                              borderRadius: 'var(--radius-s)',
-                              cursor: 'pointer',
-                            }}
-                            onClick={onOpenSite}
-                          >
-                            Open in Site and plan
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
-              </fieldset>
-            </>
+                </div>
+              )}
+            </fieldset>
           )}
 
-          {/* TAB 2: SITE PLANNER */}
+          {/* TAB 2: SIDE PLANNER MISSION CONTROLLER HUD */}
           {sideTab === 'planner' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {site ? (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#cf86c3', fontWeight: 600 }}>Active Site: {site.name}</span>
+            <div className="sidebar-planner-hud">
+              {site ? (() => {
+                const days = dailyViability(site, localTh)
+                const last = site.samples - 1
+                const slipH = i - localPlanned * 24
+                const budget = slipBudget(days, localPlanned)
+                const curStats = windowStats(site, i, localTh.missionDays * 24)
+                const curV = viability(curStats, localTh)
+
+                const planDay = (d: number) => {
+                  const day = Math.min(Math.max(d, 0), days.length - 1)
+                  localSetPlanned(day)
+                  localSetI(day * 24)
+                }
+                const slipHours = (h: number) => {
+                  localSetI(Math.min(Math.max(i + h, 0), last))
+                }
+
+                return (
+                  <>
+                    {/* Active Site Header Card */}
+                    <div className="hud-card">
+                      <div className="hud-card-head">
+                        <span className="hud-card-title">Target region</span>
+                        <button
+                          type="button"
+                          className="link"
+                          style={{ fontSize: '0.72rem', color: 'var(--ink-2)' }}
+                          onClick={() => setSideTab('artemis')}
+                        >
+                          Switch site
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.94rem', color: 'var(--ink)' }}>{site.name}</strong>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink-2)' }}>
+                          {Math.abs(site.lat).toFixed(2)}° S, {Math.abs(site.lon).toFixed(1)}° {site.lon < 0 ? 'W' : 'E'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Planned Landing Date & Slip Sliders */}
+                    <div className="hud-card">
+                      <div className="hud-card-head">
+                        <span className="hud-card-title">Planned touchdown (UTC)</span>
+                        {slipH !== 0 && (
+                          <button
+                            type="button"
+                            className="link"
+                            style={{ fontSize: '0.70rem', color: 'var(--sun)' }}
+                            onClick={() => localSetI(localPlanned * 24)}
+                          >
+                            Reset to planned
+                          </button>
+                        )}
+                      </div>
+
+                      <label className="plan-date" style={{ margin: '4px 0 8px', display: 'block' }}>
+                        <input
+                          type="date"
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', fontSize: '0.82rem', background: 'var(--raise)', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 'var(--radius-s)' }}
+                          value={formatDate(timeAt(site, localPlanned * 24))}
+                          min={formatDate(timeAt(site, 0))}
+                          max={formatDate(timeAt(site, last))}
+                          onChange={(e) => {
+                            const ms = Date.parse(e.target.value) - Date.parse(site.start_utc)
+                            if (!Number.isNaN(ms)) planDay(Math.round(ms / 86_400_000))
+                          }}
+                        />
+                      </label>
+
+                      <span style={{ fontSize: '0.70rem', color: 'var(--ink-2)' }}>Quick slip offset:</span>
+                      <div className="hud-slips-grid">
+                        <button type="button" className="hud-slip-btn" onClick={() => slipHours(24)}>+1 d</button>
+                        <button type="button" className="hud-slip-btn" onClick={() => slipHours(7 * 24)}>+7 d</button>
+                        <button type="button" className="hud-slip-btn" onClick={() => slipHours(14 * 24)}>+14 d</button>
+                        <button type="button" className="hud-slip-btn" onClick={() => slipHours(709)}>+1 mo</button>
+                      </div>
+                      {slipH !== 0 && (
+                        <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--sun)' }}>
+                          Slipped {formatDuration(Math.abs(slipH))} {slipH < 0 ? 'earlier' : 'later'} ({formatUtc(timeAt(site, i))})
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Live Viability Assessment */}
+                    <div className="hud-card">
+                      <div className="hud-card-head">
+                        <span className="hud-card-title">Mission viability</span>
+                        <span className={`hud-status-badge ${curV}`}>
+                          {VIABILITY_LABEL[curV]}
+                        </span>
+                      </div>
+
+                      <div className="hud-metrics-grid">
+                        <div className="hud-metric-item">
+                          <span className="hud-metric-lbl">Sunlight fraction:</span>
+                          <span className={`hud-metric-val ${curStats && curStats.sunPct >= localTh.minSunPct ? 'ok' : 'bad'}`}>
+                            {curStats ? `${curStats.sunPct.toFixed(0)}%` : '–'} <span style={{ fontSize: '0.68rem', color: 'var(--ink-2)' }}>(&ge;{localTh.minSunPct}%)</span>
+                          </span>
+                        </div>
+                        <div className="hud-metric-item">
+                          <span className="hud-metric-lbl">Longest darkness:</span>
+                          <span className={`hud-metric-val ${curStats && curStats.longestDarkH <= localTh.maxDarkH ? 'ok' : 'bad'}`}>
+                            {curStats ? formatDuration(curStats.longestDarkH) : '–'} <span style={{ fontSize: '0.68rem', color: 'var(--ink-2)' }}>(&le;{localTh.maxDarkH}h)</span>
+                          </span>
+                        </div>
+                        <div className="hud-metric-item">
+                          <span className="hud-metric-lbl">Earth LoS comms:</span>
+                          <span className={`hud-metric-val ${curStats && curStats.earthPct >= localTh.minEarthPct ? 'ok' : 'bad'}`}>
+                            {curStats ? `${curStats.earthPct.toFixed(0)}%` : '–'} <span style={{ fontSize: '0.68rem', color: 'var(--ink-2)' }}>(&ge;{localTh.minEarthPct}%)</span>
+                          </span>
+                        </div>
+                        <div className="hud-metric-item">
+                          <span className="hud-metric-lbl">Sun at landing:</span>
+                          <span className="hud-metric-val" style={{ fontSize: '0.72rem' }}>
+                            {atLanding(site.sun.frac, i, 'Sunlit', 'sets', 'rises')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Slip Budget Feedback */}
+                      <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--line)', fontSize: '0.72rem', color: 'var(--ink-2)', lineHeight: 1.4 }}>
+                        {budget.canSlip === null ? (
+                          <span style={{ color: '#f87171' }}>Planned date is not viable under mission thresholds.</span>
+                        ) : budget.canSlip === 0 ? (
+                          <span>Viable on planned date only (0 d slip buffer).</span>
+                        ) : (
+                          <span style={{ color: 'var(--both)' }}>
+                            Can slip up to <strong>{budget.canSlip} day{budget.canSlip > 1 ? 's' : ''}</strong> and remain viable.
+                          </span>
+                        )}
+                        {budget.nextViable !== null && (
+                          <div style={{ marginTop: '4px' }}>
+                            Next viable window:{' '}
+                            <button
+                              type="button"
+                              className="link"
+                              style={{ fontSize: '0.72rem', color: 'var(--sun)' }}
+                              onClick={() => localSetI(budget.nextViable! * 24)}
+                            >
+                              {formatDate(timeAt(site, budget.nextViable * 24))} (+{budget.nextViable - localPlanned} d)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Jump to Full Calendar Button */}
                     <button
                       type="button"
-                      style={{ fontSize: '0.72rem', padding: '2px 6px', background: 'transparent', color: 'var(--muted)', border: '1px solid var(--rule)', borderRadius: '3px', cursor: 'pointer' }}
-                      onClick={() => setSideTab('artemis')}
+                      className="hud-jump-btn"
+                      onClick={() => {
+                        const el = document.getElementById('planner-calendar-section')
+                        if (el) el.scrollIntoView({ behavior: 'smooth' })
+                      }}
                     >
-                      Change Site
+                      View full 12-month calendar &amp; slip table &darr;
                     </button>
-                  </div>
-                  <Planner
-                    site={site}
-                    i={i}
-                    setI={localSetI}
-                    planned={localPlanned}
-                    setPlanned={localSetPlanned}
-                    th={localTh}
-                    setTh={localSetTh}
-                    onFindAlternatives={onFindAlternatives}
-                  />
-                </div>
-              ) : (
+                  </>
+                )
+              })() : (
                 <div className="pick-box">
                   <p>Calculating 2027 orbital illumination &amp; terrain horizon for the selected site...</p>
                   <button
@@ -1140,7 +1262,7 @@ export function Terrain3D({
                 })()}
               </div>
 
-              <div className="legend three-legend">
+              <div className="illum-legend-grid">
                 {(['sun', 'earth', 'both', 'none'] as const).map((k) => (
                   <span key={k}>
                     <span className={`swatch st-${k}`} aria-hidden="true" />
@@ -1165,11 +1287,12 @@ export function Terrain3D({
                 />
                 <span className="unit">{exag.toFixed(1).replace(/\.0$/, '')}×</span>
               </label>
-              <div className="seg" style={{ marginTop: '6px', marginBottom: '14px' }}>
+              <div className="exag-grid">
                 {[1, 1.5, 2, 3, 5].map((val) => (
                   <button
                     key={val}
                     type="button"
+                    className="exag-btn"
                     aria-pressed={exag === val}
                     onClick={() => setExag(val)}
                   >
@@ -1179,15 +1302,15 @@ export function Terrain3D({
               </div>
               <fieldset className="thresholds">
                 <legend>Camera</legend>
-                <div className="slips">
-                  <button onClick={() => preset('overview')}>Overview</button>
-                  <button onClick={() => preset('overhead')}>Overhead</button>
-                  <button onClick={() => preset('shackleton')}>Over Shackleton</button>
-                  <button disabled={!ellipse} onClick={() => preset('ellipse')}>Over the landing ellipse</button>
-                  <button disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>
-                    From site, look at Sun
+                <div className="camera-grid">
+                  <button type="button" className="camera-btn" onClick={() => preset('overview')}>Overview</button>
+                  <button type="button" className="camera-btn" onClick={() => preset('overhead')}>Overhead</button>
+                  <button type="button" className="camera-btn" onClick={() => preset('shackleton')}>Over Shackleton</button>
+                  <button type="button" className="camera-btn" disabled={!ellipse} onClick={() => preset('ellipse')}>Over ellipse</button>
+                  <button type="button" className="camera-btn" disabled={!site || site.lat > -80.5} onClick={() => preset('sun')}>
+                    Look at Sun
                   </button>
-                  <button disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>
+                  <button type="button" className="camera-btn" disabled={!site || site.lat > -80.5} onClick={() => preset('earth')}>
                     Look at Earth
                   </button>
                 </div>
@@ -1224,14 +1347,14 @@ export function Terrain3D({
         <section className="panel" aria-label="Interactive 2027 Availability Timeline">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.96rem', color: '#e8e4da' }}>
+              <h3 style={{ margin: 0, fontSize: '0.96rem', color: 'var(--ink)' }}>
                 Sun and Earth availability
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--muted)' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--ink-2)' }}>
                 Click or drag anywhere along the timeline to rotate Sun &amp; Earth vectors and sweep GPU shadows across the 3D terrain.
               </p>
             </div>
-            <span style={{ fontSize: '0.76rem', color: '#cf86c3' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--sun)' }}>
               Active Site: <strong>{site.name}</strong>
             </span>
           </div>
@@ -1239,9 +1362,9 @@ export function Terrain3D({
         </section>
       )}
 
-      {/* Full-width Landing Date Planner (if site loaded and sideTab is not already showing it) */}
-      {site && sideTab !== 'planner' && (
-        <section className="panel" aria-label="Landing Date Planner Calendar">
+      {/* Full-width Landing Date Planner */}
+      {site && (
+        <section id="planner-calendar-section" className="panel" aria-label="Landing Date Planner Calendar">
           <Planner
             site={site}
             i={i}
@@ -1259,118 +1382,80 @@ export function Terrain3D({
       <section
         id="artemis-3d-matrix"
         className="panel"
-        style={{ borderColor: 'rgba(207, 134, 195, 0.35)' }}
         aria-label="Artemis III Comparative Resource Matrix"
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', color: '#f2efe8', fontWeight: 600 }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', color: 'var(--ink)', fontWeight: 600 }}>
               Artemis III candidate regions: resources and minerals
             </h3>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-2)' }}>
               Comprehensive on-site mineralogy, water-ice cold trap depth, cryogenic volatiles, and lander ISRU utility across all 9 regions.
             </p>
           </div>
           <button
             type="button"
-            style={{
-              padding: '5px 10px',
-              fontSize: '0.74rem',
-              background: 'rgba(207, 134, 195, 0.15)',
-              color: '#cf86c3',
-              border: '1px solid rgba(207, 134, 195, 0.4)',
-              borderRadius: 'var(--radius-s)',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
+            className="matrix-back-btn"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            Back to the 3D view
+            Back to the 3D view &uarr;
           </button>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '0.78rem',
-              color: '#c9c4b8',
-              textAlign: 'left',
-            }}
-          >
+          <table className="artemis-matrix-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--rule)', color: 'var(--muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>
-                <th style={{ padding: '8px 10px' }}>Region name</th>
-                <th style={{ padding: '8px 10px' }}>Lat / lon</th>
-                <th style={{ padding: '8px 10px' }}>Elev.</th>
-                <th style={{ padding: '8px 10px' }}>Water ice potential</th>
-                <th style={{ padding: '8px 10px' }}>Depth estimate</th>
-                <th style={{ padding: '8px 10px' }}>Primary minerals</th>
-                <th style={{ padding: '8px 10px' }}>Lander ISRU utility</th>
-                <th style={{ padding: '8px 10px' }}>3D Action</th>
+              <tr>
+                <th>Region name</th>
+                <th>Lat / lon</th>
+                <th>Elev.</th>
+                <th>Water ice potential</th>
+                <th>Depth estimate</th>
+                <th>Primary minerals</th>
+                <th>Lander ISRU utility</th>
+                <th>3D Action</th>
               </tr>
             </thead>
             <tbody>
               {ARTEMIS_3_SITES.map((a) => {
                 const isSelected = selectedArtemis?.id === a.id
+                const icePotential = a.resources.water_ice_potential
+                const badgeClass =
+                  icePotential === 'Exceptional'
+                    ? 'exceptional'
+                    : icePotential === 'Very High'
+                    ? 'very-high'
+                    : icePotential === 'Strategic'
+                    ? 'strategic'
+                    : 'high'
                 return (
-                  <tr
-                    key={a.id}
-                    style={{
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                      background: isSelected ? 'rgba(207, 134, 195, 0.08)' : undefined,
-                    }}
-                  >
-                    <td style={{ padding: '10px 10px', fontWeight: 600, color: isSelected ? '#cf86c3' : '#f2efe8' }}>
+                  <tr key={a.id} className={isSelected ? 'selected' : ''}>
+                    <td style={{ fontWeight: 600, color: isSelected ? 'var(--sun)' : 'var(--ink)' }}>
                       {a.name}
                     </td>
-                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       {Math.abs(a.lat).toFixed(2)}° S, {Math.abs(a.lon).toFixed(1)}° {a.lon < 0 ? 'W' : 'E'}
                     </td>
-                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       +{a.elevation_km} km
                     </td>
-                    <td style={{ padding: '10px 10px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          fontWeight: 600,
-                          background:
-                            a.resources.water_ice_potential === 'Exceptional'
-                              ? 'rgba(34, 197, 94, 0.2)'
-                              : a.resources.water_ice_potential === 'Very High'
-                              ? 'rgba(207, 134, 195, 0.2)'
-                              : a.resources.water_ice_potential === 'Strategic'
-                              ? 'rgba(242, 239, 232, 0.2)'
-                              : 'rgba(168, 85, 247, 0.2)',
-                          color:
-                            a.resources.water_ice_potential === 'Exceptional'
-                              ? '#4ade80'
-                              : a.resources.water_ice_potential === 'Very High'
-                              ? '#cf86c3'
-                              : a.resources.water_ice_potential === 'Strategic'
-                              ? '#f2efe8'
-                              : '#c084fc',
-                        }}
-                      >
-                        {a.resources.water_ice_potential}
+                    <td>
+                      <span className={`artemis-ice-badge ${badgeClass}`}>
+                        {icePotential}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 10px' }}>{a.resources.depth_estimate}</td>
-                    <td style={{ padding: '10px 10px' }}>{a.minerals.primary.slice(0, 2).join(', ')}</td>
-                    <td style={{ padding: '10px 10px', maxWidth: '240px' }}>{a.resources.isru_applications}</td>
-                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                    <td>{a.resources.depth_estimate}</td>
+                    <td>{a.minerals.primary.slice(0, 2).join(', ')}</td>
+                    <td style={{ maxWidth: '240px' }}>{a.resources.isru_applications}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <button
                         type="button"
                         style={{
                           padding: '4px 8px',
                           fontSize: '0.72rem',
-                          background: isSelected ? 'var(--ink)' : 'rgba(255,255,255,0.06)',
+                          background: isSelected ? 'var(--ink)' : 'var(--raise)',
                           color: isSelected ? 'var(--sheet)' : 'var(--ink)',
-                          border: isSelected ? 'none' : '1px solid var(--rule)',
+                          border: isSelected ? 'none' : '1px solid var(--line)',
                           borderRadius: 'var(--radius-s)',
                           cursor: 'pointer',
                           fontWeight: 600,

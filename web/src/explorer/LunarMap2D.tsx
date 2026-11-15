@@ -358,7 +358,7 @@ export function LunarMap2D({
         for (const r of artemis) {
           if (r.lat > -84.2) continue
           const [px, py] = toXY(r.lat, r.lon)
-          ctx.strokeStyle = '#cf86c3'; ctx.lineWidth = 1.4
+          ctx.strokeStyle = '#9fd3cf'; ctx.lineWidth = 1.4
           ctx.beginPath()
           ctx.moveTo(px, py - 6); ctx.lineTo(px + 6, py)
           ctx.lineTo(px, py + 6); ctx.lineTo(px - 6, py); ctx.closePath()

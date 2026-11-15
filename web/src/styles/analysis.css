@@ -124,14 +124,14 @@
   padding: 8px 12px;
   background: #0f0e0c;
   border: 1px solid #201f1c;
-  border-left: 0; border-top: 2px solid #cf86c3;
+  border-left: 0; border-top: 2px solid var(--sun);
   border-radius: var(--radius-s);
   font-size: 11px;
 }
 
 .science-badge-title {
   font-weight: 600;
-  color: #cf86c3;
+  color: var(--ink);
 }
 
 .science-badge-val {
@@ -214,9 +214,9 @@
 }
 
 .science-toggle-pill.active {
-  background: #8e4d84;
-  color: #ffffff;
-  border-color: #cf86c3;
+  background: var(--ink);
+  color: var(--sheet);
+  border-color: var(--ink);
   box-shadow: none;
 }
 
@@ -261,7 +261,443 @@
 }
 
 .telemetry-val.highlight {
-  color: #cf86c3;
+  color: var(--sun);
+}
+
+/* =========================================================================
+   3D Terrain Page: Precision Layout & Artemis Color Palette Tokens
+   ========================================================================= */
+
+/* Sub-tab navigation in 3D sidebar */
+.sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.sidebar-tab-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 8px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sidebar-tab-btn:last-child {
+  border-right: none;
+}
+
+.sidebar-tab-btn:hover {
+  color: var(--ink);
+  background: var(--raise);
+}
+
+.sidebar-tab-btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--sheet);
+  font-weight: 600;
+}
+
+/* Artemis III Region Selection Grid */
+.artemis-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.artemis-chip-btn {
+  padding: 6px 4px;
+  font-size: 0.70rem;
+  line-height: 1.25;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  color: var(--ink-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.artemis-chip-btn:hover {
+  background: var(--raise);
+  color: var(--ink);
+  border-color: var(--line-2);
+}
+
+.artemis-chip-btn.active {
+  background: var(--raise);
+  color: var(--ink);
+  border-color: var(--sun);
+  box-shadow: inset 0 0 0 1px var(--sun);
+  font-weight: 600;
+}
+
+/* Artemis Detail Card */
+.artemis-detail-card {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--plate);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+}
+
+.artemis-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.artemis-detail-title {
+  margin: 0 0 2px;
+  font-size: 0.92rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.artemis-detail-coords {
+  font-size: 0.72rem;
+  color: var(--ink-2);
+}
+
+/* Artemis Resource & Mineral Badges */
+.artemis-ice-badge {
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-m);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.artemis-ice-badge.exceptional {
+  background: rgba(31, 163, 138, 0.18);
+  color: var(--both);
+  border: 1px solid var(--both);
+}
+
+.artemis-ice-badge.very-high {
+  background: rgba(85, 144, 216, 0.18);
+  color: var(--earth);
+  border: 1px solid var(--earth);
+}
+
+.artemis-ice-badge.strategic {
+  background: rgba(201, 132, 25, 0.18);
+  color: var(--sun);
+  border: 1px solid var(--sun);
+}
+
+.artemis-ice-badge.high {
+  background: rgba(170, 165, 152, 0.15);
+  color: var(--ink-2);
+  border: 1px solid var(--line-2);
+}
+
+.mineral-tag {
+  background: var(--raise);
+  border: 1px solid var(--line);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.70rem;
+  color: var(--ink);
+}
+
+/* 3D Vertical Exaggeration 5-Column Grid */
+.exag-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+}
+
+.exag-btn {
+  padding: 6px 2px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  color: var(--ink-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.exag-btn:hover {
+  color: var(--ink);
+  background: var(--raise);
+  border-color: var(--line-2);
+}
+
+.exag-btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--sheet);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+/* 3D Camera Presets 2-Column Grid */
+.camera-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.camera-btn {
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.camera-btn:hover:not(:disabled) {
+  background: var(--raise);
+  border-color: var(--line-2);
+}
+
+.camera-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--line);
+}
+
+/* 3D Illumination Legend 2x2 Grid */
+.illum-legend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  padding: 8px 10px;
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  margin-bottom: 10px;
+}
+
+.illum-legend-grid span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--ink-2);
+}
+
+/* Sidebar Mission Controller HUD (when sideTab === 'planner') */
+.sidebar-planner-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud-card {
+  padding: 12px;
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.hud-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.hud-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hud-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-m);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.hud-status-badge.viable {
+  background: rgba(31, 163, 138, 0.18);
+  color: var(--both);
+  border: 1px solid var(--both);
+}
+
+.hud-status-badge.marginal {
+  background: rgba(201, 132, 25, 0.18);
+  color: var(--sun);
+  border: 1px solid var(--sun);
+}
+
+.hud-status-badge.not {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.hud-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.hud-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hud-metric-lbl {
+  font-size: 0.68rem;
+  color: var(--ink-2);
+}
+
+.hud-metric-val {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-metric-val.ok {
+  color: var(--both);
+}
+
+.hud-metric-val.warn {
+  color: var(--sun);
+}
+
+.hud-metric-val.bad {
+  color: #f87171;
+}
+
+.hud-slips-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.hud-slip-btn {
+  padding: 5px 2px;
+  font-size: 0.72rem;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.hud-slip-btn:hover {
+  background: var(--line);
+  border-color: var(--line-2);
+}
+
+.hud-jump-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+  background: var(--raise);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-jump-btn:hover {
+  background: var(--ink);
+  color: var(--sheet);
+  border-color: var(--ink);
+}
+
+/* Artemis Matrix Table Styling */
+.artemis-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  text-align: left;
+}
+
+.artemis-matrix-table th {
+  padding: 8px 10px;
+  color: var(--ink-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--plate);
+}
+
+.artemis-matrix-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.artemis-matrix-table tr:hover td {
+  background: var(--raise);
+}
+
+.artemis-matrix-table tr.selected td {
+  background: rgba(201, 132, 25, 0.08);
+}
+
+.matrix-back-btn {
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  background: var(--raise);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.matrix-back-btn:hover {
+  background: var(--ink);
+  color: var(--sheet);
+  border-color: var(--ink);
 }
 
 .telemetry-val.depth {

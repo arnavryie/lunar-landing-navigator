@@ -564,7 +564,7 @@ export function Globe({
         // 1. Sleek cyan pinpoint dot
         const dot = new THREE.Mesh(
           new THREE.OctahedronGeometry(0.005),
-          new THREE.MeshBasicMaterial({ color: '#cf86c3' }),
+          new THREE.MeshBasicMaterial({ color: '#9fd3cf' }),
         )
         dot.position.copy(surfPos)
         dot.userData = { artemis: a, id: a.id }
@@ -587,7 +587,7 @@ export function Globe({
         }
         const miniRing = new THREE.Line(
           new THREE.BufferGeometry().setFromPoints(ringPts),
-          new THREE.LineBasicMaterial({ color: '#cf86c3', transparent: true, opacity: 0.45 }),
+          new THREE.LineBasicMaterial({ color: '#9fd3cf', transparent: true, opacity: 0.45 }),
         )
         miniRing.userData = { artemis: a, id: a.id }
         w.artemisGroup.add(miniRing)
@@ -596,7 +596,7 @@ export function Globe({
         const miniHeadPos = norm.clone().multiplyScalar(1.014)
         const miniStem = new THREE.Line(
           new THREE.BufferGeometry().setFromPoints([surfPos, miniHeadPos]),
-          new THREE.LineBasicMaterial({ color: '#cf86c3', transparent: true, opacity: 0.5 }),
+          new THREE.LineBasicMaterial({ color: '#9fd3cf', transparent: true, opacity: 0.5 }),
         )
         miniStem.userData = { artemis: a, id: a.id }
         w.artemisGroup.add(miniStem)
@@ -881,9 +881,9 @@ export function Globe({
         </fieldset>
 
         {/* Artemis III Candidate Landing Regions & Lander Resources Dossier */}
-        <fieldset className="thresholds" style={{ borderColor: 'rgba(207, 134, 195, 0.45)' }}>
+        <fieldset className="thresholds" style={{ borderColor: 'var(--line)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <legend style={{ color: '#cf86c3', fontWeight: 600, margin: 0, padding: '0 4px' }}>
+            <legend style={{ color: 'var(--ink)', fontWeight: 600, margin: 0, padding: '0 4px' }}>
               Artemis III candidate regions
             </legend>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -928,9 +928,9 @@ export function Globe({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '6px',
-                    borderColor: isSelected ? '#f2efe8' : isExceptional ? 'rgba(207, 134, 195, 0.4)' : undefined,
-                    background: isSelected ? 'rgba(242, 239, 232, 0.16)' : undefined,
-                    color: isSelected ? '#f2efe8' : undefined,
+                    borderColor: isSelected ? 'var(--sun)' : isExceptional ? 'rgba(31, 163, 138, 0.4)' : undefined,
+                    background: isSelected ? 'var(--raise)' : undefined,
+                    color: isSelected ? 'var(--ink)' : undefined,
                     fontWeight: isSelected ? 600 : 400,
                   }}
                   onClick={() => flyArtemis(a)}
@@ -942,18 +942,18 @@ export function Globe({
                       padding: '1px 4px',
                       borderRadius: '2px',
                       background: isSelected
-                        ? 'rgba(242, 239, 232, 0.25)'
+                        ? 'rgba(201, 132, 25, 0.25)'
                         : isExceptional
-                        ? 'rgba(207, 134, 195, 0.2)'
+                        ? 'rgba(31, 163, 138, 0.2)'
                         : isStrategic
-                        ? 'rgba(242, 239, 232, 0.2)'
+                        ? 'rgba(201, 132, 25, 0.2)'
                         : 'rgba(255, 255, 255, 0.08)',
                       color: isSelected
-                        ? '#f2efe8'
+                        ? 'var(--sun)'
                         : isExceptional
-                        ? '#cf86c3'
+                        ? 'var(--both)'
                         : isStrategic
-                        ? '#f2efe8'
+                        ? 'var(--sun)'
                         : '#aaa598',
                       fontWeight: 700,
                       textTransform: 'uppercase',
@@ -972,8 +972,8 @@ export function Globe({
               style={{
                 marginTop: '12px',
                 padding: '12px',
-                background: 'rgba(16, 15, 13, 0.92)',
-                border: '1px solid #cf86c3',
+                background: 'var(--plate)',
+                border: '1px solid var(--line-2)',
                 borderRadius: 'var(--radius-s)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
               }}
@@ -981,8 +981,8 @@ export function Globe({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#f2efe8', fontSize: '0.8rem' }}>◆</span>
-                    <h4 style={{ margin: 0, fontSize: '0.96rem', color: '#f2efe8', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--sun)', fontSize: '0.8rem' }}>◆</span>
+                    <h4 style={{ margin: 0, fontSize: '0.96rem', color: 'var(--ink)', fontWeight: 600 }}>
                       {selectedArtemis.name}
                     </h4>
                   </div>
@@ -1001,9 +1001,9 @@ export function Globe({
                     letterSpacing: '0.04em',
                     background:
                       selectedArtemis.resources.water_ice_potential === 'Exceptional'
-                        ? 'rgba(207, 134, 195, 0.25)'
-                        : 'rgba(242, 239, 232, 0.25)',
-                    color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? '#cf86c3' : '#f2efe8',
+                        ? 'rgba(31, 163, 138, 0.2)'
+                        : 'rgba(201, 132, 25, 0.2)',
+                    color: selectedArtemis.resources.water_ice_potential === 'Exceptional' ? 'var(--both)' : 'var(--sun)',
                     border: '1px solid currentColor',
                   }}
                 >
@@ -1055,7 +1055,7 @@ export function Globe({
                   paddingTop: '6px',
                 }}
               >
-                <strong style={{ color: '#cf86c3' }}>Water ice and volatiles</strong>
+                <strong style={{ color: 'var(--ink)' }}>Water ice and volatiles</strong>
                 <div style={{ color: '#c9c4b8', margin: '2px 0' }}>
                   {selectedArtemis.resources.water_ice_details}
                 </div>
@@ -1144,8 +1144,8 @@ export function Globe({
                       padding: '5px 8px',
                       fontSize: '0.74rem',
                       background: 'rgba(255, 255, 255, 0.08)',
-                      color: '#cf86c3',
-                      border: '1px solid rgba(207, 134, 195, 0.35)',
+                      color: 'var(--ink)',
+                      border: '1px solid var(--line-2)',
                       borderRadius: 'var(--radius-s)',
                       cursor: 'pointer',
                     }}
@@ -1160,9 +1160,9 @@ export function Globe({
                     style={{
                       padding: '5px 8px',
                       fontSize: '0.74rem',
-                      background: 'rgba(207, 134, 195, 0.12)',
-                      color: '#cf86c3',
-                      border: '1px solid rgba(207, 134, 195, 0.4)',
+                      background: 'var(--raise)',
+                      color: 'var(--sun)',
+                      border: '1px solid var(--line-2)',
                       borderRadius: 'var(--radius-s)',
                       cursor: 'pointer',
                       fontWeight: 600,
@@ -1199,9 +1199,9 @@ export function Globe({
                     fontSize: '0.72rem',
                     padding: '2px 7px',
                     minWidth: 'auto',
-                    background: labelMode === mode ? 'rgba(207, 134, 195, 0.25)' : undefined,
-                    color: labelMode === mode ? '#cf86c3' : undefined,
-                    borderColor: labelMode === mode ? '#cf86c3' : undefined,
+                    background: labelMode === mode ? 'var(--ink)' : undefined,
+                    color: labelMode === mode ? 'var(--sheet)' : undefined,
+                    borderColor: labelMode === mode ? 'var(--ink)' : undefined,
                     fontWeight: labelMode === mode ? 600 : 400,
                   }}
                   onClick={() => setLabelMode(mode)}

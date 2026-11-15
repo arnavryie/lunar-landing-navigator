@@ -328,7 +328,7 @@ function ScienceQuadrantChart(p: { evals: Eval[]; th: Thresholds }) {
           <text x={splitX + 12} y={splitY + 36} fill="#aaa598" fontSize="9">Low Power · Far from Ice</text>
 
           {/* Threshold Divider Lines */}
-          <line x1={splitX} y1={mt} x2={splitX} y2={mt + ph} stroke="#cf86c3" strokeWidth="1.5" strokeDasharray="3 3" />
+          <line x1={splitX} y1={mt} x2={splitX} y2={mt + ph} stroke="#9fd3cf" strokeWidth="1.5" strokeDasharray="3 3" />
           <line x1={ml} y1={splitY} x2={w - mr} y2={splitY} stroke="#c98419" strokeWidth="1.5" strokeDasharray="3 3" />
 
           {/* X Axis Ticks */}

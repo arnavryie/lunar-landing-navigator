@@ -585,15 +585,15 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         ellipse: {
           semiMajorAxis: 12_000,
           semiMinorAxis: 12_000,
-          material: Cesium.Color.fromCssColorString('#cf86c3').withAlpha(0.14),
+          material: Cesium.Color.fromCssColorString('#9fd3cf').withAlpha(0.14),
           outline: true,
-          outlineColor: Cesium.Color.fromCssColorString('#cf86c3'),
+          outlineColor: Cesium.Color.fromCssColorString('#9fd3cf'),
           outlineWidth: 1.5,
           height: 400,
         },
         point: {
           pixelSize: 7,
-          color: Cesium.Color.fromCssColorString('#cf86c3'),
+          color: Cesium.Color.fromCssColorString('#9fd3cf'),
           outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
           outlineWidth: 1.5,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -601,7 +601,7 @@ export const CesiumMoon = forwardRef<CesiumMoonHandle, CesiumMoonProps>(function
         label: {
           text: d ? `${r.name} (${d.resources.water_ice_potential})` : r.name,
           font: '550 11px Archivo, system-ui, sans-serif',
-          fillColor: Cesium.Color.fromCssColorString('#e7c3e1'),
+          fillColor: Cesium.Color.fromCssColorString('#d3eee9'),
           outlineColor: Cesium.Color.fromCssColorString('#0f0e0c'),
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,

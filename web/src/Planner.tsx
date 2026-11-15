@@ -303,37 +303,46 @@ function BeforeAfter({ site, plannedI, newI, hours, th }: { site: Site; plannedI
       after: atLanding(site.earth.frac, newI, 'In view', 'sets', 'rises'),
     },
   ]
-  const word = (t?: number) => (t === undefined || t === 0 ? 'Same' : t > 0 ? 'Better' : 'Worse')
   return (
     <div className="before-after">
-      <h3>
-        {slipH === 0 ? 'Planned landing' : `Slipped by ${formatDuration(Math.abs(slipH))}${slipH < 0 ? ' earlier' : ''}`}
-        <span className="muted">
-          {' '}
-          {formatDate(timeAt(site, plannedI))} → {timeAt(site, newI).toISOString().slice(0, 16).replace('T', ' ')} UTC,{' '}
-          {th.missionDays}-day mission
-        </span>
-      </h3>
+      <div className="before-after-header">
+        <div className="before-after-title">
+          <span>Mission scenario impact</span>
+          <span className="before-after-pill">
+            {slipH === 0 ? 'Planned landing (0 d slip)' : `Slipped by ${formatDuration(Math.abs(slipH))}${slipH < 0 ? ' earlier' : ''}`}
+          </span>
+        </div>
+        <div className="before-after-dates">
+          {formatDate(timeAt(site, plannedI))} → {timeAt(site, newI).toISOString().slice(0, 16).replace('T', ' ')} UTC · {th.missionDays}-day mission
+        </div>
+      </div>
       <table>
         <thead>
           <tr>
-            <th scope="col" />
-            <th scope="col">Planned</th>
+            <th scope="col">Mission metric</th>
+            <th scope="col">Planned (00:00 UTC)</th>
             <th scope="col">After slip</th>
             <th scope="col">Change</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.label}>
-              <th scope="row">{r.label}</th>
-              <td>{r.before}</td>
-              <td>{r.after}</td>
-              <td className={r.trend === undefined ? '' : r.trend > 0 ? 'up' : r.trend < 0 ? 'down' : ''}>
-                {r.trend === undefined ? '' : `${r.trend > 0 ? '▲' : r.trend < 0 ? '▼' : '='} ${word(r.trend)}`}
-              </td>
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const badgeClass = r.trend === undefined ? '' : r.trend > 0 ? 'up' : r.trend < 0 ? 'down' : 'same'
+            return (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                <td>{r.before}</td>
+                <td>{r.after}</td>
+                <td>
+                  {r.trend !== undefined && (
+                    <span className={`before-after-badge ${badgeClass}`}>
+                      {r.trend > 0 ? '▲ Better' : r.trend < 0 ? '▼ Worse' : '= Same'}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
