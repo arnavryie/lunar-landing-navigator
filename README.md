@@ -479,7 +479,6 @@ Much of the code (Python pipeline and web app) and the documentation was written
 | **Rajsinh Sangramsinh Ghorpade** | `@rajsinh` | [@rajghorpade03](https://github.com/rajghorpade03) | LOLA South Pole topography, PSR (Permanently Shadowed Region) cold trap modeling, terrain roughness & slope safety analysis  |
 | **Nikhil Manmohan Sharma** | `@codebynikhil08` | [@codebynikhil08](https://github.com/codebynikhil08) | Artemis III candidate landing zone telemetry evaluation, ephemeris verification, solar irradiance & direct-to-Earth link modeling  |
 
-> **Teammates:** please fill in your GitHub ID and a one-line contribution summary in the table above (and correct anything listed for you).
 
 *Dr. D.Y. Patil Institute of Technology, Pune · NASA Space Apps Challenge 2026*
 
